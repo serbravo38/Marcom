@@ -193,3 +193,17 @@ CREATE INDEX idx_stock_movements_asset ON inventory_schema.stock_movements(asset
 CREATE INDEX idx_work_orders_status ON work_order_schema.work_orders(status);
 CREATE INDEX idx_work_orders_tech ON work_order_schema.work_orders(assigned_technician_id);
 CREATE INDEX idx_dte_order ON billing_schema.dte_documents(order_id);
+
+-- =============================================================================
+-- INSERCIÓN DE DATOS SEMILLA (Seed Data)
+-- =============================================================================
+INSERT INTO auth_customer_schema.users (rut, email, password_hash, first_name, last_name, role)
+VALUES (
+  '12345678-9',
+  'admin@marcom.cl',
+  '$2b$12$0kJpQwNGdXl.HYxg.JJAJOGGDUAPHPFf1TZiexXcHf840hB7icM/G', -- password: admin123
+  'Admin',
+  'Principal',
+  'ADMIN'
+)
+ON CONFLICT (email) DO NOTHING;
