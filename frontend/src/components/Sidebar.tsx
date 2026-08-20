@@ -24,7 +24,7 @@ export const Sidebar: React.FC = () => {
     <aside className="sidebar glass-panel">
       <div className="sidebar-brand">
         <span className="brand-dot"></span>
-        <h2>APT MARCOM</h2>
+        <h2>MARCOM</h2>
       </div>
 
       <nav className="sidebar-menu">
@@ -68,8 +68,8 @@ export const Sidebar: React.FC = () => {
               <User size={16} />
             </div>
             <div className="user-info">
-              <p className="user-name">{user.first_name} {user.last_name}</p>
-              <p className="user-role">{user.role}</p>
+              <p className="user-name">{user.nombre} {user.apellido}</p>
+              <p className="user-role">{user.rol}</p>
             </div>
           </div>
         )}

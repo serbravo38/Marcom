@@ -2,92 +2,92 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from app.models import RoleEnum
+from app.models import RolUsuario
 
 # --- PROFILE SCHEMAS ---
-class CustomerProfileBase(BaseModel):
-    phone: Optional[str] = None
-    address: Optional[str] = None
+class PerfilClienteBase(BaseModel):
+    telefono: Optional[str] = None
+    direccion: Optional[str] = None
     region: Optional[str] = None
-    commune: Optional[str] = None
+    comuna: Optional[str] = None
 
-class CustomerProfileCreate(CustomerProfileBase):
-    agreement_id: Optional[UUID] = None
+class PerfilClienteCrear(PerfilClienteBase):
+    convenio_id: Optional[UUID] = None
 
-class CustomerProfileUpdate(CustomerProfileBase):
-    agreement_id: Optional[UUID] = None
+class PerfilClienteActualizar(PerfilClienteBase):
+    convenio_id: Optional[UUID] = None
 
-class CustomerProfileResponse(CustomerProfileBase):
-    profile_id: UUID
-    user_id: UUID
-    agreement_id: Optional[UUID] = None
+class PerfilClienteRespuesta(PerfilClienteBase):
+    perfil_id: UUID
+    usuario_id: UUID
+    convenio_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
 
 # --- USER SCHEMAS ---
-class UserBase(BaseModel):
+class UsuarioBase(BaseModel):
     rut: str = Field(..., max_length=12, description="RUT chileno (ej: 12345678-9)")
-    email: EmailStr
-    first_name: str = Field(..., max_length=100)
-    last_name: str = Field(..., max_length=100)
-    role: RoleEnum = RoleEnum.CLIENTE_STANDARD
-    is_active: bool = True
+    correo: EmailStr
+    nombre: str = Field(..., max_length=100)
+    apellido: str = Field(..., max_length=100)
+    rol: RolUsuario = RolUsuario.CLIENTE_ESTANDAR
+    activo: bool = True
 
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=6, description="Contraseña en texto plano")
+class UsuarioCrear(UsuarioBase):
+    clave: str = Field(..., min_length=6, description="Contraseña en texto plano")
 
-class UserUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    role: Optional[RoleEnum] = None
-    is_active: Optional[bool] = None
-    password: Optional[str] = None
+class UsuarioActualizar(BaseModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    rol: Optional[RolUsuario] = None
+    activo: Optional[bool] = None
+    clave: Optional[str] = None
 
-class UserResponse(UserBase):
-    user_id: UUID
-    created_at: datetime
-    updated_at: datetime
-    profile: Optional[CustomerProfileResponse] = None
+class UsuarioRespuesta(UsuarioBase):
+    usuario_id: UUID
+    creado_en: datetime
+    actualizado_en: datetime
+    perfil: Optional[PerfilClienteRespuesta] = None
 
     class Config:
         from_attributes = True
 
 # --- AGREEMENT SCHEMAS ---
-class AgreementBase(BaseModel):
-    company_name: str = Field(..., max_length=150)
+class ConvenioBase(BaseModel):
+    nombre_empresa: str = Field(..., max_length=150)
     rut: str = Field(..., max_length=12)
-    credit_limit: float = 0.00
-    used_credit: float = 0.00
-    is_active: bool = True
+    limite_credito: float = 0.00
+    credito_usado: float = 0.00
+    activo: bool = True
 
-class AgreementCreate(AgreementBase):
+class ConvenioCrear(ConvenioBase):
     pass
 
-class AgreementUpdate(BaseModel):
-    company_name: Optional[str] = None
+class ConvenioActualizar(BaseModel):
+    nombre_empresa: Optional[str] = None
     rut: Optional[str] = None
-    credit_limit: Optional[float] = None
-    used_credit: Optional[float] = None
-    is_active: Optional[bool] = None
+    limite_credito: Optional[float] = None
+    credito_usado: Optional[float] = None
+    activo: Optional[bool] = None
 
-class AgreementResponse(AgreementBase):
-    agreement_id: UUID
-    created_at: datetime
+class ConvenioRespuesta(ConvenioBase):
+    convenio_id: UUID
+    creado_en: datetime
 
     class Config:
         from_attributes = True
 
 # --- AUTH & TOKEN SCHEMAS ---
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+class IniciarSesionUsuario(BaseModel):
+    correo: EmailStr
+    clave: str
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-class TokenData(BaseModel):
-    user_id: Optional[UUID] = None
-    email: Optional[EmailStr] = None
-    role: Optional[RoleEnum] = None
+class DatosToken(BaseModel):
+    usuario_id: Optional[UUID] = None
+    correo: Optional[EmailStr] = None
+    rol: Optional[RolUsuario] = None

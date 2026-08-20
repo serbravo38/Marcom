@@ -3,116 +3,116 @@ from app import models, schemas
 import bcrypt
 from uuid import UUID
 
-# Password hashing configuration
-def get_password_hash(password: str) -> str:
-    pwd_bytes = password.encode('utf-8')
+# Configuración de hashing de contraseñas
+def obtener_clave_hash(clave: str) -> str:
+    pwd_bytes = clave.encode('utf-8')
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(pwd_bytes, salt)
     return hashed.decode('utf-8')
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    pwd_bytes = plain_password.encode('utf-8')
-    hashed_bytes = hashed_password.encode('utf-8')
+def verificar_clave(clave_plana: str, clave_hash: str) -> bool:
+    pwd_bytes = clave_plana.encode('utf-8')
+    hashed_bytes = clave_hash.encode('utf-8')
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
-# --- USER CRUD ---
-def get_user_by_id(db: Session, user_id: UUID):
-    return db.query(models.User).filter(models.User.user_id == user_id).first()
+# --- CRUD USUARIOS ---
+def obtener_usuario_por_id(db: Session, usuario_id: UUID):
+    return db.query(models.Usuario).filter(models.Usuario.usuario_id == usuario_id).first()
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
+def obtener_usuario_por_correo(db: Session, correo: str):
+    return db.query(models.Usuario).filter(models.Usuario.correo == correo).first()
 
-def get_user_by_rut(db: Session, rut: str):
-    return db.query(models.User).filter(models.User.rut == rut).first()
+def obtener_usuario_por_rut(db: Session, rut: str):
+    return db.query(models.Usuario).filter(models.Usuario.rut == rut).first()
 
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
+def obtener_usuarios(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Usuario).offset(skip).limit(limit).all()
 
-def create_user(db: Session, user_in: schemas.UserCreate):
-    password_hash = get_password_hash(user_in.password)
-    db_user = models.User(
-        rut=user_in.rut,
-        email=user_in.email,
-        password_hash=password_hash,
-        first_name=user_in.first_name,
-        last_name=user_in.last_name,
-        role=user_in.role,
-        is_active=user_in.is_active
+def crear_usuario(db: Session, usuario_in: schemas.UsuarioCrear):
+    clave_hash = obtener_clave_hash(usuario_in.clave)
+    db_usuario = models.Usuario(
+        rut=usuario_in.rut,
+        correo=usuario_in.correo,
+        clave_hash=clave_hash,
+        nombre=usuario_in.nombre,
+        apellido=usuario_in.apellido,
+        rol=usuario_in.rol,
+        activo=usuario_in.activo
     )
-    db.add(db_user)
+    db.add(db_usuario)
     db.commit()
-    db.refresh(db_user)
-    return db_user
+    db.refresh(db_usuario)
+    return db_usuario
 
-def update_user(db: Session, db_user: models.User, user_update: schemas.UserUpdate):
-    update_data = user_update.model_dump(exclude_unset=True)
-    if "password" in update_data:
-        password_hash = get_password_hash(update_data["password"])
-        db_user.password_hash = password_hash
-        del update_data["password"]
+def actualizar_usuario(db: Session, db_usuario: models.Usuario, usuario_update: schemas.UsuarioActualizar):
+    update_data = usuario_update.model_dump(exclude_unset=True)
+    if "clave" in update_data:
+        clave_hash = obtener_clave_hash(update_data["clave"])
+        db_usuario.clave_hash = clave_hash
+        del update_data["clave"]
     
     for key, value in update_data.items():
-        setattr(db_user, key, value)
+        setattr(db_usuario, key, value)
         
     db.commit()
-    db.refresh(db_user)
-    return db_user
+    db.refresh(db_usuario)
+    return db_usuario
 
-# --- AGREEMENT CRUD ---
-def get_agreement_by_id(db: Session, agreement_id: UUID):
-    return db.query(models.Agreement).filter(models.Agreement.agreement_id == agreement_id).first()
+# --- CRUD CONVENIOS ---
+def obtener_convenio_por_id(db: Session, convenio_id: UUID):
+    return db.query(models.Convenio).filter(models.Convenio.convenio_id == convenio_id).first()
 
-def get_agreement_by_rut(db: Session, rut: str):
-    return db.query(models.Agreement).filter(models.Agreement.rut == rut).first()
+def obtener_convenio_por_rut(db: Session, rut: str):
+    return db.query(models.Convenio).filter(models.Convenio.rut == rut).first()
 
-def get_agreements(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Agreement).offset(skip).limit(limit).all()
+def obtener_convenios(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Convenio).offset(skip).limit(limit).all()
 
-def create_agreement(db: Session, agreement_in: schemas.AgreementCreate):
-    db_agreement = models.Agreement(
-        company_name=agreement_in.company_name,
-        rut=agreement_in.rut,
-        credit_limit=agreement_in.credit_limit,
-        used_credit=agreement_in.used_credit,
-        is_active=agreement_in.is_active
+def crear_convenio(db: Session, convenio_in: schemas.ConvenioCrear):
+    db_convenio = models.Convenio(
+        nombre_empresa=convenio_in.nombre_empresa,
+        rut=convenio_in.rut,
+        limite_credito=convenio_in.limite_credito,
+        credito_usado=convenio_in.credito_usado,
+        activo=convenio_in.activo
     )
-    db.add(db_agreement)
+    db.add(db_convenio)
     db.commit()
-    db.refresh(db_agreement)
-    return db_agreement
+    db.refresh(db_convenio)
+    return db_convenio
 
-def update_agreement(db: Session, db_agreement: models.Agreement, agreement_update: schemas.AgreementUpdate):
-    update_data = agreement_update.model_dump(exclude_unset=True)
+def actualizar_convenio(db: Session, db_convenio: models.Convenio, convenio_update: schemas.ConvenioActualizar):
+    update_data = convenio_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(db_agreement, key, value)
+        setattr(db_convenio, key, value)
         
     db.commit()
-    db.refresh(db_agreement)
-    return db_agreement
+    db.refresh(db_convenio)
+    return db_convenio
 
-# --- PROFILE CRUD ---
-def get_profile_by_user_id(db: Session, user_id: UUID):
-    return db.query(models.CustomerProfile).filter(models.CustomerProfile.user_id == user_id).first()
+# --- CRUD PERFILES ---
+def obtener_perfil_por_usuario_id(db: Session, usuario_id: UUID):
+    return db.query(models.PerfilCliente).filter(models.PerfilCliente.usuario_id == usuario_id).first()
 
-def create_or_update_profile(db: Session, user_id: UUID, profile_in: schemas.CustomerProfileCreate):
-    db_profile = get_profile_by_user_id(db, user_id)
-    if db_profile:
-        # Update
-        update_data = profile_in.model_dump(exclude_unset=True)
+def crear_o_actualizar_perfil(db: Session, usuario_id: UUID, perfil_in: schemas.PerfilClienteCrear):
+    db_perfil = obtener_perfil_por_usuario_id(db, usuario_id)
+    if db_perfil:
+        # Actualizar
+        update_data = perfil_in.model_dump(exclude_unset=True)
         for key, value in update_data.items():
-            setattr(db_profile, key, value)
+            setattr(db_perfil, key, value)
     else:
-        # Create
-        db_profile = models.CustomerProfile(
-            user_id=user_id,
-            agreement_id=profile_in.agreement_id,
-            phone=profile_in.phone,
-            address=profile_in.address,
-            region=profile_in.region,
-            commune=profile_in.commune
+        # Crear
+        db_perfil = models.PerfilCliente(
+            usuario_id=usuario_id,
+            convenio_id=perfil_in.convenio_id,
+            telefono=perfil_in.telefono,
+            direccion=perfil_in.direccion,
+            region=perfil_in.region,
+            comuna=perfil_in.comuna
         )
-        db.add(db_profile)
+        db.add(db_perfil)
         
     db.commit()
-    db.refresh(db_profile)
-    return db_profile
+    db.refresh(db_perfil)
+    return db_perfil

@@ -3,65 +3,65 @@ from app import models, schemas
 from uuid import UUID
 
 # --- ORDERS CRUD ---
-def get_order_by_id(db: Session, order_id: UUID):
-    return db.query(models.Order).filter(models.Order.order_id == order_id).first()
+def obtener_pedido_por_id(db: Session, pedido_id: UUID):
+    return db.query(models.Pedido).filter(models.Pedido.pedido_id == pedido_id).first()
 
-def get_orders(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Order).offset(skip).limit(limit).all()
+def obtener_pedidos(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Pedido).offset(skip).limit(limit).all()
 
-def get_orders_by_user(db: Session, user_id: UUID):
-    return db.query(models.Order).filter(models.Order.user_id == user_id).all()
+def obtener_pedidos_por_usuario(db: Session, usuario_id: UUID):
+    return db.query(models.Pedido).filter(models.Pedido.usuario_id == usuario_id).all()
 
-def create_order(db: Session, order_in: schemas.OrderCreate):
-    db_order = models.Order(
-        user_id=order_in.user_id,
-        total_amount=order_in.total_amount,
-        payment_method=order_in.payment_method,
-        payment_status=order_in.payment_status
+def crear_pedido(db: Session, pedido_in: schemas.PedidoCrear):
+    db_pedido = models.Pedido(
+        usuario_id=pedido_in.usuario_id,
+        monto_total=pedido_in.monto_total,
+        metodo_pago=pedido_in.metodo_pago,
+        estado_pago=pedido_in.estado_pago
     )
-    db.add(db_order)
+    db.add(db_pedido)
     db.commit()
-    db.refresh(db_order)
-    return db_order
+    db.refresh(db_pedido)
+    return db_pedido
 
-def update_order_status(db: Session, db_order: models.Order, status: models.PaymentStatusEnum):
-    db_order.payment_status = status
+def actualizar_estado_pedido(db: Session, db_pedido: models.Pedido, estado: models.EstadoPagoEnum):
+    db_pedido.estado_pago = estado
     db.commit()
-    db.refresh(db_order)
-    return db_order
+    db.refresh(db_pedido)
+    return db_pedido
 
 # --- PAYMENTS CRUD ---
-def create_payment(db: Session, payment_in: schemas.PaymentCreate):
-    db_payment = models.Payment(
-        order_id=payment_in.order_id,
-        gateway_transaction_id=payment_in.gateway_transaction_id,
-        amount=payment_in.amount,
-        status=payment_in.status,
-        response_payload=payment_in.response_payload
+def crear_pago(db: Session, pago_in: schemas.PagoCrear):
+    db_pago = models.Pago(
+        pedido_id=pago_in.pedido_id,
+        transaccion_pasarela_id=pago_in.transaccion_pasarela_id,
+        monto=pago_in.monto,
+        estado=pago_in.estado,
+        payload_respuesta=pago_in.payload_respuesta
     )
-    db.add(db_payment)
+    db.add(db_pago)
     
     # Auto update Order payment status if payment is approved
-    db_order = get_order_by_id(db, payment_in.order_id)
-    if db_order and payment_in.status == models.PaymentStatusEnum.APROBADO:
-        db_order.payment_status = models.PaymentStatusEnum.APROBADO
+    db_pedido = obtener_pedido_por_id(db, pago_in.pedido_id)
+    if db_pedido and pago_in.estado == models.EstadoPagoEnum.APROBADO:
+        db_pedido.estado_pago = models.EstadoPagoEnum.APROBADO
         
     db.commit()
-    db.refresh(db_payment)
-    return db_payment
+    db.refresh(db_pago)
+    return db_pago
 
-def get_payments_by_order(db: Session, order_id: UUID):
-    return db.query(models.Payment).filter(models.Payment.order_id == order_id).all()
+def obtener_pagos_por_pedido(db: Session, pedido_id: UUID):
+    return db.query(models.Pago).filter(models.Pago.pedido_id == pedido_id).all()
 
 # --- DTE DOCUMENTS CRUD ---
-def create_dte_document(db: Session, dte_in: schemas.DTEDocumentCreate):
-    db_dte = models.DTEDocument(
-        order_id=dte_in.order_id,
-        dte_type=dte_in.dte_type,
-        sii_folio=dte_in.sii_folio,
-        pdf_url=dte_in.pdf_url,
-        xml_url=dte_in.xml_url,
-        sii_status=dte_in.sii_status
+def crear_documento_dte(db: Session, dte_in: schemas.DocumentoDTECrear):
+    db_dte = models.DocumentoDTE(
+        pedido_id=dte_in.pedido_id,
+        tipo_dte=dte_in.tipo_dte,
+        folio_sii=dte_in.folio_sii,
+        url_pdf=dte_in.url_pdf,
+        url_xml=dte_in.url_xml,
+        estado_sii=dte_in.estado_sii
     )
     db.add(db_dte)
     db.commit()

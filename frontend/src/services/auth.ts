@@ -1,58 +1,58 @@
 import { api } from "./api";
 
-export interface User {
-  user_id: string;
+export interface Usuario {
+  usuario_id: string;
   rut: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: "ADMIN" | "JEFE_BODEGA" | "TECNICO_TERRENO" | "CLIENTE_CONVENIO" | "CLIENTE_STANDARD";
-  is_active: boolean;
-  created_at: string;
+  correo: string;
+  nombre: string;
+  apellido: string;
+  rol: "ADMIN" | "JEFE_BODEGA" | "TECNICO_TERRENO" | "CLIENTE_CONVENIO" | "CLIENTE_ESTANDAR";
+  activo: boolean;
+  creado_en: string;
 }
 
-export interface Agreement {
-  agreement_id: string;
-  company_name: string;
+export interface Convenio {
+  convenio_id: string;
+  nombre_empresa: string;
   rut: string;
-  credit_limit: number;
-  used_credit: number;
-  is_active: boolean;
-  created_at: string;
+  limite_credito: number;
+  credito_usado: number;
+  activo: boolean;
+  creado_en: string;
 }
 
-export interface LoginResponse {
+export interface RespuestaIniciarSesion {
   access_token: string;
   token_type: string;
 }
 
 export const authService = {
-  login: async (credentials: any): Promise<LoginResponse> => {
-    return api.post<LoginResponse>("/auth/login", credentials);
+  login: async (credenciales: any): Promise<RespuestaIniciarSesion> => {
+    return api.post<RespuestaIniciarSesion>("/auth/iniciar-sesion", credenciales);
   },
 
-  register: async (userData: any): Promise<User> => {
-    return api.post<User>("/auth/register", userData);
+  register: async (datosUsuario: any): Promise<Usuario> => {
+    return api.post<Usuario>("/auth/registrar", datosUsuario);
   },
 
-  getMe: async (): Promise<User> => {
-    return api.get<User>("/users/me");
+  getMe: async (): Promise<Usuario> => {
+    return api.get<Usuario>("/usuarios/me");
   },
 
-  getUsers: async (): Promise<User[]> => {
-    return api.get<User[]>("/users");
+  getUsers: async (): Promise<Usuario[]> => {
+    return api.get<Usuario[]>("/usuarios");
   },
 
-  createProfile: async (userId: string, profileData: any): Promise<any> => {
-    return api.post(`/users/${userId}/profile`, profileData);
+  createProfile: async (usuarioId: string, datosPerfil: any): Promise<any> => {
+    return api.post(`/usuarios/${usuarioId}/perfil`, datosPerfil);
   },
 
-  // Agreements CRUD
-  createAgreement: async (agreementData: any): Promise<Agreement> => {
-    return api.post<Agreement>("/agreements", agreementData);
+  // Convenios CRUD
+  createAgreement: async (datosConvenio: any): Promise<Convenio> => {
+    return api.post<Convenio>("/convenios", datosConvenio);
   },
 
-  getAgreements: async (): Promise<Agreement[]> => {
-    return api.get<Agreement[]>("/agreements");
+  getAgreements: async (): Promise<Convenio[]> => {
+    return api.get<Convenio[]>("/convenios");
   }
 };

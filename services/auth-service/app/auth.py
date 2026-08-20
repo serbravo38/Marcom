@@ -8,7 +8,7 @@ from app.config import settings
 from app.db import get_db
 from app import crud, models, schemas
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/iniciar-sesion", auto_error=False)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -17,15 +17,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    # Cast user_id to string if it's a UUID object
-    if "user_id" in to_encode:
-        to_encode["user_id"] = str(to_encode["user_id"])
+    # Cast usuario_id to string if it's a UUID object
+    if "usuario_id" in to_encode:
+        to_encode["usuario_id"] = str(to_encode["usuario_id"])
         
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.Usuario:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudo validar las credenciales",
@@ -36,21 +36,21 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        user_id: str = payload.get("user_id")
-        if user_id is None:
+        usuario_id: str = payload.get("usuario_id")
+        if usuario_id is None:
             raise credentials_exception
-        token_data = schemas.TokenData(user_id=user_id)
+        token_data = schemas.DatosToken(usuario_id=usuario_id)
     except JWTError:
         raise credentials_exception
         
-    user = crud.get_user_by_id(db, user_id=token_data.user_id)
+    user = crud.obtener_usuario_por_id(db, usuario_id=token_data.usuario_id)
     if user is None:
         raise credentials_exception
     return user
 
-def require_role(roles: list[models.RoleEnum]):
-    def dependency(current_user: models.User = Depends(get_current_user)):
-        if current_user.role not in roles:
+def require_role(roles: list[models.RolUsuario]):
+    def dependency(current_user: models.Usuario = Depends(get_current_user)):
+        if current_user.rol not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permisos suficientes para realizar esta acción"

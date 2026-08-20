@@ -5,13 +5,46 @@ import {
   Loader2, 
   Shuffle 
 } from "lucide-react";
-import { 
-  inventoryService, 
-  type Location, 
-  type ProductCatalog, 
-  type Asset, 
-  type StockMovement 
-} from "../services/inventory";
+import { inventoryService } from "../services/inventory";
+
+type Location = {
+  ubicacion_id: string;
+  nombre: string;
+  direccion: string;
+  region: string;
+  es_bodega: boolean;
+};
+
+type ProductCatalog = {
+  producto_id: string;
+  sku: string;
+  nombre: string;
+  marca: string;
+  categoria: string;
+  pulgadas?: number | null;
+  descripcion?: string | null;
+};
+
+type Asset = {
+  activo_id: string;
+  producto_id: string;
+  numero_serie: string;
+  codigo_qr?: string | null;
+  estado_actual: string;
+  ubicacion_actual_id: string;
+  producto?: ProductCatalog | null;
+  ubicacion_actual?: Location | null;
+};
+
+type StockMovement = {
+  movimiento_id: string;
+  activo_id: string;
+  ubicacion_origen_id: string | null;
+  ubicacion_destino_id: string;
+  motivo: string;
+  creado_en: string;
+  activo?: Asset | null;
+};
 
 export const Inventory: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"locations" | "products" | "assets" | "movements">("assets");
@@ -72,7 +105,10 @@ export const Inventory: React.FC = () => {
       setLocations(locsData);
       setProducts(prodsData);
       setAssets(assetsData);
-      setMovements(movesData);
+      setMovements(movesData.map((movement) => ({
+        ...movement,
+        ubicacion_origen_id: movement.ubicacion_origen_id ?? null
+      })));
     } catch (err: any) {
       setError(err?.message || "Ocurrió un error al cargar datos de inventario.");
     } finally {
@@ -100,10 +136,10 @@ export const Inventory: React.FC = () => {
     setModalError(null);
     try {
       await inventoryService.createLocation({
-        name: locName,
-        address: locAddress,
+        nombre: locName,
+        direccion: locAddress,
         region: locRegion,
-        is_warehouse: locIsWarehouse
+        es_bodega: locIsWarehouse
       });
       closeModals();
       fetchData();
@@ -121,11 +157,11 @@ export const Inventory: React.FC = () => {
     try {
       await inventoryService.createProduct({
         sku: prodSku,
-        name: prodName,
-        brand: prodBrand,
-        category: prodCategory,
-        size_inches: prodSize ? Number(prodSize) : null,
-        description: prodDesc || null
+        nombre: prodName,
+        marca: prodBrand,
+        categoria: prodCategory,
+        pulgadas: prodSize ? Number(prodSize) : null,
+        descripcion: prodDesc || null
       });
       closeModals();
       fetchData();
@@ -142,11 +178,11 @@ export const Inventory: React.FC = () => {
     setModalError(null);
     try {
       await inventoryService.createAsset({
-        product_id: assetProductId,
-        serial_number: assetSerial,
-        qr_code: assetQrCode || null,
-        current_status: assetStatus,
-        current_location_id: assetLocationId
+        producto_id: assetProductId,
+        numero_serie: assetSerial,
+        codigo_qr: assetQrCode || null,
+        estado_actual: assetStatus,
+        ubicacion_actual_id: assetLocationId
       });
       closeModals();
       fetchData();
@@ -162,13 +198,13 @@ export const Inventory: React.FC = () => {
     setModalLoading(true);
     setModalError(null);
     try {
-      const selectedAsset = assets.find(a => a.asset_id === moveAssetId);
+      const selectedAsset = assets.find(a => a.activo_id === moveAssetId);
       await inventoryService.createMovement({
-        asset_id: moveAssetId,
-        origin_location_id: selectedAsset?.current_location_id || null,
-        destination_location_id: moveDestId,
-        moved_by_user_id: "00000000-0000-0000-0000-000000000000", // Will be overwritten by backend using JWT user ID
-        reason: moveReason
+        activo_id: moveAssetId,
+        ubicacion_origen_id: selectedAsset?.ubicacion_actual_id || null,
+        ubicacion_destino_id: moveDestId,
+        usuario_movimiento_id: "00000000-0000-0000-0000-000000000000", // Will be overwritten by backend using JWT user ID
+        motivo: moveReason
       });
       closeModals();
       fetchData();
@@ -252,18 +288,18 @@ export const Inventory: React.FC = () => {
                     </thead>
                     <tbody>
                       {assets.map((asset) => (
-                        <tr key={asset.asset_id}>
-                          <td style={{ fontWeight: 600 }}>{asset.product?.name} ({asset.product?.brand})</td>
-                          <td>{asset.serial_number}</td>
-                          <td><code>{asset.qr_code || "Sin QR"}</code></td>
-                          <td>{asset.current_location?.name}</td>
+                        <tr key={asset.activo_id}>
+                          <td style={{ fontWeight: 600 }}>{asset.producto?.nombre} ({asset.producto?.marca})</td>
+                          <td>{asset.numero_serie}</td>
+                          <td><code>{asset.codigo_qr || "Sin QR"}</code></td>
+                          <td>{asset.ubicacion_actual?.nombre}</td>
                           <td>
                             <span className={`badge ${
-                              asset.current_status === "NUEVO" ? "primary" : 
-                              asset.current_status === "USADO_BUEN_ESTADO" ? "success" : 
-                              asset.current_status === "DEFECTUOSO" ? "error" : "warning"
+                              asset.estado_actual === "NUEVO" ? "primary" : 
+                              asset.estado_actual === "USADO_BUEN_ESTADO" ? "success" : 
+                              asset.estado_actual === "DEFECTUOSO" ? "error" : "warning"
                             }`}>
-                              {asset.current_status}
+                              {asset.estado_actual}
                             </span>
                           </td>
                         </tr>
@@ -303,13 +339,13 @@ export const Inventory: React.FC = () => {
                     </thead>
                     <tbody>
                       {locations.map((loc) => (
-                        <tr key={loc.location_id}>
-                          <td style={{ fontWeight: 600 }}>{loc.name}</td>
-                          <td>{loc.address}</td>
+                        <tr key={loc.ubicacion_id}>
+                          <td style={{ fontWeight: 600 }}>{loc.nombre}</td>
+                          <td>{loc.direccion}</td>
                           <td>{loc.region}</td>
                           <td>
-                            <span className={`badge ${loc.is_warehouse ? "success" : "primary"}`}>
-                              {loc.is_warehouse ? "Bodega" : "Punto de Venta"}
+                            <span className={`badge ${loc.es_bodega ? "success" : "primary"}`}>
+                              {loc.es_bodega ? "Bodega" : "Punto de Venta"}
                             </span>
                           </td>
                         </tr>
@@ -350,12 +386,12 @@ export const Inventory: React.FC = () => {
                     </thead>
                     <tbody>
                       {products.map((prod) => (
-                        <tr key={prod.product_id}>
+                        <tr key={prod.producto_id}>
                           <td><code>{prod.sku}</code></td>
-                          <td style={{ fontWeight: 600 }}>{prod.name}</td>
-                          <td>{prod.brand}</td>
-                          <td>{prod.category}</td>
-                          <td>{prod.size_inches ? `${prod.size_inches}"` : "N/A"}</td>
+                          <td style={{ fontWeight: 600 }}>{prod.nombre}</td>
+                          <td>{prod.marca}</td>
+                          <td>{prod.categoria}</td>
+                          <td>{prod.pulgadas ? `${prod.pulgadas}"` : "N/A"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -394,17 +430,17 @@ export const Inventory: React.FC = () => {
                     </thead>
                     <tbody>
                       {movements.map((move) => {
-                        const originLoc = locations.find(l => l.location_id === move.origin_location_id);
-                        const destLoc = locations.find(l => l.location_id === move.destination_location_id);
+                        const originLoc = locations.find(l => l.ubicacion_id === move.ubicacion_origen_id);
+                        const destLoc = locations.find(l => l.ubicacion_id === move.ubicacion_destino_id);
                         return (
-                          <tr key={move.movement_id}>
+                          <tr key={move.movimiento_id}>
                             <td style={{ fontWeight: 600 }}>
-                              {move.asset?.product?.name} ({move.asset?.serial_number})
+                              {move.activo?.producto?.nombre} ({move.activo?.numero_serie})
                             </td>
-                            <td>{originLoc ? originLoc.name : "Inicial / Carga"}</td>
-                            <td>{destLoc ? destLoc.name : "N/A"}</td>
-                            <td>{move.reason}</td>
-                            <td>{new Date(move.created_at).toLocaleString()}</td>
+                            <td>{originLoc ? originLoc.nombre : "Inicial / Carga"}</td>
+                            <td>{destLoc ? destLoc.nombre : "N/A"}</td>
+                            <td>{move.motivo}</td>
+                            <td>{new Date(move.creado_en).toLocaleString()}</td>
                           </tr>
                         );
                       })}
@@ -510,7 +546,7 @@ export const Inventory: React.FC = () => {
                 <label>Producto en Catálogo</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetProductId} onChange={e=>setAssetProductId(e.target.value)} required>
                   <option value="">Selecciona un modelo...</option>
-                  {products.map(p=><option key={p.product_id} value={p.product_id}>{p.name} ({p.brand})</option>)}
+                  {products.map(p=><option key={p.producto_id} value={p.producto_id}>{p.nombre} ({p.marca})</option>)}
                 </select>
               </div>
               <div className="form-row">
@@ -527,7 +563,7 @@ export const Inventory: React.FC = () => {
                 <label>Ubicación Inicial</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetLocationId} onChange={e=>setAssetLocationId(e.target.value)} required>
                   <option value="">Selecciona ubicación...</option>
-                  {locations.map(l=><option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+                  {locations.map(l=><option key={l.ubicacion_id} value={l.ubicacion_id}>{l.nombre}</option>)}
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "25px" }}>
@@ -559,14 +595,14 @@ export const Inventory: React.FC = () => {
                 <label>Activo a Trasladar</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={moveAssetId} onChange={e=>setMoveAssetId(e.target.value)} required>
                   <option value="">Selecciona el activo (N° Serie)...</option>
-                  {assets.map(a=><option key={a.asset_id} value={a.asset_id}>{a.product?.name} - SN: {a.serial_number} (en {a.current_location?.name})</option>)}
+                  {assets.map(a=><option key={a.activo_id} value={a.activo_id}>{a.producto?.nombre} - SN: {a.numero_serie} (en {a.ubicacion_actual?.nombre})</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label>Bodega / Ubicación Destino</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={moveDestId} onChange={e=>setMoveDestId(e.target.value)} required>
                   <option value="">Selecciona destino...</option>
-                  {locations.map(l=><option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+                  {locations.map(l=><option key={l.ubicacion_id} value={l.ubicacion_id}>{l.nombre}</option>)}
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "25px" }}>

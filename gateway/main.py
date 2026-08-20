@@ -47,13 +47,13 @@ async def gateway_proxy(request: Request, path: str):
     # 1. Determine destination service based on route prefix
     target_service_url = None
     
-    if path.startswith("api/v1/auth") or path.startswith("api/v1/users") or path.startswith("api/v1/agreements"):
+    if path.startswith("api/v1/auth") or path.startswith("api/v1/usuarios") or path.startswith("api/v1/convenios"):
         target_service_url = settings.AUTH_SERVICE_URL
-    elif path.startswith("api/v1/locations") or path.startswith("api/v1/products") or path.startswith("api/v1/assets") or path.startswith("api/v1/movements"):
+    elif path.startswith("api/v1/ubicaciones") or path.startswith("api/v1/productos") or path.startswith("api/v1/activos") or path.startswith("api/v1/movimientos"):
         target_service_url = settings.INVENTORY_SERVICE_URL
-    elif path.startswith("api/v1/work-orders"):
+    elif path.startswith("api/v1/ordenes-trabajo"):
         target_service_url = settings.WORK_ORDER_SERVICE_URL
-    elif path.startswith("api/v1/orders") or path.startswith("api/v1/payments") or path.startswith("api/v1/dte-documents"):
+    elif path.startswith("api/v1/pedidos") or path.startswith("api/v1/pagos") or path.startswith("api/v1/documentos-dte"):
         target_service_url = settings.BILLING_SERVICE_URL
     
     if not target_service_url:

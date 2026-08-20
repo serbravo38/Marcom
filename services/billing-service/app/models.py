@@ -5,90 +5,90 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db import Base
 
-class PaymentMethodEnum(str, enum.Enum):
+class MetodoPagoEnum(str, enum.Enum):
     PASARELA_WEBPAY = "PASARELA_WEBPAY"
     PASARELA_MERCADOPAGO = "PASARELA_MERCADOPAGO"
     CREDITO_CONVENIO = "CREDITO_CONVENIO"
 
-class PaymentStatusEnum(str, enum.Enum):
+class EstadoPagoEnum(str, enum.Enum):
     PENDIENTE = "PENDIENTE"
     APROBADO = "APROBADO"
     RECHAZADO = "RECHAZADO"
     REEMBOLSADO = "REEMBOLSADO"
 
-class DTETypeEnum(str, enum.Enum):
+class TipoDTEEnum(str, enum.Enum):
     FACTURA_ELECTRONICA = "FACTURA_ELECTRONICA"
     GUIA_DESPACHO = "GUIA_DESPACHO"
     BOLETA_ELECTRONICA = "BOLETA_ELECTRONICA"
 
-class Order(Base):
-    __tablename__ = "orders"
-    __table_args__ = {"schema": "billing_schema"}
+class Pedido(Base):
+    __tablename__ = "pedidos"
+    __table_args__ = {"schema": "esquema_facturacion"}
 
-    order_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    user_id = Column(
+    pedido_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    usuario_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("auth_customer_schema.users.user_id"),
+        ForeignKey("esquema_auth_clientes.usuarios.usuario_id"),
         nullable=False
     )
-    total_amount = Column(Numeric(12, 2), nullable=False)
-    payment_method = Column(
-        Enum(PaymentMethodEnum, name="payment_method_enum", schema="billing_schema"),
+    monto_total = Column(Numeric(12, 2), nullable=False)
+    metodo_pago = Column(
+        Enum(MetodoPagoEnum, name="metodo_pago_enum", schema="esquema_facturacion"),
         nullable=False
     )
-    payment_status = Column(
-        Enum(PaymentStatusEnum, name="payment_status_enum", schema="billing_schema"),
+    estado_pago = Column(
+        Enum(EstadoPagoEnum, name="estado_pago_enum", schema="esquema_facturacion"),
         nullable=False,
-        default=PaymentStatusEnum.PENDIENTE,
+        default=EstadoPagoEnum.PENDIENTE,
         server_default="PENDIENTE"
     )
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
-    payments = relationship("Payment", back_populates="order")
-    dte_documents = relationship("DTEDocument", back_populates="order")
+    # Relaciones
+    pagos = relationship("Pago", back_populates="pedido")
+    documentos_dte = relationship("DocumentoDTE", back_populates="pedido")
 
-class Payment(Base):
-    __tablename__ = "payments"
-    __table_args__ = {"schema": "billing_schema"}
+class Pago(Base):
+    __tablename__ = "pagos"
+    __table_args__ = {"schema": "esquema_facturacion"}
 
-    payment_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    order_id = Column(
+    pago_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    pedido_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("billing_schema.orders.order_id"),
+        ForeignKey("esquema_facturacion.pedidos.pedido_id"),
         nullable=False
     )
-    gateway_transaction_id = Column(String(100), nullable=True)
-    amount = Column(Numeric(12, 2), nullable=False)
-    status = Column(
-        Enum(PaymentStatusEnum, name="payment_status_enum", schema="billing_schema"),
+    transaccion_pasarela_id = Column(String(100), nullable=True)
+    monto = Column(Numeric(12, 2), nullable=False)
+    estado = Column(
+        Enum(EstadoPagoEnum, name="estado_pago_enum", schema="esquema_facturacion"),
         nullable=False
     )
-    response_payload = Column(JSONB, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    payload_respuesta = Column(JSONB, nullable=True)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
-    order = relationship("Order", back_populates="payments")
+    # Relaciones
+    pedido = relationship("Pedido", back_populates="pagos")
 
-class DTEDocument(Base):
-    __tablename__ = "dte_documents"
-    __table_args__ = {"schema": "billing_schema"}
+class DocumentoDTE(Base):
+    __tablename__ = "documentos_dte"
+    __table_args__ = {"schema": "esquema_facturacion"}
 
     dte_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    order_id = Column(
+    pedido_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("billing_schema.orders.order_id"),
+        ForeignKey("esquema_facturacion.pedidos.pedido_id"),
         nullable=False
     )
-    dte_type = Column(
-        Enum(DTETypeEnum, name="dte_type_enum", schema="billing_schema"),
+    tipo_dte = Column(
+        Enum(TipoDTEEnum, name="tipo_dte_enum", schema="esquema_facturacion"),
         nullable=False
     )
-    sii_folio = Column(Integer, nullable=True)
-    pdf_url = Column(String, nullable=True)
-    xml_url = Column(String, nullable=True)
-    sii_status = Column(String(50), nullable=False, default="PENDIENTE", server_default="PENDIENTE")
-    issued_at = Column(DateTime(timezone=True), server_default=func.now())
+    folio_sii = Column(Integer, nullable=True)
+    url_pdf = Column(String, nullable=True)
+    url_xml = Column(String, nullable=True)
+    estado_sii = Column(String(50), nullable=False, default="PENDIENTE", server_default="PENDIENTE")
+    emitido_en = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
-    order = relationship("Order", back_populates="dte_documents")
+    # Relaciones
+    pedido = relationship("Pedido", back_populates="documentos_dte")

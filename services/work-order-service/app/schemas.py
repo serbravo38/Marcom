@@ -2,69 +2,69 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from app.models import OTStatusEnum
+from app.models import EstadoOTEnum
 
 # --- WORK ORDER ASSETS ---
-class WorkOrderAssetBase(BaseModel):
-    installed_asset_id: Optional[UUID] = None
-    removed_asset_id: Optional[UUID] = None
-    action_type: str = Field(..., max_length=50, description="e.g. INSTALACION_NUEVA, REEMPLAZO_POR_FALLA, RETIRO")
+class ActivoOrdenTrabajoBase(BaseModel):
+    activo_instalado_id: Optional[UUID] = None
+    activo_retirado_id: Optional[UUID] = None
+    tipo_accion: str = Field(..., max_length=50, description="ej. INSTALACION_NUEVA, REEMPLAZO_POR_FALLA, RETIRO")
 
-class WorkOrderAssetCreate(WorkOrderAssetBase):
+class ActivoOrdenTrabajoCrear(ActivoOrdenTrabajoBase):
     pass
 
-class WorkOrderAssetResponse(WorkOrderAssetBase):
-    wo_asset_id: UUID
-    work_order_id: UUID
+class ActivoOrdenTrabajoRespuesta(ActivoOrdenTrabajoBase):
+    activo_ot_id: UUID
+    orden_trabajo_id: UUID
 
     class Config:
         from_attributes = True
 
 # --- FIELD EVIDENCES ---
-class FieldEvidenceBase(BaseModel):
-    image_url: str
-    signature_url: Optional[str] = None
-    comments: Optional[str] = None
+class EvidenciaTerrenoBase(BaseModel):
+    url_imagen: str
+    url_firma: Optional[str] = None
+    comentarios: Optional[str] = None
 
-class FieldEvidenceCreate(FieldEvidenceBase):
+class EvidenciaTerrenoCrear(EvidenciaTerrenoBase):
     pass
 
-class FieldEvidenceResponse(FieldEvidenceBase):
-    evidence_id: UUID
-    work_order_id: UUID
-    captured_at: datetime
+class EvidenciaTerrenoRespuesta(EvidenciaTerrenoBase):
+    evidencia_id: UUID
+    orden_trabajo_id: UUID
+    fecha_captura: datetime
 
     class Config:
         from_attributes = True
 
 # --- WORK ORDERS ---
-class WorkOrderBase(BaseModel):
-    order_number: str = Field(..., max_length=20)
-    client_agreement_id: Optional[UUID] = None
-    location_id: UUID
-    assigned_technician_id: Optional[UUID] = None
-    status: OTStatusEnum = OTStatusEnum.PENDIENTE
-    scheduled_date: datetime
-    completion_date: Optional[datetime] = None
-    notes: Optional[str] = None
+class OrdenTrabajoBase(BaseModel):
+    numero_orden: str = Field(..., max_length=20)
+    convenio_cliente_id: Optional[UUID] = None
+    ubicacion_id: UUID
+    tecnico_asignado_id: Optional[UUID] = None
+    estado: EstadoOTEnum = EstadoOTEnum.PENDIENTE
+    fecha_programada: datetime
+    fecha_termino: Optional[datetime] = None
+    notas: Optional[str] = None
 
-class WorkOrderCreate(WorkOrderBase):
+class OrdenTrabajoCrear(OrdenTrabajoBase):
     pass
 
-class WorkOrderUpdate(BaseModel):
-    client_agreement_id: Optional[UUID] = None
-    location_id: Optional[UUID] = None
-    assigned_technician_id: Optional[UUID] = None
-    status: Optional[OTStatusEnum] = None
-    scheduled_date: Optional[datetime] = None
-    completion_date: Optional[datetime] = None
-    notes: Optional[str] = None
+class OrdenTrabajoActualizar(BaseModel):
+    convenio_cliente_id: Optional[UUID] = None
+    ubicacion_id: Optional[UUID] = None
+    tecnico_asignado_id: Optional[UUID] = None
+    estado: Optional[EstadoOTEnum] = None
+    fecha_programada: Optional[datetime] = None
+    fecha_termino: Optional[datetime] = None
+    notas: Optional[str] = None
 
-class WorkOrderResponse(WorkOrderBase):
-    work_order_id: UUID
-    created_at: datetime
-    assets: List[WorkOrderAssetResponse] = []
-    evidences: List[FieldEvidenceResponse] = []
+class OrdenTrabajoRespuesta(OrdenTrabajoBase):
+    orden_trabajo_id: UUID
+    creado_en: datetime
+    activos: List[ActivoOrdenTrabajoRespuesta] = []
+    evidencias: List[EvidenciaTerrenoRespuesta] = []
 
     class Config:
         from_attributes = True

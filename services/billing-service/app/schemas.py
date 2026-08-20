@@ -2,63 +2,63 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Any
 from datetime import datetime
 from uuid import UUID
-from app.models import PaymentMethodEnum, PaymentStatusEnum, DTETypeEnum
+from app.models import MetodoPagoEnum, EstadoPagoEnum, TipoDTEEnum
 
 # --- PAYMENTS ---
-class PaymentBase(BaseModel):
-    amount: float
-    gateway_transaction_id: Optional[str] = Field(None, max_length=100)
-    status: PaymentStatusEnum
-    response_payload: Optional[Any] = None
+class PagoBase(BaseModel):
+    monto: float
+    transaccion_pasarela_id: Optional[str] = Field(None, max_length=100)
+    estado: EstadoPagoEnum
+    payload_respuesta: Optional[Any] = None
 
-class PaymentCreate(PaymentBase):
-    order_id: UUID
+class PagoCrear(PagoBase):
+    pedido_id: UUID
 
-class PaymentResponse(PaymentBase):
-    payment_id: UUID
-    order_id: UUID
-    created_at: datetime
+class PagoRespuesta(PagoBase):
+    pago_id: UUID
+    pedido_id: UUID
+    creado_en: datetime
 
     class Config:
         from_attributes = True
 
 # --- DTE DOCUMENTS ---
-class DTEDocumentBase(BaseModel):
-    dte_type: DTETypeEnum
-    sii_folio: Optional[int] = None
-    pdf_url: Optional[str] = None
-    xml_url: Optional[str] = None
-    sii_status: str = "PENDIENTE"
+class DocumentoDTEBase(BaseModel):
+    tipo_dte: TipoDTEEnum
+    folio_sii: Optional[int] = None
+    url_pdf: Optional[str] = None
+    url_xml: Optional[str] = None
+    estado_sii: str = "PENDIENTE"
 
-class DTEDocumentCreate(DTEDocumentBase):
-    order_id: UUID
+class DocumentoDTECrear(DocumentoDTEBase):
+    pedido_id: UUID
 
-class DTEDocumentResponse(DTEDocumentBase):
+class DocumentoDTERespuesta(DocumentoDTEBase):
     dte_id: UUID
-    order_id: UUID
-    issued_at: datetime
+    pedido_id: UUID
+    emitido_en: datetime
 
     class Config:
         from_attributes = True
 
 # --- ORDERS ---
-class OrderBase(BaseModel):
-    user_id: UUID
-    total_amount: float
-    payment_method: PaymentMethodEnum
-    payment_status: PaymentStatusEnum = PaymentStatusEnum.PENDIENTE
+class PedidoBase(BaseModel):
+    usuario_id: UUID
+    monto_total: float
+    metodo_pago: MetodoPagoEnum
+    estado_pago: EstadoPagoEnum = EstadoPagoEnum.PENDIENTE
 
-class OrderCreate(OrderBase):
+class PedidoCrear(PedidoBase):
     pass
 
-class OrderUpdate(BaseModel):
-    payment_status: Optional[PaymentStatusEnum] = None
+class PedidoActualizar(BaseModel):
+    estado_pago: Optional[EstadoPagoEnum] = None
 
-class OrderResponse(OrderBase):
-    order_id: UUID
-    created_at: datetime
-    payments: List[PaymentResponse] = []
-    dte_documents: List[DTEDocumentResponse] = []
+class PedidoRespuesta(PedidoBase):
+    pedido_id: UUID
+    creado_en: datetime
+    pagos: List[PagoRespuesta] = []
+    documentos_dte: List[DocumentoDTERespuesta] = []
 
     class Config:
         from_attributes = True

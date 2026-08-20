@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Plus, X, Loader2, CreditCard, AlertCircle } from "lucide-react";
-import { authService, type Agreement } from "../services/auth";
+import { authService } from "../services/auth";
+
+type Agreement = {
+  convenio_id: string | number;
+  nombre_empresa: string;
+  rut: string;
+  limite_credito: number;
+  credito_usado: number;
+  activo: boolean;
+};
 
 export const Agreements: React.FC = () => {
   const [agreements, setAgreements] = useState<Agreement[]>([]);
@@ -39,11 +48,11 @@ export const Agreements: React.FC = () => {
 
     try {
       await authService.createAgreement({
-        company_name: companyName,
+        nombre_empresa: companyName,
         rut,
-        credit_limit: Number(creditLimit),
-        used_credit: 0,
-        is_active: true
+        limite_credito: Number(creditLimit),
+        credito_usado: 0,
+        activo: true
       });
       
       // Reset form and close modal
@@ -100,14 +109,14 @@ export const Agreements: React.FC = () => {
               </thead>
               <tbody>
                 {agreements.map((agreement) => (
-                  <tr key={agreement.agreement_id}>
-                    <td style={{ fontWeight: 600 }}>{agreement.company_name}</td>
+                  <tr key={agreement.convenio_id}>
+                    <td style={{ fontWeight: 600 }}>{agreement.nombre_empresa}</td>
                     <td>{agreement.rut}</td>
-                    <td>${agreement.credit_limit.toLocaleString('es-CL')}</td>
-                    <td>${agreement.used_credit.toLocaleString('es-CL')}</td>
+                    <td>${agreement.limite_credito.toLocaleString('es-CL')}</td>
+                    <td>${agreement.credito_usado.toLocaleString('es-CL')}</td>
                     <td>
-                      <span className={`badge ${agreement.is_active ? "success" : "error"}`}>
-                        {agreement.is_active ? "Activo" : "Inactivo"}
+                      <span className={`badge ${agreement.activo ? "success" : "error"}`}>
+                        {agreement.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
                   </tr>

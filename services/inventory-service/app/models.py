@@ -5,103 +5,103 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db import Base
 
-class AssetStatusEnum(str, enum.Enum):
+class EstadoActivoEnum(str, enum.Enum):
     NUEVO = "NUEVO"
     USADO_BUEN_ESTADO = "USADO_BUEN_ESTADO"
     DEFECTUOSO = "DEFECTUOSO"
     EN_TRANSITO = "EN_TRANSITO"
     DADO_DE_BAJA = "DADO_DE_BAJA"
 
-class Location(Base):
-    __tablename__ = "locations"
-    __table_args__ = {"schema": "inventory_schema"}
+class Ubicacion(Base):
+    __tablename__ = "ubicaciones"
+    __table_args__ = {"schema": "esquema_inventario"}
 
-    location_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    name = Column(String(100), nullable=False)
-    address = Column(String, nullable=False)
+    ubicacion_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    nombre = Column(String(100), nullable=False)
+    direccion = Column(String, nullable=False)
     region = Column(String(100), nullable=False)
-    is_warehouse = Column(Boolean, nullable=False, default=False, server_default="false")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    es_bodega = Column(Boolean, nullable=False, default=False, server_default="false")
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
-    assets = relationship("Asset", back_populates="current_location")
+    # Relaciones
+    activos = relationship("Activo", back_populates="ubicacion_actual")
 
-class ProductCatalog(Base):
-    __tablename__ = "product_catalog"
-    __table_args__ = {"schema": "inventory_schema"}
+class CatalogoProductos(Base):
+    __tablename__ = "catalogo_productos"
+    __table_args__ = {"schema": "esquema_inventario"}
 
-    product_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    producto_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     sku = Column(String(50), unique=True, nullable=False)
-    name = Column(String(150), nullable=False)
-    brand = Column(String(100), nullable=False)
-    category = Column(String(100), nullable=False)
-    size_inches = Column(Numeric(5, 2), nullable=True)
-    description = Column(String, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    nombre = Column(String(150), nullable=False)
+    marca = Column(String(100), nullable=False)
+    categoria = Column(String(100), nullable=False)
+    pulgadas = Column(Numeric(5, 2), nullable=True)
+    descripcion = Column(String, nullable=True)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
-    assets = relationship("Asset", back_populates="product")
+    # Relaciones
+    activos = relationship("Activo", back_populates="producto")
 
-class Asset(Base):
-    __tablename__ = "assets"
-    __table_args__ = {"schema": "inventory_schema"}
+class Activo(Base):
+    __tablename__ = "activos"
+    __table_args__ = {"schema": "esquema_inventario"}
 
-    asset_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    product_id = Column(
+    activo_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    producto_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventory_schema.product_catalog.product_id"),
+        ForeignKey("esquema_inventario.catalogo_productos.producto_id"),
         nullable=False
     )
-    serial_number = Column(String(100), unique=True, nullable=False)
-    qr_code = Column(String(255), unique=True, nullable=True)
-    current_status = Column(
-        Enum(AssetStatusEnum, name="asset_status", schema="inventory_schema"),
+    numero_serie = Column(String(100), unique=True, nullable=False)
+    codigo_qr = Column(String(255), unique=True, nullable=True)
+    estado_actual = Column(
+        Enum(EstadoActivoEnum, name="estado_activo_enum", schema="esquema_inventario"),
         nullable=False,
-        default=AssetStatusEnum.NUEVO,
+        default=EstadoActivoEnum.NUEVO,
         server_default="NUEVO"
     )
-    current_location_id = Column(
+    ubicacion_actual_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventory_schema.locations.location_id"),
+        ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
         nullable=False
     )
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    actualizado_en = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relationships
-    product = relationship("ProductCatalog", back_populates="assets")
-    current_location = relationship("Location", back_populates="assets")
-    movements = relationship("StockMovement", back_populates="asset")
+    # Relaciones
+    producto = relationship("CatalogoProductos", back_populates="activos")
+    ubicacion_actual = relationship("Ubicacion", back_populates="activos")
+    movimientos = relationship("MovimientoStock", back_populates="activo")
 
-class StockMovement(Base):
-    __tablename__ = "stock_movements"
-    __table_args__ = {"schema": "inventory_schema"}
+class MovimientoStock(Base):
+    __tablename__ = "movimientos_stock"
+    __table_args__ = {"schema": "esquema_inventario"}
 
-    movement_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    asset_id = Column(
+    movimiento_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    activo_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventory_schema.assets.asset_id"),
+        ForeignKey("esquema_inventario.activos.activo_id"),
         nullable=False
     )
-    origin_location_id = Column(
+    ubicacion_origen_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventory_schema.locations.location_id"),
+        ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
         nullable=True
     )
-    destination_location_id = Column(
+    ubicacion_destino_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventory_schema.locations.location_id"),
+        ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
         nullable=False
     )
-    moved_by_user_id = Column(
+    usuario_movimiento_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("auth_customer_schema.users.user_id"),
+        ForeignKey("esquema_auth_clientes.usuarios.usuario_id"),
         nullable=False
     )
-    reason = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    motivo = Column(String, nullable=False)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
-    asset = relationship("Asset", back_populates="movements")
-    origin_location = relationship("Location", foreign_keys=[origin_location_id])
-    destination_location = relationship("Location", foreign_keys=[destination_location_id])
+    # Relaciones
+    activo = relationship("Activo", back_populates="movimientos")
+    ubicacion_origen = relationship("Ubicacion", foreign_keys=[ubicacion_origen_id])
+    ubicacion_destino = relationship("Ubicacion", foreign_keys=[ubicacion_destino_id])

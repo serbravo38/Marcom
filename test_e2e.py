@@ -25,29 +25,29 @@ def run_tests():
     admin_email = f"admin_{int(time.time())}@marcom.cl"
     register_payload = {
         "rut": f"12.345.678-{int(time.time()) % 10}",
-        "email": admin_email,
-        "password": "supersecurepassword",
-        "first_name": "Admin",
-        "last_name": "Test",
-        "role": "ADMIN",
-        "is_active": True
+        "correo": admin_email,
+        "clave": "supersecurepassword",
+        "nombre": "Admin",
+        "apellido": "Test",
+        "rol": "ADMIN",
+        "activo": True
     }
     
     print(f"\n1. Registrando nuevo administrador ({admin_email})...")
-    response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/register", json=register_payload)
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/registrar", json=register_payload)
     if response.status_code != 201:
         print(f"❌ Error al registrar usuario: {response.status_code} - {response.text}")
         sys.exit(1)
-    user_id = response.json()["user_id"]
-    print(f"✅ Usuario registrado correctamente. ID: {user_id}")
+    usuario_id = response.json()["usuario_id"]
+    print(f"✅ Usuario registrado correctamente. ID: {usuario_id}")
 
     # 3. Login
     print("\n2. Iniciando sesión para obtener token JWT...")
     login_payload = {
-        "email": admin_email,
-        "password": "supersecurepassword"
+        "correo": admin_email,
+        "clave": "supersecurepassword"
     }
-    response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/login", json=login_payload)
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/iniciar-sesion", json=login_payload)
     if response.status_code != 200:
         print(f"❌ Error al iniciar sesión: {response.status_code} - {response.text}")
         sys.exit(1)
@@ -57,60 +57,60 @@ def run_tests():
     print("✅ Autenticación exitosa. Token JWT obtenido.")
 
     # 4. Obtener perfil
-    print("\n3. Obteniendo datos de mi perfil (/users/me)...")
-    response = httpx.get(f"{GATEWAY_URL}/api/v1/users/me", headers=headers)
+    print("\n3. Obteniendo datos de mi perfil (/usuarios/me)...")
+    response = httpx.get(f"{GATEWAY_URL}/api/v1/usuarios/me", headers=headers)
     if response.status_code != 200:
         print(f"❌ Error al obtener perfil: {response.status_code} - {response.text}")
         sys.exit(1)
-    print(f"✅ Perfil cargado. Nombre: {response.json()['first_name']} {response.json()['last_name']}")
+    print(f"✅ Perfil cargado. Nombre: {response.json()['nombre']} {response.json()['apellido']}")
 
     # 5. Crear un Convenio (Auth Service)
     print("\n4. Creando convenio (enrutando a Auth Service)...")
     agreement_payload = {
-        "company_name": "Copec S.A.",
+        "nombre_empresa": "Copec S.A.",
         "rut": f"99.888.777-{int(time.time()) % 10}",
-        "credit_limit": 75000.00,
-        "used_credit": 0.00,
-        "is_active": True
+        "limite_credito": 75000.00,
+        "credito_usado": 0.00,
+        "activo": True
     }
-    response = httpx.post(f"{GATEWAY_URL}/api/v1/agreements", json=agreement_payload, headers=headers)
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/convenios", json=agreement_payload, headers=headers)
     if response.status_code != 201:
         print(f"❌ Error al crear convenio: {response.status_code} - {response.text}")
         sys.exit(1)
-    agreement_id = response.json()["agreement_id"]
-    print(f"✅ Convenio creado. ID: {agreement_id}")
+    convenio_id = response.json()["convenio_id"]
+    print(f"✅ Convenio creado. ID: {convenio_id}")
 
     # 6. Crear una Ubicación (Inventory Service)
     print("\n5. Creando ubicación en bodega (enrutando a Inventory Service)...")
     location_payload = {
-        "name": "Bodega Central Pudahuel",
-        "address": "Av. Américo Vespucio 1500",
+        "nombre": "Bodega Central Pudahuel",
+        "direccion": "Av. Américo Vespucio 1500",
         "region": "Región Metropolitana",
-        "is_warehouse": True
+        "es_bodega": True
     }
-    response = httpx.post(f"{GATEWAY_URL}/api/v1/locations", json=location_payload, headers=headers)
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/ubicaciones", json=location_payload, headers=headers)
     if response.status_code != 201:
         print(f"❌ Error al crear ubicación: {response.status_code} - {response.text}")
         sys.exit(1)
-    location_id = response.json()["location_id"]
-    print(f"✅ Ubicación creada. ID: {location_id}")
+    ubicacion_id = response.json()["ubicacion_id"]
+    print(f"✅ Ubicación creada. ID: {ubicacion_id}")
 
     # 7. Crear un Producto en Catálogo (Inventory Service)
     print("\n6. Registrando producto en catálogo (enrutando a Inventory Service)...")
     product_payload = {
         "sku": f"PROD-{int(time.time())}",
-        "name": "Monitor Profesional 65 pulgadas",
-        "brand": "Samsung",
-        "category": "Monitores",
-        "size_inches": 65.00,
-        "description": "Monitor para sala de control"
+        "nombre": "Monitor Profesional 65 pulgadas",
+        "marca": "Samsung",
+        "categoria": "Monitores",
+        "pulgadas": 65.00,
+        "descripcion": "Monitor para sala de control"
     }
-    response = httpx.post(f"{GATEWAY_URL}/api/v1/products", json=product_payload, headers=headers)
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/productos", json=product_payload, headers=headers)
     if response.status_code != 201:
         print(f"❌ Error al crear producto: {response.status_code} - {response.text}")
         sys.exit(1)
-    product_id = response.json()["product_id"]
-    print(f"✅ Producto registrado en catálogo. ID: {product_id}")
+    producto_id = response.json()["producto_id"]
+    print(f"✅ Producto registrado en catálogo. ID: {producto_id}")
 
     print("\n====================================================")
     print("🎉 ¡TODAS LAS PRUEBAS DE INTEGRACIÓN PASARON CON ÉXITO!")

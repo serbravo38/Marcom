@@ -3,18 +3,18 @@ from app import models, schemas
 from uuid import UUID
 
 # --- LOCATION CRUD ---
-def get_location_by_id(db: Session, location_id: UUID):
-    return db.query(models.Location).filter(models.Location.location_id == location_id).first()
+def obtener_ubicacion_por_id(db: Session, ubicacion_id: UUID):
+    return db.query(models.Ubicacion).filter(models.Ubicacion.ubicacion_id == ubicacion_id).first()
 
-def get_locations(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Location).offset(skip).limit(limit).all()
+def obtener_ubicaciones(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Ubicacion).offset(skip).limit(limit).all()
 
-def create_location(db: Session, location_in: schemas.LocationCreate):
-    db_location = models.Location(
-        name=location_in.name,
-        address=location_in.address,
+def crear_ubicacion(db: Session, location_in: schemas.UbicacionCrear):
+    db_location = models.Ubicacion(
+        nombre=location_in.nombre,
+        direccion=location_in.direccion,
         region=location_in.region,
-        is_warehouse=location_in.is_warehouse
+        es_bodega=location_in.es_bodega
     )
     db.add(db_location)
     db.commit()
@@ -22,23 +22,23 @@ def create_location(db: Session, location_in: schemas.LocationCreate):
     return db_location
 
 # --- PRODUCT CATALOG CRUD ---
-def get_product_by_id(db: Session, product_id: UUID):
-    return db.query(models.ProductCatalog).filter(models.ProductCatalog.product_id == product_id).first()
+def obtener_producto_por_id(db: Session, producto_id: UUID):
+    return db.query(models.CatalogoProductos).filter(models.CatalogoProductos.producto_id == producto_id).first()
 
-def get_product_by_sku(db: Session, sku: str):
-    return db.query(models.ProductCatalog).filter(models.ProductCatalog.sku == sku).first()
+def obtener_producto_por_sku(db: Session, sku: str):
+    return db.query(models.CatalogoProductos).filter(models.CatalogoProductos.sku == sku).first()
 
-def get_products(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.ProductCatalog).offset(skip).limit(limit).all()
+def obtener_productos(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.CatalogoProductos).offset(skip).limit(limit).all()
 
-def create_product(db: Session, product_in: schemas.ProductCatalogCreate):
-    db_product = models.ProductCatalog(
+def crear_producto(db: Session, product_in: schemas.CatalogoProductosCrear):
+    db_product = models.CatalogoProductos(
         sku=product_in.sku,
-        name=product_in.name,
-        brand=product_in.brand,
-        category=product_in.category,
-        size_inches=product_in.size_inches,
-        description=product_in.description
+        nombre=product_in.nombre,
+        marca=product_in.marca,
+        categoria=product_in.categoria,
+        pulgadas=product_in.pulgadas,
+        descripcion=product_in.descripcion
     )
     db.add(db_product)
     db.commit()
@@ -46,29 +46,29 @@ def create_product(db: Session, product_in: schemas.ProductCatalogCreate):
     return db_product
 
 # --- ASSET CRUD ---
-def get_asset_by_id(db: Session, asset_id: UUID):
-    return db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
+def obtener_activo_por_id(db: Session, activo_id: UUID):
+    return db.query(models.Activo).filter(models.Activo.activo_id == activo_id).first()
 
-def get_asset_by_serial(db: Session, serial_number: str):
-    return db.query(models.Asset).filter(models.Asset.serial_number == serial_number).first()
+def obtener_activo_por_serie(db: Session, numero_serie: str):
+    return db.query(models.Activo).filter(models.Activo.numero_serie == numero_serie).first()
 
-def get_assets(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Asset).offset(skip).limit(limit).all()
+def obtener_activos(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Activo).offset(skip).limit(limit).all()
 
-def create_asset(db: Session, asset_in: schemas.AssetCreate):
-    db_asset = models.Asset(
-        product_id=asset_in.product_id,
-        serial_number=asset_in.serial_number,
-        qr_code=asset_in.qr_code,
-        current_status=asset_in.current_status,
-        current_location_id=asset_in.current_location_id
+def crear_activo(db: Session, asset_in: schemas.ActivoCrear):
+    db_asset = models.Activo(
+        producto_id=asset_in.producto_id,
+        numero_serie=asset_in.numero_serie,
+        codigo_qr=asset_in.codigo_qr,
+        estado_actual=asset_in.estado_actual,
+        ubicacion_actual_id=asset_in.ubicacion_actual_id
     )
     db.add(db_asset)
     db.commit()
     db.refresh(db_asset)
     return db_asset
 
-def update_asset(db: Session, db_asset: models.Asset, asset_update: schemas.AssetUpdate):
+def actualizar_activo(db: Session, db_asset: models.Activo, asset_update: schemas.ActivoActualizar):
     update_data = asset_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_asset, key, value)
@@ -77,27 +77,27 @@ def update_asset(db: Session, db_asset: models.Asset, asset_update: schemas.Asse
     return db_asset
 
 # --- STOCK MOVEMENT CRUD ---
-def get_movements_by_asset(db: Session, asset_id: UUID):
-    return db.query(models.StockMovement).filter(models.StockMovement.asset_id == asset_id).all()
+def obtener_movimientos_por_activo(db: Session, activo_id: UUID):
+    return db.query(models.MovimientoStock).filter(models.MovimientoStock.activo_id == activo_id).all()
 
-def get_movements(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.StockMovement).offset(skip).limit(limit).all()
+def obtener_movimientos(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.MovimientoStock).offset(skip).limit(limit).all()
 
-def create_stock_movement(db: Session, movement_in: schemas.StockMovementCreate):
+def crear_movimiento_stock(db: Session, movement_in: schemas.MovimientoStockCrear):
     # 1. Create the stock movement record
-    db_movement = models.StockMovement(
-        asset_id=movement_in.asset_id,
-        origin_location_id=movement_in.origin_location_id,
-        destination_location_id=movement_in.destination_location_id,
-        moved_by_user_id=movement_in.moved_by_user_id,
-        reason=movement_in.reason
+    db_movement = models.MovimientoStock(
+        activo_id=movement_in.activo_id,
+        ubicacion_origen_id=movement_in.ubicacion_origen_id,
+        ubicacion_destino_id=movement_in.ubicacion_destino_id,
+        usuario_movimiento_id=movement_in.usuario_movimiento_id,
+        motivo=movement_in.motivo
     )
     db.add(db_movement)
     
     # 2. Update the asset's current location automatically
-    db_asset = get_asset_by_id(db, movement_in.asset_id)
+    db_asset = obtener_activo_por_id(db, movement_in.activo_id)
     if db_asset:
-        db_asset.current_location_id = movement_in.destination_location_id
+        db_asset.ubicacion_actual_id = movement_in.ubicacion_destino_id
         
     db.commit()
     db.refresh(db_movement)

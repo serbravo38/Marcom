@@ -17,7 +17,7 @@ export const Login: React.FC = () => {
 
     try {
       // 1. Get access token
-      const authData = await authService.login({ email, password });
+      const authData = await authService.login({ correo: email, clave: password });
       localStorage.setItem("marcom_token", authData.access_token);
 
       // 2. Fetch and store user profile

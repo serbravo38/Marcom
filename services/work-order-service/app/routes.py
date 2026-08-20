@@ -7,50 +7,50 @@ from app import crud, schemas, auth
 
 router = APIRouter()
 
-# --- WORK ORDERS ---
+# --- ORDENES TRABAJO ---
 
-@router.post("/work-orders", response_model=schemas.WorkOrderResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/ordenes-trabajo", response_model=schemas.OrdenTrabajoRespuesta, status_code=status.HTTP_201_CREATED)
 def create_work_order(
-    work_order_in: schemas.WorkOrderCreate,
+    work_order_in: schemas.OrdenTrabajoCrear,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
 ):
-    db_wo = crud.get_work_order_by_number(db, order_number=work_order_in.order_number)
+    db_wo = crud.obtener_orden_trabajo_por_numero(db, numero_orden=work_order_in.numero_orden)
     if db_wo:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ya existe una orden de trabajo con este número de orden."
         )
-    return crud.create_work_order(db, work_order_in)
+    return crud.crear_orden_trabajo(db, work_order_in)
 
-@router.get("/work-orders", response_model=List[schemas.WorkOrderResponse])
+@router.get("/ordenes-trabajo", response_model=List[schemas.OrdenTrabajoRespuesta])
 def get_work_orders(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    return crud.get_work_orders(db, skip, limit)
+    return crud.obtener_ordenes_trabajo(db, skip, limit)
 
-@router.get("/work-orders/{work_order_id}", response_model=schemas.WorkOrderResponse)
+@router.get("/ordenes-trabajo/{orden_trabajo_id}", response_model=schemas.OrdenTrabajoRespuesta)
 def get_work_order(
-    work_order_id: UUID,
+    orden_trabajo_id: UUID,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    db_wo = crud.get_work_order_by_id(db, work_order_id=work_order_id)
+    db_wo = crud.obtener_orden_trabajo_por_id(db, orden_trabajo_id=orden_trabajo_id)
     if not db_wo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden de trabajo no encontrada.")
     return db_wo
 
-@router.patch("/work-orders/{work_order_id}", response_model=schemas.WorkOrderResponse)
+@router.patch("/ordenes-trabajo/{orden_trabajo_id}", response_model=schemas.OrdenTrabajoRespuesta)
 def update_work_order(
-    work_order_id: UUID,
-    work_order_update: schemas.WorkOrderUpdate,
+    orden_trabajo_id: UUID,
+    work_order_update: schemas.OrdenTrabajoActualizar,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    db_wo = crud.get_work_order_by_id(db, work_order_id=work_order_id)
+    db_wo = crud.obtener_orden_trabajo_por_id(db, orden_trabajo_id=orden_trabajo_id)
     if not db_wo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden de trabajo no encontrada.")
         
@@ -62,36 +62,36 @@ def update_work_order(
             detail="No tienes permisos para modificar órdenes de trabajo."
         )
         
-    return crud.update_work_order(db, db_wo, work_order_update)
+    return crud.actualizar_orden_trabajo(db, db_wo, work_order_update)
 
 
-# --- WORK ORDER ASSETS ---
+# --- ACTIVO ORDEN TRABAJO ---
 
-@router.post("/work-orders/{work_order_id}/assets", response_model=schemas.WorkOrderAssetResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/ordenes-trabajo/{orden_trabajo_id}/activos", response_model=schemas.ActivoOrdenTrabajoRespuesta, status_code=status.HTTP_201_CREATED)
 def add_work_order_asset(
-    work_order_id: UUID,
-    asset_in: schemas.WorkOrderAssetCreate,
+    orden_trabajo_id: UUID,
+    asset_in: schemas.ActivoOrdenTrabajoCrear,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO"]))
 ):
-    db_wo = crud.get_work_order_by_id(db, work_order_id=work_order_id)
+    db_wo = crud.obtener_orden_trabajo_por_id(db, orden_trabajo_id=orden_trabajo_id)
     if not db_wo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden de trabajo no encontrada.")
         
-    return crud.create_work_order_asset(db, work_order_id, asset_in)
+    return crud.crear_activo_orden_trabajo(db, orden_trabajo_id, asset_in)
 
 
-# --- FIELD EVIDENCES ---
+# --- EVIDENCIAS ---
 
-@router.post("/work-orders/{work_order_id}/evidences", response_model=schemas.FieldEvidenceResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/ordenes-trabajo/{orden_trabajo_id}/evidencias", response_model=schemas.EvidenciaTerrenoRespuesta, status_code=status.HTTP_201_CREATED)
 def upload_field_evidence(
-    work_order_id: UUID,
-    evidence_in: schemas.FieldEvidenceCreate,
+    orden_trabajo_id: UUID,
+    evidence_in: schemas.EvidenciaTerrenoCrear,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "TECNICO_TERRENO"]))
 ):
-    db_wo = crud.get_work_order_by_id(db, work_order_id=work_order_id)
+    db_wo = crud.obtener_orden_trabajo_por_id(db, orden_trabajo_id=orden_trabajo_id)
     if not db_wo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden de trabajo no encontrada.")
         
-    return crud.create_field_evidence(db, work_order_id, evidence_in)
+    return crud.crear_evidencia_terreno(db, orden_trabajo_id, evidence_in)

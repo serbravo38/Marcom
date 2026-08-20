@@ -1,4 +1,4 @@
-# Proyecto APT / MARCOM
+# Proyecto MARCOM
 
 Este es un sistema modular basado en una arquitectura de microservicios utilizando **FastAPI** para los servicios backend, **Docker Compose** para la persistencia de datos centralizada con **PostgreSQL**, y un **API Gateway** como punto de entrada único.
 

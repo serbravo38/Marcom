@@ -1,85 +1,85 @@
 import { api } from "./api";
 
-export interface Location {
-  location_id: string;
-  name: string;
-  address: string;
+export interface Ubicacion {
+  ubicacion_id: string;
+  nombre: string;
+  direccion: string;
   region: string;
-  is_warehouse: boolean;
-  created_at: string;
+  es_bodega: boolean;
+  creado_en: string;
 }
 
-export interface ProductCatalog {
-  product_id: string;
+export interface CatalogoProductos {
+  producto_id: string;
   sku: string;
-  name: string;
-  brand: string;
-  category: string;
-  size_inches?: number;
-  description?: string;
-  created_at: string;
+  nombre: string;
+  marca: string;
+  categoria: string;
+  pulgadas?: number;
+  descripcion?: string;
+  creado_en: string;
 }
 
-export interface Asset {
-  asset_id: string;
-  product_id: string;
-  serial_number: string;
-  qr_code?: string;
-  current_status: "NUEVO" | "USADO_BUEN_ESTADO" | "DEFECTUOSO" | "EN_TRANSITO" | "DADO_DE_BAJA";
-  current_location_id: string;
-  created_at: string;
-  updated_at: string;
-  product?: ProductCatalog;
-  current_location?: Location;
+export interface Activo {
+  activo_id: string;
+  producto_id: string;
+  numero_serie: string;
+  codigo_qr?: string;
+  estado_actual: "NUEVO" | "USADO_BUEN_ESTADO" | "DEFECTUOSO" | "EN_TRANSITO" | "DADO_DE_BAJA";
+  ubicacion_actual_id: string;
+  creado_en: string;
+  actualizado_en: string;
+  producto?: CatalogoProductos;
+  ubicacion_actual?: Ubicacion;
 }
 
-export interface StockMovement {
-  movement_id: string;
-  asset_id: string;
-  origin_location_id?: string;
-  destination_location_id: string;
-  moved_by_user_id: string;
-  reason: string;
-  created_at: string;
-  asset?: Asset;
+export interface MovimientoStock {
+  movimiento_id: string;
+  activo_id: string;
+  ubicacion_origen_id?: string;
+  ubicacion_destino_id: string;
+  usuario_movimiento_id: string;
+  motivo: string;
+  creado_en: string;
+  activo?: Activo;
 }
 
 export const inventoryService = {
-  // Locations
-  getLocations: async (): Promise<Location[]> => {
-    return api.get<Location[]>("/locations");
+  // Ubicaciones
+  getLocations: async (): Promise<Ubicacion[]> => {
+    return api.get<Ubicacion[]>("/ubicaciones");
   },
-  createLocation: async (data: any): Promise<Location> => {
-    return api.post<Location>("/locations", data);
-  },
-
-  // Products Catalog
-  getProducts: async (): Promise<ProductCatalog[]> => {
-    return api.get<ProductCatalog[]>("/products");
-  },
-  createProduct: async (data: any): Promise<ProductCatalog> => {
-    return api.post<ProductCatalog>("/products", data);
+  createLocation: async (data: any): Promise<Ubicacion> => {
+    return api.post<Ubicacion>("/ubicaciones", data);
   },
 
-  // Assets
-  getAssets: async (): Promise<Asset[]> => {
-    return api.get<Asset[]>("/assets");
+  // Catálogo de Productos
+  getProducts: async (): Promise<CatalogoProductos[]> => {
+    return api.get<CatalogoProductos[]>("/productos");
   },
-  getAssetDetails: async (assetId: string): Promise<Asset> => {
-    return api.get<Asset>(`/assets/${assetId}`);
-  },
-  createAsset: async (data: any): Promise<Asset> => {
-    return api.post<Asset>("/assets", data);
-  },
-  updateAsset: async (assetId: string, data: any): Promise<Asset> => {
-    return api.patch<Asset>(`/assets/${assetId}`, data);
+  createProduct: async (data: any): Promise<CatalogoProductos> => {
+    return api.post<CatalogoProductos>("/productos", data);
   },
 
-  // Stock Movements
-  getMovements: async (): Promise<StockMovement[]> => {
-    return api.get<StockMovement[]>("/movements");
+  // Activos
+  getAssets: async (): Promise<Activo[]> => {
+    return api.get<Activo[]>("/activos");
   },
-  createMovement: async (data: any): Promise<StockMovement> => {
-    return api.post<StockMovement>("/movements", data);
+  getAssetDetails: async (activoId: string): Promise<Activo> => {
+    return api.get<Activo>(`/activos/${activoId}`);
+  },
+  createAsset: async (data: any): Promise<Activo> => {
+    return api.post<Activo>("/activos", data);
+  },
+  updateAsset: async (activoId: string, data: any): Promise<Activo> => {
+    return api.patch<Activo>(`/activos/${activoId}`, data);
+  },
+
+  // Movimientos de Stock
+  getMovements: async (): Promise<MovimientoStock[]> => {
+    return api.get<MovimientoStock[]>("/movimientos");
+  },
+  createMovement: async (data: any): Promise<MovimientoStock> => {
+    return api.post<MovimientoStock>("/movimientos", data);
   }
 };

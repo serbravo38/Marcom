@@ -2,85 +2,85 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from app.models import AssetStatusEnum
+from app.models import EstadoActivoEnum
 
 # --- LOCATION SCHEMAS ---
-class LocationBase(BaseModel):
-    name: str = Field(..., max_length=100)
-    address: str
+class UbicacionBase(BaseModel):
+    nombre: str = Field(..., max_length=100)
+    direccion: str
     region: str = Field(..., max_length=100)
-    is_warehouse: bool = False
+    es_bodega: bool = False
 
-class LocationCreate(LocationBase):
+class UbicacionCrear(UbicacionBase):
     pass
 
-class LocationResponse(LocationBase):
-    location_id: UUID
-    created_at: datetime
+class UbicacionRespuesta(UbicacionBase):
+    ubicacion_id: UUID
+    creado_en: datetime
 
     class Config:
         from_attributes = True
 
 # --- PRODUCT CATALOG SCHEMAS ---
-class ProductCatalogBase(BaseModel):
+class CatalogoProductosBase(BaseModel):
     sku: str = Field(..., max_length=50)
-    name: str = Field(..., max_length=150)
-    brand: str = Field(..., max_length=100)
-    category: str = Field(..., max_length=100)
-    size_inches: Optional[float] = None
-    description: Optional[str] = None
+    nombre: str = Field(..., max_length=150)
+    marca: str = Field(..., max_length=100)
+    categoria: str = Field(..., max_length=100)
+    pulgadas: Optional[float] = None
+    descripcion: Optional[str] = None
 
-class ProductCatalogCreate(ProductCatalogBase):
+class CatalogoProductosCrear(CatalogoProductosBase):
     pass
 
-class ProductCatalogResponse(ProductCatalogBase):
-    product_id: UUID
-    created_at: datetime
+class CatalogoProductosRespuesta(CatalogoProductosBase):
+    producto_id: UUID
+    creado_en: datetime
 
     class Config:
         from_attributes = True
 
 # --- ASSET SCHEMAS ---
-class AssetBase(BaseModel):
-    product_id: UUID
-    serial_number: str = Field(..., max_length=100)
-    qr_code: Optional[str] = Field(None, max_length=255)
-    current_status: AssetStatusEnum = AssetStatusEnum.NUEVO
-    current_location_id: UUID
+class ActivoBase(BaseModel):
+    producto_id: UUID
+    numero_serie: str = Field(..., max_length=100)
+    codigo_qr: Optional[str] = Field(None, max_length=255)
+    estado_actual: EstadoActivoEnum = EstadoActivoEnum.NUEVO
+    ubicacion_actual_id: UUID
 
-class AssetCreate(AssetBase):
+class ActivoCrear(ActivoBase):
     pass
 
-class AssetUpdate(BaseModel):
-    current_status: Optional[AssetStatusEnum] = None
-    current_location_id: Optional[UUID] = None
-    qr_code: Optional[str] = None
+class ActivoActualizar(BaseModel):
+    estado_actual: Optional[EstadoActivoEnum] = None
+    ubicacion_actual_id: Optional[UUID] = None
+    codigo_qr: Optional[str] = None
 
-class AssetResponse(AssetBase):
-    asset_id: UUID
-    created_at: datetime
-    updated_at: datetime
-    product: Optional[ProductCatalogResponse] = None
-    current_location: Optional[LocationResponse] = None
+class ActivoRespuesta(ActivoBase):
+    activo_id: UUID
+    creado_en: datetime
+    actualizado_en: datetime
+    producto: Optional[CatalogoProductosRespuesta] = None
+    ubicacion_actual: Optional[UbicacionRespuesta] = None
 
     class Config:
         from_attributes = True
 
 # --- STOCK MOVEMENT SCHEMAS ---
-class StockMovementBase(BaseModel):
-    asset_id: UUID
-    origin_location_id: Optional[UUID] = None
-    destination_location_id: UUID
-    moved_by_user_id: UUID
-    reason: str
+class MovimientoStockBase(BaseModel):
+    activo_id: UUID
+    ubicacion_origen_id: Optional[UUID] = None
+    ubicacion_destino_id: UUID
+    usuario_movimiento_id: UUID
+    motivo: str
 
-class StockMovementCreate(StockMovementBase):
+class MovimientoStockCrear(MovimientoStockBase):
     pass
 
-class StockMovementResponse(StockMovementBase):
-    movement_id: UUID
-    created_at: datetime
-    asset: Optional[AssetResponse] = None
+class MovimientoStockRespuesta(MovimientoStockBase):
+    movimiento_id: UUID
+    creado_en: datetime
+    activo: Optional[ActivoRespuesta] = None
 
     class Config:
         from_attributes = True

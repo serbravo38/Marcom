@@ -1,203 +1,203 @@
 -- =============================================================================
--- PROYECTO APT / MARCOM: MODELO DE BASE DE DATOS
+-- PROYECTO MARCOM: MODELO DE BASE DE DATOS
 -- Motor: PostgreSQL 14+
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =============================================================================
--- ESQUEMA 1: USUARIOS Y CLIENTES (Auth & Customers)
+-- ESQUEMA 1: USUARIOS Y CLIENTES (Autenticación y Convenios)
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS auth_customer_schema;
+CREATE SCHEMA IF NOT EXISTS esquema_auth_clientes;
 
-CREATE TYPE auth_customer_schema.role_enum AS ENUM (
-  'ADMIN', 'JEFE_BODEGA', 'TECNICO_TERRENO', 'CLIENTE_CONVENIO', 'CLIENTE_STANDARD'
+CREATE TYPE esquema_auth_clientes.rol_usuario AS ENUM (
+  'ADMIN', 'JEFE_BODEGA', 'TECNICO_TERRENO', 'CLIENTE_CONVENIO', 'CLIENTE_ESTANDAR'
 );
 
-CREATE TABLE auth_customer_schema.users (
-  user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE esquema_auth_clientes.usuarios (
+  usuario_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   rut VARCHAR(12) UNIQUE NOT NULL,
-  email VARCHAR(150) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  first_name VARCHAR(100) NOT NULL,
-  last_name VARCHAR(100) NOT NULL,
-  role auth_customer_schema.role_enum NOT NULL DEFAULT 'CLIENTE_STANDARD',
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  correo VARCHAR(150) UNIQUE NOT NULL,
+  clave_hash VARCHAR(255) NOT NULL,
+  nombre VARCHAR(100) NOT NULL,
+  apellido VARCHAR(100) NOT NULL,
+  rol esquema_auth_clientes.rol_usuario NOT NULL DEFAULT 'CLIENTE_ESTANDAR',
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE auth_customer_schema.agreements (
-  agreement_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_name VARCHAR(150) NOT NULL, -- ej: Copec S.A., Arcoprime Ltda.
+CREATE TABLE esquema_auth_clientes.convenios (
+  convenio_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre_empresa VARCHAR(150) NOT NULL, -- ej: Copec S.A., Arcoprime Ltda.
   rut VARCHAR(12) UNIQUE NOT NULL,
-  credit_limit NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-  used_credit NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  limite_credito NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+  credito_usado NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE auth_customer_schema.customer_profiles (
-  profile_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID UNIQUE NOT NULL REFERENCES auth_customer_schema.users(user_id) ON DELETE CASCADE,
-  agreement_id UUID REFERENCES auth_customer_schema.agreements(agreement_id) ON DELETE SET NULL,
-  phone VARCHAR(20),
-  address TEXT,
+CREATE TABLE esquema_auth_clientes.perfiles_clientes (
+  perfil_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  usuario_id UUID UNIQUE NOT NULL REFERENCES esquema_auth_clientes.usuarios(usuario_id) ON DELETE CASCADE,
+  convenio_id UUID REFERENCES esquema_auth_clientes.convenios(convenio_id) ON DELETE SET NULL,
+  telefono VARCHAR(20),
+  direccion TEXT,
   region VARCHAR(100),
-  commune VARCHAR(100)
+  comuna VARCHAR(100)
 );
 
 -- =============================================================================
--- ESQUEMA 2: INVENTARIO Y BODEGA (Inventory Service)
+-- ESQUEMA 2: INVENTARIO Y BODEGA
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS inventory_schema;
+CREATE SCHEMA IF NOT EXISTS esquema_inventario;
 
-CREATE TYPE inventory_schema.asset_status AS ENUM (
+CREATE TYPE esquema_inventario.estado_activo_enum AS ENUM (
   'NUEVO', 'USADO_BUEN_ESTADO', 'DEFECTUOSO', 'EN_TRANSITO', 'DADO_DE_BAJA'
 );
 
-CREATE TABLE inventory_schema.locations (
-  location_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name VARCHAR(100) NOT NULL, -- ej: "Bodega M3storage - Enea", "Tienda Pronto Copec Pudahuel"
-  address TEXT NOT NULL,
+CREATE TABLE esquema_inventario.ubicaciones (
+  ubicacion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre VARCHAR(100) NOT NULL, -- ej: "Bodega M3storage - Enea", "Tienda Pronto Copec Pudahuel"
+  direccion TEXT NOT NULL,
   region VARCHAR(100) NOT NULL,
-  is_warehouse BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  es_bodega BOOLEAN NOT NULL DEFAULT FALSE,
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE inventory_schema.product_catalog (
-  product_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE esquema_inventario.catalogo_productos (
+  producto_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   sku VARCHAR(50) UNIQUE NOT NULL,
-  name VARCHAR(150) NOT NULL, -- ej: "Monitor Profesional 65", "Monitor en Placa >100", "Impresora Comanda"
-  brand VARCHAR(100) NOT NULL, -- ej: "Samsung"
-  category VARCHAR(100) NOT NULL, -- ej: "Monitores", "POS", "Notebooks", "UPS"
-  size_inches NUMERIC(5, 2), -- 10.00 a 65.00, >100.00
-  description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  nombre VARCHAR(150) NOT NULL, -- ej: "Monitor Profesional 65", "Monitor en Placa >100", "Impresora Comanda"
+  marca VARCHAR(100) NOT NULL, -- ej: "Samsung"
+  categoria VARCHAR(100) NOT NULL, -- ej: "Monitores", "POS", "Notebooks", "UPS"
+  pulgadas NUMERIC(5, 2), -- 10.00 a 65.00, >100.00
+  descripcion TEXT,
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE inventory_schema.assets (
-  asset_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  product_id UUID NOT NULL REFERENCES inventory_schema.product_catalog(product_id),
-  serial_number VARCHAR(100) UNIQUE NOT NULL,
-  qr_code VARCHAR(255) UNIQUE,
-  current_status inventory_schema.asset_status NOT NULL DEFAULT 'NUEVO',
-  current_location_id UUID NOT NULL REFERENCES inventory_schema.locations(location_id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE esquema_inventario.activos (
+  activo_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  producto_id UUID NOT NULL REFERENCES esquema_inventario.catalogo_productos(producto_id),
+  numero_serie VARCHAR(100) UNIQUE NOT NULL,
+  codigo_qr VARCHAR(255) UNIQUE,
+  estado_actual esquema_inventario.estado_activo_enum NOT NULL DEFAULT 'NUEVO',
+  ubicacion_actual_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE inventory_schema.stock_movements (
-  movement_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  asset_id UUID NOT NULL REFERENCES inventory_schema.assets(asset_id),
-  origin_location_id UUID REFERENCES inventory_schema.locations(location_id),
-  destination_location_id UUID NOT NULL REFERENCES inventory_schema.locations(location_id),
-  moved_by_user_id UUID NOT NULL REFERENCES auth_customer_schema.users(user_id),
-  reason TEXT NOT NULL, -- ej: "Instalación local nuevo", "Retiro por falla", "Despacho a región"
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE esquema_inventario.movimientos_stock (
+  movimiento_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  activo_id UUID NOT NULL REFERENCES esquema_inventario.activos(activo_id),
+  ubicacion_origen_id UUID REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
+  ubicacion_destino_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
+  usuario_movimiento_id UUID NOT NULL REFERENCES esquema_auth_clientes.usuarios(usuario_id),
+  motivo TEXT NOT NULL, -- ej: "Instalación local nuevo", "Retiro por falla", "Despacho a región"
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =============================================================================
--- ESQUEMA 3: PROYECTOS Y ÓRDENES DE TRABAJO EN TERRENO (Work Orders Service)
+-- ESQUEMA 3: PROYECTOS Y ÓRDENES DE TRABAJO EN TERRENO (OT)
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS work_order_schema;
+CREATE SCHEMA IF NOT EXISTS esquema_ordenes_trabajo;
 
-CREATE TYPE work_order_schema.ot_status AS ENUM (
+CREATE TYPE esquema_ordenes_trabajo.estado_ot_enum AS ENUM (
   'PENDIENTE', 'ASIGNADA', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA'
 );
 
-CREATE TABLE work_order_schema.work_orders (
-  work_order_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_number VARCHAR(20) UNIQUE NOT NULL,
-  client_agreement_id UUID REFERENCES auth_customer_schema.agreements(agreement_id),
-  location_id UUID NOT NULL REFERENCES inventory_schema.locations(location_id),
-  assigned_technician_id UUID REFERENCES auth_customer_schema.users(user_id),
-  status work_order_schema.ot_status NOT NULL DEFAULT 'PENDIENTE',
-  scheduled_date TIMESTAMP WITH TIME ZONE NOT NULL,
-  completion_date TIMESTAMP WITH TIME ZONE,
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE esquema_ordenes_trabajo.ordenes_trabajo (
+  orden_trabajo_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  numero_orden VARCHAR(20) UNIQUE NOT NULL,
+  convenio_cliente_id UUID REFERENCES esquema_auth_clientes.convenios(convenio_id),
+  ubicacion_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
+  tecnico_asignado_id UUID REFERENCES esquema_auth_clientes.usuarios(usuario_id),
+  estado esquema_ordenes_trabajo.estado_ot_enum NOT NULL DEFAULT 'PENDIENTE',
+  fecha_programada TIMESTAMP WITH TIME ZONE NOT NULL,
+  fecha_termino TIMESTAMP WITH TIME ZONE,
+  notas TEXT,
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE work_order_schema.work_order_assets (
-  wo_asset_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  work_order_id UUID NOT NULL REFERENCES work_order_schema.work_orders(work_order_id) ON DELETE CASCADE,
-  installed_asset_id UUID REFERENCES inventory_schema.assets(asset_id),
-  removed_asset_id UUID REFERENCES inventory_schema.assets(asset_id),
-  action_type VARCHAR(50) NOT NULL -- ej: 'INSTALACION_NUEVA', 'REEMPLAZO_POR_FALLA', 'RETIRO'
+CREATE TABLE esquema_ordenes_trabajo.activos_orden_trabajo (
+  activo_ot_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  orden_trabajo_id UUID NOT NULL REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE CASCADE,
+  activo_instalado_id UUID REFERENCES esquema_inventario.activos(activo_id),
+  activo_retirado_id UUID REFERENCES esquema_inventario.activos(activo_id),
+  tipo_accion VARCHAR(50) NOT NULL -- ej: 'INSTALACION_NUEVA', 'REEMPLAZO_POR_FALLA', 'RETIRO'
 );
 
-CREATE TABLE work_order_schema.field_evidences (
-  evidence_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  work_order_id UUID NOT NULL REFERENCES work_order_schema.work_orders(work_order_id) ON DELETE CASCADE,
-  image_url TEXT NOT NULL,
-  signature_url TEXT,
-  comments TEXT,
-  captured_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE esquema_ordenes_trabajo.evidencias_terreno (
+  evidencia_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  orden_trabajo_id UUID NOT NULL REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE CASCADE,
+  url_imagen TEXT NOT NULL,
+  url_firma TEXT,
+  comentarios TEXT,
+  fecha_captura TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =============================================================================
--- ESQUEMA 4: FACTURACIÓN, CONVENIOS Y PAGOS (Billing & Payment Service)
+-- ESQUEMA 4: FACTURACIÓN Y PAGOS
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS billing_schema;
+CREATE SCHEMA IF NOT EXISTS esquema_facturacion;
 
-CREATE TYPE billing_schema.payment_method_enum AS ENUM (
+CREATE TYPE esquema_facturacion.metodo_pago_enum AS ENUM (
   'PASARELA_WEBPAY', 'PASARELA_MERCADOPAGO', 'CREDITO_CONVENIO'
 );
 
-CREATE TYPE billing_schema.payment_status_enum AS ENUM (
+CREATE TYPE esquema_facturacion.estado_pago_enum AS ENUM (
   'PENDIENTE', 'APROBADO', 'RECHAZADO', 'REEMBOLSADO'
 );
 
-CREATE TYPE billing_schema.dte_type_enum AS ENUM (
+CREATE TYPE esquema_facturacion.tipo_dte_enum AS ENUM (
   'FACTURA_ELECTRONICA', 'GUIA_DESPACHO', 'BOLETA_ELECTRONICA'
 );
 
-CREATE TABLE billing_schema.orders (
-  order_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES auth_customer_schema.users(user_id),
-  total_amount NUMERIC(12, 2) NOT NULL,
-  payment_method billing_schema.payment_method_enum NOT NULL,
-  payment_status billing_schema.payment_status_enum NOT NULL DEFAULT 'PENDIENTE',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE esquema_facturacion.pedidos (
+  pedido_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  usuario_id UUID NOT NULL REFERENCES esquema_auth_clientes.usuarios(usuario_id),
+  monto_total NUMERIC(12, 2) NOT NULL,
+  metodo_pago esquema_facturacion.metodo_pago_enum NOT NULL,
+  estado_pago esquema_facturacion.estado_pago_enum NOT NULL DEFAULT 'PENDIENTE',
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE billing_schema.payments (
-  payment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id UUID NOT NULL REFERENCES billing_schema.orders(order_id),
-  gateway_transaction_id VARCHAR(100),
-  amount NUMERIC(12, 2) NOT NULL,
-  status billing_schema.payment_status_enum NOT NULL,
-  response_payload JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE esquema_facturacion.pagos (
+  pago_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pedido_id UUID NOT NULL REFERENCES esquema_facturacion.pedidos(pedido_id),
+  transaccion_pasarela_id VARCHAR(100),
+  monto NUMERIC(12, 2) NOT NULL,
+  estado esquema_facturacion.estado_pago_enum NOT NULL,
+  payload_respuesta JSONB,
+  creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE billing_schema.dte_documents (
+CREATE TABLE esquema_facturacion.documentos_dte (
   dte_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id UUID NOT NULL REFERENCES billing_schema.orders(order_id),
-  dte_type billing_schema.dte_type_enum NOT NULL,
-  sii_folio INT,
-  pdf_url TEXT,
-  xml_url TEXT,
-  sii_status VARCHAR(50) DEFAULT 'PENDIENTE', -- ej: 'ACEPTADO', 'RECHAZADO'
-  issued_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  pedido_id UUID NOT NULL REFERENCES esquema_facturacion.pedidos(pedido_id),
+  tipo_dte esquema_facturacion.tipo_dte_enum NOT NULL,
+  folio_sii INT,
+  url_pdf TEXT,
+  url_xml TEXT,
+  estado_sii VARCHAR(50) DEFAULT 'PENDIENTE', -- ej: 'ACEPTADO', 'RECHAZADO'
+  emitido_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =============================================================================
 -- ÍNDICES PARA OPTIMIZACIÓN DE CONSULTAS Y KPIs
 -- =============================================================================
-CREATE INDEX idx_assets_serial ON inventory_schema.assets(serial_number);
-CREATE INDEX idx_assets_location ON inventory_schema.assets(current_location_id);
-CREATE INDEX idx_assets_status ON inventory_schema.assets(current_status);
-CREATE INDEX idx_stock_movements_asset ON inventory_schema.stock_movements(asset_id);
-CREATE INDEX idx_work_orders_status ON work_order_schema.work_orders(status);
-CREATE INDEX idx_work_orders_tech ON work_order_schema.work_orders(assigned_technician_id);
-CREATE INDEX idx_dte_order ON billing_schema.dte_documents(order_id);
+CREATE INDEX idx_activos_serie ON esquema_inventario.activos(numero_serie);
+CREATE INDEX idx_activos_ubicacion ON esquema_inventario.activos(ubicacion_actual_id);
+CREATE INDEX idx_activos_estado ON esquema_inventario.activos(estado_actual);
+CREATE INDEX idx_movimientos_activo ON esquema_inventario.movimientos_stock(activo_id);
+CREATE INDEX idx_ordenes_estado ON esquema_ordenes_trabajo.ordenes_trabajo(estado);
+CREATE INDEX idx_ordenes_tecnico ON esquema_ordenes_trabajo.ordenes_trabajo(tecnico_asignado_id);
+CREATE INDEX idx_dte_pedido ON esquema_facturacion.documentos_dte(pedido_id);
 
 -- =============================================================================
 -- INSERCIÓN DE DATOS SEMILLA (Seed Data)
 -- =============================================================================
-INSERT INTO auth_customer_schema.users (rut, email, password_hash, first_name, last_name, role)
+INSERT INTO esquema_auth_clientes.usuarios (rut, correo, clave_hash, nombre, apellido, rol)
 VALUES (
   '12345678-9',
   'admin@marcom.cl',
@@ -206,4 +206,4 @@ VALUES (
   'Principal',
   'ADMIN'
 )
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (correo) DO NOTHING;

@@ -7,153 +7,153 @@ from app import crud, schemas, auth
 
 router = APIRouter()
 
-# --- LOCATIONS ---
+# --- UBICACIONES ---
 
-@router.post("/locations", response_model=schemas.LocationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/ubicaciones", response_model=schemas.UbicacionRespuesta, status_code=status.HTTP_201_CREATED)
 def create_location(
-    location_in: schemas.LocationCreate,
+    location_in: schemas.UbicacionCrear,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
 ):
-    return crud.create_location(db, location_in)
+    return crud.crear_ubicacion(db, location_in)
 
-@router.get("/locations", response_model=List[schemas.LocationResponse])
+@router.get("/ubicaciones", response_model=List[schemas.UbicacionRespuesta])
 def get_locations(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    return crud.get_locations(db, skip, limit)
+    return crud.obtener_ubicaciones(db, skip, limit)
 
 
-# --- PRODUCT CATALOG ---
+# --- CATALOGO PRODUCTOS ---
 
-@router.post("/products", response_model=schemas.ProductCatalogResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/productos", response_model=schemas.CatalogoProductosRespuesta, status_code=status.HTTP_201_CREATED)
 def create_product(
-    product_in: schemas.ProductCatalogCreate,
+    product_in: schemas.CatalogoProductosCrear,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
 ):
-    db_product = crud.get_product_by_sku(db, sku=product_in.sku)
+    db_product = crud.obtener_producto_por_sku(db, sku=product_in.sku)
     if db_product:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ya existe un producto registrado con este SKU."
         )
-    return crud.create_product(db, product_in)
+    return crud.crear_producto(db, product_in)
 
-@router.get("/products", response_model=List[schemas.ProductCatalogResponse])
+@router.get("/productos", response_model=List[schemas.CatalogoProductosRespuesta])
 def get_products(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    return crud.get_products(db, skip, limit)
+    return crud.obtener_productos(db, skip, limit)
 
 
-# --- ASSETS ---
+# --- ACTIVOS ---
 
-@router.post("/assets", response_model=schemas.AssetResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/activos", response_model=schemas.ActivoRespuesta, status_code=status.HTTP_201_CREATED)
 def create_asset(
-    asset_in: schemas.AssetCreate,
+    asset_in: schemas.ActivoCrear,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO"]))
 ):
     # Verify product exists
-    product = crud.get_product_by_id(db, product_id=asset_in.product_id)
+    product = crud.obtener_producto_por_id(db, producto_id=asset_in.producto_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado en catálogo.")
         
     # Verify location exists
-    location = crud.get_location_by_id(db, location_id=asset_in.current_location_id)
+    location = crud.obtener_ubicacion_por_id(db, ubicacion_id=asset_in.ubicacion_actual_id)
     if not location:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
         
     # Check if serial exists
-    db_asset = crud.get_asset_by_serial(db, serial_number=asset_in.serial_number)
+    db_asset = crud.obtener_activo_por_serie(db, numero_serie=asset_in.numero_serie)
     if db_asset:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ya existe un activo con este número de serie."
         )
         
-    return crud.create_asset(db, asset_in)
+    return crud.crear_activo(db, asset_in)
 
-@router.get("/assets", response_model=List[schemas.AssetResponse])
+@router.get("/activos", response_model=List[schemas.ActivoRespuesta])
 def get_assets(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    return crud.get_assets(db, skip, limit)
+    return crud.obtener_activos(db, skip, limit)
 
-@router.get("/assets/{asset_id}", response_model=schemas.AssetResponse)
+@router.get("/activos/{activo_id}", response_model=schemas.ActivoRespuesta)
 def get_asset_details(
-    asset_id: UUID,
+    activo_id: UUID,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    asset = crud.get_asset_by_id(db, asset_id=asset_id)
+    asset = crud.obtener_activo_por_id(db, activo_id=activo_id)
     if not asset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activo no encontrado.")
     return asset
 
-@router.patch("/assets/{asset_id}", response_model=schemas.AssetResponse)
+@router.patch("/activos/{activo_id}", response_model=schemas.ActivoRespuesta)
 def update_asset(
-    asset_id: UUID,
-    asset_update: schemas.AssetUpdate,
+    activo_id: UUID,
+    asset_update: schemas.ActivoActualizar,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO"]))
 ):
-    asset = crud.get_asset_by_id(db, asset_id=asset_id)
+    asset = crud.obtener_activo_por_id(db, activo_id=activo_id)
     if not asset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activo no encontrado.")
         
-    if asset_update.current_location_id:
-        location = crud.get_location_by_id(db, location_id=asset_update.current_location_id)
+    if asset_update.ubicacion_actual_id:
+        location = crud.obtener_ubicacion_por_id(db, ubicacion_id=asset_update.ubicacion_actual_id)
         if not location:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
             
-    return crud.update_asset(db, asset, asset_update)
+    return crud.actualizar_activo(db, asset, asset_update)
 
 
-# --- STOCK MOVEMENTS ---
+# --- MOVIMIENTOS STOCK ---
 
-@router.post("/movements", response_model=schemas.StockMovementResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/movimientos", response_model=schemas.MovimientoStockRespuesta, status_code=status.HTTP_201_CREATED)
 def record_stock_movement(
-    movement_in: schemas.StockMovementCreate,
+    movement_in: schemas.MovimientoStockCrear,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
     # Verify asset exists
-    asset = crud.get_asset_by_id(db, asset_id=movement_in.asset_id)
+    asset = crud.obtener_activo_por_id(db, activo_id=movement_in.activo_id)
     if not asset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activo no encontrado.")
         
     # Verify destination location exists
-    dest_location = crud.get_location_by_id(db, location_id=movement_in.destination_location_id)
+    dest_location = crud.obtener_ubicacion_por_id(db, ubicacion_id=movement_in.ubicacion_destino_id)
     if not dest_location:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación de destino no encontrada.")
         
     # Verify origin location matches if provided
-    if movement_in.origin_location_id:
-        origin_location = crud.get_location_by_id(db, location_id=movement_in.origin_location_id)
+    if movement_in.ubicacion_origen_id:
+        origin_location = crud.obtener_ubicacion_por_id(db, ubicacion_id=movement_in.ubicacion_origen_id)
         if not origin_location:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación de origen no encontrada.")
             
-    # Auto-fill moved_by_user_id from JWT payload to prevent spoofing
-    movement_in.moved_by_user_id = UUID(user.get("user_id"))
+    # Auto-fill usuario_movimiento_id from JWT payload to prevent spoofing
+    movement_in.usuario_movimiento_id = UUID(user.get("usuario_id"))
     
-    return crud.create_stock_movement(db, movement_in)
+    return crud.crear_movimiento_stock(db, movement_in)
 
-@router.get("/movements", response_model=List[schemas.StockMovementResponse])
+@router.get("/movimientos", response_model=List[schemas.MovimientoStockRespuesta])
 def get_movements(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    return crud.get_movements(db, skip, limit)
+    return crud.obtener_movimientos(db, skip, limit)

@@ -3,7 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.config import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/iniciar-sesion", auto_error=False)
 
 def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
     credentials_exception = HTTPException(
@@ -16,12 +16,12 @@ def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
         
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        user_id: str = payload.get("user_id")
+        usuario_id: str = payload.get("usuario_id")
         role: str = payload.get("role")
         email: str = payload.get("email")
-        if user_id is None:
+        if usuario_id is None:
             raise credentials_exception
-        return {"user_id": user_id, "role": role, "email": email}
+        return {"usuario_id": usuario_id, "role": role, "email": email}
     except JWTError:
         raise credentials_exception
 

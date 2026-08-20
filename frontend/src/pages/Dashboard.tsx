@@ -7,17 +7,30 @@ import {
   TrendingUp, 
   AlertCircle 
 } from "lucide-react";
-import { authService, type Agreement } from "../services/auth";
-import { inventoryService, type Location, type ProductCatalog, type Asset, type StockMovement } from "../services/inventory";
-import { workOrdersService, type WorkOrder } from "../services/workOrders";
+import { authService } from "../services/auth";
+import { inventoryService } from "../services/inventory";
+import { workOrdersService } from "../services/workOrders";
 import { MetricCard } from "../components/MetricCard";
 
+type StockMovement = {
+  movimiento_id: string | number;
+  motivo: string;
+  creado_en: string | Date;
+};
+
+type DashboardWorkOrder = {
+  orden_trabajo_id: string | number;
+  numero_orden: string;
+  fecha_programada: string | Date;
+  estado: string;
+};
+
 export const Dashboard: React.FC = () => {
-  const [agreements, setAgreements] = useState<Agreement[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [products, setProducts] = useState<ProductCatalog[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [agreements, setAgreements] = useState<unknown[]>([]);
+  const [locations, setLocations] = useState<unknown[]>([]);
+  const [products, setProducts] = useState<unknown[]>([]);
+  const [assets, setAssets] = useState<unknown[]>([]);
+  const [workOrders, setWorkOrders] = useState<DashboardWorkOrder[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   
   const [error, setError] = useState<string | null>(null);
@@ -36,11 +49,11 @@ export const Dashboard: React.FC = () => {
           workOrdersData,
           movementsData
         ] = await Promise.all([
-          authService.getAgreements().catch(() => [] as Agreement[]),
-          inventoryService.getLocations().catch(() => [] as Location[]),
-          inventoryService.getProducts().catch(() => [] as ProductCatalog[]),
-          inventoryService.getAssets().catch(() => [] as Asset[]),
-          workOrdersService.getWorkOrders().catch(() => [] as WorkOrder[]),
+          authService.getAgreements().catch(() => [] as unknown[]),
+          inventoryService.getLocations().catch(() => [] as unknown[]),
+          inventoryService.getProducts().catch(() => [] as unknown[]),
+          inventoryService.getAssets().catch(() => [] as unknown[]),
+          workOrdersService.getWorkOrders().catch(() => [] as DashboardWorkOrder[]),
           inventoryService.getMovements().catch(() => [] as StockMovement[])
         ]);
 
@@ -124,15 +137,15 @@ export const Dashboard: React.FC = () => {
                 </thead>
                 <tbody>
                   {workOrders.slice(0, 5).map((wo) => (
-                    <tr key={wo.work_order_id}>
-                      <td style={{ fontWeight: 600 }}>{wo.order_number}</td>
-                      <td>{new Date(wo.scheduled_date).toLocaleDateString()}</td>
+                    <tr key={wo.orden_trabajo_id}>
+                      <td style={{ fontWeight: 600 }}>{wo.numero_orden}</td>
+                      <td>{new Date(wo.fecha_programada).toLocaleDateString()}</td>
                       <td>
                         <span className={`badge ${
-                          wo.status === "COMPLETADA" ? "success" : 
-                          wo.status === "CANCELADA" ? "error" : "warning"
+                          wo.estado === "COMPLETADA" ? "success" : 
+                          wo.estado === "CANCELADA" ? "error" : "warning"
                         }`}>
-                          {wo.status}
+                          {wo.estado}
                         </span>
                       </td>
                     </tr>
@@ -157,14 +170,14 @@ export const Dashboard: React.FC = () => {
               </p>
             ) : (
               movements.slice(0, 5).map((m) => (
-                <div key={m.movement_id} style={{ display: "flex", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.02)", paddingBottom: "12px" }}>
+                <div key={m.movimiento_id} style={{ display: "flex", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.02)", paddingBottom: "12px" }}>
                   <div style={{ background: "rgba(255,255,255,0.03)", padding: "8px", borderRadius: "8px", display: "flex", alignItems: "center" }}>
                     <Shuffle size={16} style={{ color: "hsl(var(--secondary))" }} />
                   </div>
                   <div>
-                    <p style={{ fontSize: "0.85rem", fontWeight: 500 }}>{m.reason}</p>
+                    <p style={{ fontSize: "0.85rem", fontWeight: 500 }}>{m.motivo}</p>
                     <p style={{ fontSize: "0.75rem", color: "hsl(var(--text-muted))" }}>
-                      {new Date(m.created_at).toLocaleString()}
+                      {new Date(m.creado_en).toLocaleString()}
                     </p>
                   </div>
                 </div>

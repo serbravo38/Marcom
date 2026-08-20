@@ -1,58 +1,58 @@
 import { api } from "./api";
 
-export interface WorkOrderAsset {
-  wo_asset_id: string;
-  work_order_id: string;
-  installed_asset_id?: string;
-  removed_asset_id?: string;
-  action_type: string;
+export interface ActivoOrdenTrabajo {
+  activo_ot_id: string;
+  orden_trabajo_id: string;
+  activo_instalado_id?: string;
+  activo_retirado_id?: string;
+  tipo_accion: string;
 }
 
-export interface FieldEvidence {
-  evidence_id: string;
-  work_order_id: string;
-  image_url: string;
-  signature_url?: string;
-  comments?: string;
-  captured_at: string;
+export interface EvidenciaTerreno {
+  evidencia_id: string;
+  orden_trabajo_id: string;
+  url_imagen: string;
+  url_firma?: string;
+  comentarios?: string;
+  fecha_captura: string;
 }
 
-export interface WorkOrder {
-  work_order_id: string;
-  order_number: string;
-  client_agreement_id?: string;
-  location_id: string;
-  assigned_technician_id?: string;
-  status: "PENDIENTE" | "ASIGNADA" | "EN_PROCESO" | "COMPLETADA" | "CANCELADA";
-  scheduled_date: string;
-  completion_date?: string;
+export interface OrdenTrabajo {
+  orden_trabajo_id: string;
+  numero_orden: string;
+  convenio_cliente_id?: string;
+  ubicacion_id: string;
+  tecnico_asignado_id?: string;
+  estado: "PENDIENTE" | "ASIGNADA" | "EN_PROCESO" | "COMPLETADA" | "CANCELADA";
+  fecha_programada: string;
+  fecha_termino?: string;
   notes?: string;
-  created_at: string;
-  assets?: WorkOrderAsset[];
-  evidences?: FieldEvidence[];
+  creado_en: string;
+  activos?: ActivoOrdenTrabajo[];
+  evidencias?: EvidenciaTerreno[];
 }
 
 export const workOrdersService = {
-  getWorkOrders: async (): Promise<WorkOrder[]> => {
-    return api.get<WorkOrder[]>("/work-orders");
+  getWorkOrders: async (): Promise<OrdenTrabajo[]> => {
+    return api.get<OrdenTrabajo[]>("/ordenes-trabajo");
   },
-  getWorkOrderDetails: async (woId: string): Promise<WorkOrder> => {
-    return api.get<WorkOrder>(`/work-orders/${woId}`);
+  getWorkOrderDetails: async (woId: string): Promise<OrdenTrabajo> => {
+    return api.get<OrdenTrabajo>(`/ordenes-trabajo/${woId}`);
   },
-  createWorkOrder: async (data: any): Promise<WorkOrder> => {
-    return api.post<WorkOrder>("/work-orders", data);
+  createWorkOrder: async (data: any): Promise<OrdenTrabajo> => {
+    return api.post<OrdenTrabajo>("/ordenes-trabajo", data);
   },
-  updateWorkOrder: async (woId: string, data: any): Promise<WorkOrder> => {
-    return api.patch<WorkOrder>(`/work-orders/${woId}`, data);
+  updateWorkOrder: async (woId: string, data: any): Promise<OrdenTrabajo> => {
+    return api.patch<OrdenTrabajo>(`/ordenes-trabajo/${woId}`, data);
   },
   
-  // Work Order Assets (involved)
-  addWorkOrderAsset: async (woId: string, data: any): Promise<WorkOrderAsset> => {
-    return api.post<WorkOrderAsset>(`/work-orders/${woId}/assets`, data);
+  // Activos involucrados en Orden de Trabajo
+  addWorkOrderAsset: async (woId: string, data: any): Promise<ActivoOrdenTrabajo> => {
+    return api.post<ActivoOrdenTrabajo>(`/ordenes-trabajo/${woId}/activos`, data);
   },
 
-  // Field Evidences
-  uploadEvidence: async (woId: string, data: any): Promise<FieldEvidence> => {
-    return api.post<FieldEvidence>(`/work-orders/${woId}/evidences`, data);
+  // Evidencias de Terreno
+  uploadEvidence: async (woId: string, data: any): Promise<EvidenciaTerreno> => {
+    return api.post<EvidenciaTerreno>(`/ordenes-trabajo/${woId}/evidencias`, data);
   }
 };
