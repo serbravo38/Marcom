@@ -21,7 +21,21 @@ def run_tests():
         print(f"Error: {e}")
         sys.exit(1)
 
-    # 2. Registrar Administrador
+    # 2. Iniciar sesión como Administrador Semilla
+    print("\n1. Iniciando sesión como administrador semilla...")
+    seed_login_payload = {
+        "correo": "admin@marcom.cl",
+        "clave": "admin123"
+    }
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/iniciar-sesion", json=seed_login_payload)
+    if response.status_code != 200:
+        print(f"❌ Error al iniciar sesión con administrador semilla: {response.status_code} - {response.text}")
+        sys.exit(1)
+    seed_token = response.json()["access_token"]
+    seed_headers = {"Authorization": f"Bearer {seed_token}"}
+    print("✅ Sesión iniciada con administrador semilla.")
+
+    # 3. Registrar Administrador
     admin_email = f"admin_{int(time.time())}@marcom.cl"
     register_payload = {
         "rut": f"12.345.678-{int(time.time()) % 10}",
@@ -33,16 +47,16 @@ def run_tests():
         "activo": True
     }
     
-    print(f"\n1. Registrando nuevo administrador ({admin_email})...")
-    response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/registrar", json=register_payload)
+    print(f"\n2. Registrando nuevo administrador ({admin_email}) usando token de admin semilla...")
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/registrar", json=register_payload, headers=seed_headers)
     if response.status_code != 201:
         print(f"❌ Error al registrar usuario: {response.status_code} - {response.text}")
         sys.exit(1)
     usuario_id = response.json()["usuario_id"]
     print(f"✅ Usuario registrado correctamente. ID: {usuario_id}")
 
-    # 3. Login
-    print("\n2. Iniciando sesión para obtener token JWT...")
+    # 4. Login
+    print("\n3. Iniciando sesión con el nuevo administrador para obtener token JWT...")
     login_payload = {
         "correo": admin_email,
         "clave": "supersecurepassword"
@@ -56,16 +70,16 @@ def run_tests():
     headers = {"Authorization": f"Bearer {token}"}
     print("✅ Autenticación exitosa. Token JWT obtenido.")
 
-    # 4. Obtener perfil
-    print("\n3. Obteniendo datos de mi perfil (/usuarios/me)...")
+    # 5. Obtener perfil
+    print("\n4. Obteniendo datos de mi perfil (/usuarios/me)...")
     response = httpx.get(f"{GATEWAY_URL}/api/v1/usuarios/me", headers=headers)
     if response.status_code != 200:
         print(f"❌ Error al obtener perfil: {response.status_code} - {response.text}")
         sys.exit(1)
     print(f"✅ Perfil cargado. Nombre: {response.json()['nombre']} {response.json()['apellido']}")
 
-    # 5. Crear un Convenio (Auth Service)
-    print("\n4. Creando convenio (enrutando a Auth Service)...")
+    # 6. Crear un Convenio (Auth Service)
+    print("\n5. Creando convenio (enrutando a Auth Service)...")
     agreement_payload = {
         "nombre_empresa": "Copec S.A.",
         "rut": f"99.888.777-{int(time.time()) % 10}",
@@ -80,8 +94,8 @@ def run_tests():
     convenio_id = response.json()["convenio_id"]
     print(f"✅ Convenio creado. ID: {convenio_id}")
 
-    # 6. Crear una Ubicación (Inventory Service)
-    print("\n5. Creando ubicación en bodega (enrutando a Inventory Service)...")
+    # 7. Crear una Ubicación (Inventory Service)
+    print("\n6. Creando ubicación en bodega (enrutando a Inventory Service)...")
     location_payload = {
         "nombre": "Bodega Central Pudahuel",
         "direccion": "Av. Américo Vespucio 1500",
@@ -95,8 +109,8 @@ def run_tests():
     ubicacion_id = response.json()["ubicacion_id"]
     print(f"✅ Ubicación creada. ID: {ubicacion_id}")
 
-    # 7. Crear un Producto en Catálogo (Inventory Service)
-    print("\n6. Registrando producto en catálogo (enrutando a Inventory Service)...")
+    # 8. Crear un Producto en Catálogo (Inventory Service)
+    print("\n7. Registrando producto en catálogo (enrutando a Inventory Service)...")
     product_payload = {
         "sku": f"PROD-{int(time.time())}",
         "nombre": "Monitor Profesional 65 pulgadas",

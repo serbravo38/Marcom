@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Agreements from "./pages/Agreements";
 import Inventory from "./pages/Inventory";
 import WorkOrders from "./pages/WorkOrders";
+import Users from "./pages/Users";
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -20,6 +21,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         return "Panel Principal (Dashboard)";
       case "/agreements":
         return "Convenios de Clientes";
+      case "/users":
+        return "Gestión de Usuarios y Cuentas";
       case "/inventory":
         return "Gestión de Inventario y Bodegas";
       case "/work-orders":
@@ -86,6 +89,16 @@ export const App: React.FC = () => {
             <ProtectedRoute>
               <Layout>
                 <WorkOrders />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/users" 
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Users />
               </Layout>
             </ProtectedRoute>
           } 

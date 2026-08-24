@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -10,7 +10,11 @@ router = APIRouter()
 # --- AUTH ENDPOINTS ---
 
 @router.post("/auth/registrar", response_model=schemas.UsuarioRespuesta, status_code=status.HTTP_201_CREATED)
-def register_user(user_in: schemas.UsuarioCrear, db: Session = Depends(get_db)):
+def register_user(
+    user_in: schemas.UsuarioCrear, 
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
     # Check if email exists
     db_user = crud.obtener_usuario_por_correo(db, correo=user_in.correo)
     if db_user:
@@ -66,6 +70,100 @@ def get_all_users(
     current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
 ):
     return crud.obtener_usuarios(db, skip=skip, limit=limit)
+
+@router.post("/usuarios", response_model=schemas.UsuarioRespuesta, status_code=status.HTTP_201_CREATED)
+def create_user(
+    user_in: schemas.UsuarioCrear, 
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    # Check if email exists
+    db_user = crud.obtener_usuario_por_correo(db, correo=user_in.correo)
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El correo electrónico ya está registrado."
+        )
+    # Check if RUT exists
+    db_user_rut = crud.obtener_usuario_por_rut(db, rut=user_in.rut)
+    if db_user_rut:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El RUT ya está registrado."
+        )
+    return crud.crear_usuario(db=db, usuario_in=user_in)
+
+@router.get("/usuarios/{usuario_id}", response_model=schemas.UsuarioRespuesta)
+def get_user_by_id(
+    usuario_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    user = crud.obtener_usuario_por_id(db, usuario_id=usuario_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    return user
+
+@router.put("/usuarios/{usuario_id}", response_model=schemas.UsuarioRespuesta)
+def update_user(
+    usuario_id: UUID,
+    user_update: schemas.UsuarioActualizar,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    # Check if user exists
+    db_user = crud.obtener_usuario_por_id(db, usuario_id=usuario_id)
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    
+    # If updating email, check if it already exists
+    if user_update.correo and user_update.correo != db_user.correo:
+        other_user = crud.obtener_usuario_por_correo(db, correo=user_update.correo)
+        if other_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El correo electrónico ya está registrado por otro usuario."
+            )
+            
+    # If updating RUT, check if it already exists
+    if user_update.rut and user_update.rut != db_user.rut:
+        other_user_rut = crud.obtener_usuario_por_rut(db, rut=user_update.rut)
+        if other_user_rut:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El RUT ya está registrado por otro usuario."
+            )
+    
+    return crud.actualizar_usuario(db=db, db_usuario=db_user, usuario_update=user_update)
+
+@router.delete("/usuarios/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    usuario_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    # Prevent admin from deleting themselves
+    if current_user.usuario_id == usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes eliminar tu propia cuenta de administrador."
+        )
+        
+    db_user = crud.obtener_usuario_por_id(db, usuario_id=usuario_id)
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    
+    from sqlalchemy.exc import IntegrityError
+    try:
+        db.delete(db_user)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede eliminar el usuario porque tiene registros asociados (movimientos, órdenes, etc.). Te recomendamos desactivarlo."
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.post("/usuarios/{usuario_id}/perfil", response_model=schemas.PerfilClienteRespuesta)
 def update_user_profile(

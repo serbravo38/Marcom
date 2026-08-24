@@ -59,6 +59,16 @@ export const Sidebar: React.FC = () => {
           <Briefcase size={20} />
           <span>Órdenes de Trabajo</span>
         </NavLink>
+
+        {user && user.rol === "ADMIN" && (
+          <NavLink 
+            to="/users" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <User size={20} />
+            <span>Usuarios</span>
+          </NavLink>
+        )}
       </nav>
 
       <div className="sidebar-footer">

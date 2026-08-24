@@ -43,6 +43,22 @@ export const authService = {
     return api.get<Usuario[]>("/usuarios");
   },
 
+  createUser: async (datosUsuario: any): Promise<Usuario> => {
+    return api.post<Usuario>("/usuarios", datosUsuario);
+  },
+
+  updateUser: async (usuarioId: string, datosUsuario: any): Promise<Usuario> => {
+    return api.put<Usuario>(`/usuarios/${usuarioId}`, datosUsuario);
+  },
+
+  deleteUser: async (usuarioId: string): Promise<any> => {
+    return api.delete(`/usuarios/${usuarioId}`);
+  },
+
+  getUserById: async (usuarioId: string): Promise<Usuario> => {
+    return api.get<Usuario>(`/usuarios/${usuarioId}`);
+  },
+
   createProfile: async (usuarioId: string, datosPerfil: any): Promise<any> => {
     return api.post(`/usuarios/${usuarioId}/perfil`, datosPerfil);
   },

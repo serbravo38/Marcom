@@ -43,6 +43,8 @@ class UsuarioActualizar(BaseModel):
     rol: Optional[RolUsuario] = None
     activo: Optional[bool] = None
     clave: Optional[str] = None
+    rut: Optional[str] = None
+    correo: Optional[EmailStr] = None
 
 class UsuarioRespuesta(UsuarioBase):
     usuario_id: UUID

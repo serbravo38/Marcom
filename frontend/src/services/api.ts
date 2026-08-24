@@ -9,7 +9,11 @@ export class APIError extends Error {
   data: any;
 
   constructor(status: number, data: any) {
-    super(data?.message || "Ocurrió un error al procesar la petición.");
+    const msg = data?.message || 
+                (typeof data?.detail === 'string' ? data.detail : null) || 
+                (Array.isArray(data?.detail) ? data.detail.map((d: any) => d.msg).join(", ") : null) ||
+                "Ocurrió un error al procesar la petición.";
+    super(msg);
     this.name = "APIError";
     this.status = status;
     this.data = data;
