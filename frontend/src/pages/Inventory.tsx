@@ -3,16 +3,25 @@ import {
   Plus, 
   X, 
   Loader2, 
-  Shuffle 
+  Shuffle,
+  UploadCloud
 } from "lucide-react";
 import { inventoryService } from "../services/inventory";
+import { authService, type Convenio } from "../services/auth";
 
 type Location = {
   ubicacion_id: string;
+  codigo_local?: string | null;
   nombre: string;
   direccion: string;
   region: string;
+  comuna?: string | null;
   es_bodega: boolean;
+  convenio_id?: string | null;
+  nombre_encargado?: string | null;
+  telefono_encargado?: string | null;
+  correo_encargado?: string | null;
+  activo?: boolean;
 };
 
 type ProductCatalog = {
@@ -51,6 +60,7 @@ export const Inventory: React.FC = () => {
 
   // Data States
   const [locations, setLocations] = useState<Location[]>([]);
+  const [agreements, setAgreements] = useState<Convenio[]>([]);
   const [products, setProducts] = useState<ProductCatalog[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
@@ -59,16 +69,25 @@ export const Inventory: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Modals Open State
-  const [modalOpen, setModalOpen] = useState<"location" | "product" | "asset" | "movement" | null>(null);
+  const [modalOpen, setModalOpen] = useState<"location" | "bulk_locations" | "product" | "asset" | "movement" | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
   // Form Fields
   // Location Form
+  const [locCode, setLocCode] = useState("");
   const [locName, setLocName] = useState("");
   const [locAddress, setLocAddress] = useState("");
   const [locRegion, setLocRegion] = useState("");
+  const [locComuna, setLocComuna] = useState("");
+  const [locAgreementId, setLocAgreementId] = useState("");
+  const [locManagerName, setLocManagerName] = useState("");
+  const [locManagerPhone, setLocManagerPhone] = useState("");
+  const [locManagerEmail, setLocManagerEmail] = useState("");
   const [locIsWarehouse, setLocIsWarehouse] = useState(false);
+
+  // Bulk Locations Form
+  const [bulkLocJson, setBulkLocJson] = useState("");
 
   // Product Form
   const [prodSku, setProdSku] = useState("");
@@ -95,16 +114,18 @@ export const Inventory: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [locsData, prodsData, assetsData, movesData] = await Promise.all([
+      const [locsData, prodsData, assetsData, movesData, agreementsData] = await Promise.all([
         inventoryService.getLocations(),
         inventoryService.getProducts(),
         inventoryService.getAssets(),
-        inventoryService.getMovements()
+        inventoryService.getMovements(),
+        authService.getAgreements().catch(() => [] as Convenio[])
       ]);
 
       setLocations(locsData);
       setProducts(prodsData);
       setAssets(assetsData);
+      setAgreements(agreementsData);
       setMovements(movesData.map((movement) => ({
         ...movement,
         ubicacion_origen_id: movement.ubicacion_origen_id ?? null
@@ -124,7 +145,9 @@ export const Inventory: React.FC = () => {
     setModalOpen(null);
     setModalError(null);
     // Clear forms
-    setLocName(""); setLocAddress(""); setLocRegion(""); setLocIsWarehouse(false);
+    setLocCode(""); setLocName(""); setLocAddress(""); setLocRegion(""); setLocComuna(""); 
+    setLocAgreementId(""); setLocManagerName(""); setLocManagerPhone(""); setLocManagerEmail(""); 
+    setLocIsWarehouse(false); setBulkLocJson("");
     setProdSku(""); setProdName(""); setProdBrand(""); setProdCategory(""); setProdSize(0); setProdDesc("");
     setAssetProductId(""); setAssetSerial(""); setAssetQrCode(""); setAssetStatus("NUEVO"); setAssetLocationId("");
     setMoveAssetId(""); setMoveDestId(""); setMoveReason("");
@@ -136,15 +159,47 @@ export const Inventory: React.FC = () => {
     setModalError(null);
     try {
       await inventoryService.createLocation({
+        codigo_local: locCode || null,
         nombre: locName,
         direccion: locAddress,
         region: locRegion,
-        es_bodega: locIsWarehouse
+        comuna: locComuna || null,
+        convenio_id: locAgreementId || null,
+        nombre_encargado: locManagerName || null,
+        telefono_encargado: locManagerPhone || null,
+        correo_encargado: locManagerEmail || null,
+        es_bodega: locIsWarehouse,
+        activo: true
       });
       closeModals();
       fetchData();
     } catch (err: any) {
       setModalError(err?.message || "No se pudo crear la ubicación.");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleBulkCreateLocations = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setModalLoading(true);
+    setModalError(null);
+    try {
+      let parsedData: any[];
+      try {
+        parsedData = JSON.parse(bulkLocJson);
+        if (!Array.isArray(parsedData)) {
+          throw new Error("El JSON debe ser un arreglo de objetos de locales.");
+        }
+      } catch (parseErr: any) {
+        throw new Error("Formato JSON inválido: " + parseErr.message);
+      }
+
+      await inventoryService.bulkCreateLocations(parsedData);
+      closeModals();
+      fetchData();
+    } catch (err: any) {
+      setModalError(err?.message || "No se pudieron cargar los locales de forma masiva.");
     } finally {
       setModalLoading(false);
     }
@@ -315,41 +370,81 @@ export const Inventory: React.FC = () => {
           {activeTab === "locations" && (
             <>
               <div className="panel-title">
-                <span>Bodegas, Centros de Distribución y Tiendas</span>
-                <button className="btn-primary" onClick={() => setModalOpen("location")}>
-                  <Plus size={16} />
-                  <span>Crear Ubicación</span>
-                </button>
+                <span>Bodegas y Locales de Instalación (Convenios)</span>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button className="btn-secondary" onClick={() => setModalOpen("bulk_locations")}>
+                    <UploadCloud size={16} />
+                    <span>Carga Masiva</span>
+                  </button>
+                  <button className="btn-primary" onClick={() => setModalOpen("location")}>
+                    <Plus size={16} />
+                    <span>Crear Local / Ubicación</span>
+                  </button>
+                </div>
               </div>
 
               <div className="table-responsive">
                 {locations.length === 0 ? (
                   <p style={{ color: "hsl(var(--text-muted))", textAlign: "center", padding: "20px" }}>
-                    No hay ubicaciones registradas.
+                    No hay ubicaciones o locales registrados.
                   </p>
                 ) : (
                   <table className="premium-table">
                     <thead>
                       <tr>
-                        <th>Ubicación</th>
+                        <th>Código Local</th>
+                        <th>Nombre / Local</th>
+                        <th>Convenio Asociado</th>
+                        <th>Comuna / Región</th>
                         <th>Dirección</th>
-                        <th>Región</th>
+                        <th>Encargado</th>
                         <th>Tipo</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {locations.map((loc) => (
-                        <tr key={loc.ubicacion_id}>
-                          <td style={{ fontWeight: 600 }}>{loc.nombre}</td>
-                          <td>{loc.direccion}</td>
-                          <td>{loc.region}</td>
-                          <td>
-                            <span className={`badge ${loc.es_bodega ? "success" : "primary"}`}>
-                              {loc.es_bodega ? "Bodega" : "Punto de Venta"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {locations.map((loc) => {
+                        const agreement = agreements.find(a => a.convenio_id === loc.convenio_id);
+                        return (
+                          <tr key={loc.ubicacion_id}>
+                            <td>
+                              {loc.codigo_local ? (
+                                <span className="badge secondary" style={{ fontWeight: 600 }}>{loc.codigo_local}</span>
+                              ) : (
+                                <span style={{ color: "hsl(var(--text-muted))", fontSize: "0.85rem" }}>S/C</span>
+                              )}
+                            </td>
+                            <td style={{ fontWeight: 600 }}>{loc.nombre}</td>
+                            <td>
+                              {agreement ? (
+                                <span style={{ color: "hsl(var(--accent-primary))", fontWeight: 500 }}>
+                                  {agreement.nombre_empresa}
+                                </span>
+                              ) : (
+                                <span style={{ color: "hsl(var(--text-muted))" }}>Sin convenio / Propio</span>
+                              )}
+                            </td>
+                            <td>{loc.comuna ? `${loc.comuna}, ` : ""}{loc.region}</td>
+                            <td>{loc.direccion}</td>
+                            <td>
+                              {loc.nombre_encargado ? (
+                                <div>
+                                  <div>{loc.nombre_encargado}</div>
+                                  {loc.telefono_encargado && (
+                                    <small style={{ color: "hsl(var(--text-muted))" }}>{loc.telefono_encargado}</small>
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: "hsl(var(--text-muted))" }}>-</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className={`badge ${loc.es_bodega ? "success" : "primary"}`}>
+                                {loc.es_bodega ? "Bodega" : "Punto de Venta / Local"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -459,30 +554,136 @@ export const Inventory: React.FC = () => {
       {/* Create Location Modal */}
       {modalOpen === "location" && (
         <div className="modal-overlay">
-          <div className="modal-content glass-panel">
+          <div className="modal-content glass-panel" style={{ maxWidth: "600px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
-            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Crear Nueva Ubicación</h3>
+            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Local o Bodega</h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
             <form onSubmit={handleCreateLocation}>
-              <div className="form-group">
-                <label>Nombre de la Ubicación</label>
-                <input type="text" className="glass-input" placeholder="Bodega M3storage - Enea" value={locName} onChange={e=>setLocName(e.target.value)} required />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Código del Local (Opcional)</label>
+                  <input type="text" className="glass-input" placeholder="ej: COP-042, PRONTO-102" value={locCode} onChange={e=>setLocCode(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Convenio Asociado</label>
+                  <select className="glass-input" style={{ background: "#1b2030" }} value={locAgreementId} onChange={e=>setLocAgreementId(e.target.value)}>
+                    <option value="">Ninguno / Instalación Propia</option>
+                    {agreements.map(a=><option key={a.convenio_id} value={a.convenio_id}>{a.nombre_empresa} ({a.rut})</option>)}
+                  </select>
+                </div>
               </div>
+
+              <div className="form-group">
+                <label>Nombre del Local o Bodega</label>
+                <input type="text" className="glass-input" placeholder="Tienda Pronto Copec Pudahuel" value={locName} onChange={e=>setLocName(e.target.value)} required />
+              </div>
+
               <div className="form-group">
                 <label>Dirección Física</label>
                 <input type="text" className="glass-input" placeholder="Av. Américo Vespucio 1234" value={locAddress} onChange={e=>setLocAddress(e.target.value)} required />
               </div>
-              <div className="form-group">
-                <label>Región</label>
-                <input type="text" className="glass-input" placeholder="Región Metropolitana" value={locRegion} onChange={e=>setLocRegion(e.target.value)} required />
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Comuna</label>
+                  <input type="text" className="glass-input" placeholder="Pudahuel" value={locComuna} onChange={e=>setLocComuna(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Región</label>
+                  <input type="text" className="glass-input" placeholder="Región Metropolitana" value={locRegion} onChange={e=>setLocRegion(e.target.value)} required />
+                </div>
               </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Nombre Encargado del Local</label>
+                  <input type="text" className="glass-input" placeholder="Juan Pérez" value={locManagerName} onChange={e=>setLocManagerName(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Teléfono Encargado</label>
+                  <input type="text" className="glass-input" placeholder="+56 9 1234 5678" value={locManagerPhone} onChange={e=>setLocManagerPhone(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Correo Electrónico Encargado</label>
+                <input type="email" className="glass-input" placeholder="encargado@tienda.cl" value={locManagerEmail} onChange={e=>setLocManagerEmail(e.target.value)} />
+              </div>
+
               <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: "10px", margin: "15px 0" }}>
                 <input type="checkbox" id="is_wh" checked={locIsWarehouse} onChange={e=>setLocIsWarehouse(e.target.checked)} />
-                <label htmlFor="is_wh">¿Es una bodega/centro de distribución principal?</label>
+                <label htmlFor="is_wh">¿Es una bodega / centro de distribución principal?</label>
               </div>
+
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar</button>
+                <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar Local</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Locations Modal */}
+      {modalOpen === "bulk_locations" && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "650px" }}>
+            <button className="modal-close" onClick={closeModals}><X size={20} /></button>
+            <h3 style={{ marginBottom: "15px", fontWeight: 600 }} className="accent-text-gradient">Carga Masiva de Locales e Instalaciones</h3>
+            <p style={{ fontSize: "0.85rem", color: "hsl(var(--text-muted))", marginBottom: "20px" }}>
+              Pega un arreglo en formato JSON con la lista de locales a registrar o actualizar. Puedes incluir el <code>convenio_id</code> para cruzarlos directamente con cada cliente.
+            </p>
+            {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
+            <form onSubmit={handleBulkCreateLocations}>
+              <div className="form-group" style={{ marginBottom: "20px" }}>
+                <label>Datos en formato JSON</label>
+                <textarea 
+                  className="glass-input" 
+                  style={{ minHeight: "220px", fontFamily: "monospace", fontSize: "0.85rem", lineHeight: "1.4" }}
+                  placeholder={`[\n  {\n    "codigo_local": "COP-001",\n    "nombre": "Pronto Copec Kennedy",\n    "direccion": "Av. Presidente Kennedy 5000",\n    "comuna": "Las Condes",\n    "region": "Región Metropolitana",\n    "es_bodega": false,\n    "nombre_encargado": "Carlos Soto",\n    "telefono_encargado": "+56987654321"\n  }\n]`}
+                  value={bulkLocJson}
+                  onChange={e=>setBulkLocJson(e.target.value)}
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => {
+                    const sample = [
+                      {
+                        codigo_local: "COP-001",
+                        nombre: "Pronto Copec Kennedy",
+                        direccion: "Av. Presidente Kennedy 5000",
+                        comuna: "Las Condes",
+                        region: "Región Metropolitana",
+                        es_bodega: false,
+                        nombre_encargado: "Carlos Soto",
+                        telefono_encargado: "+56987654321",
+                        correo_encargado: "csoto@copec.cl"
+                      },
+                      {
+                        codigo_local: "PRON-002",
+                        nombre: "Pronto Copec Pudahuel",
+                        direccion: "Ruta 68 Km 12",
+                        comuna: "Pudahuel",
+                        region: "Región Metropolitana",
+                        es_bodega: false,
+                        nombre_encargado: "María Rojas",
+                        telefono_encargado: "+56911223344",
+                        correo_encargado: "mrojas@copec.cl"
+                      }
+                    ];
+                    setBulkLocJson(JSON.stringify(sample, null, 2));
+                  }}
+                >
+                  Pegar Ejemplo
+                </button>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
+                  <button type="submit" className="btn-primary" disabled={modalLoading}>Cargar Locales</button>
+                </div>
               </div>
             </form>
           </div>

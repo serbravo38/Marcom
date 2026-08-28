@@ -17,11 +17,23 @@ class Ubicacion(Base):
     __table_args__ = {"schema": "esquema_inventario"}
 
     ubicacion_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    nombre = Column(String(100), nullable=False)
+    codigo_local = Column(String(50), unique=True, nullable=True)
+    nombre = Column(String(150), nullable=False)
     direccion = Column(String, nullable=False)
     region = Column(String(100), nullable=False)
+    comuna = Column(String(100), nullable=True)
     es_bodega = Column(Boolean, nullable=False, default=False, server_default="false")
+    convenio_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("esquema_auth_clientes.convenios.convenio_id", ondelete="SET NULL"),
+        nullable=True
+    )
+    nombre_encargado = Column(String(150), nullable=True)
+    telefono_encargado = Column(String(20), nullable=True)
+    correo_encargado = Column(String(150), nullable=True)
+    activo = Column(Boolean, nullable=False, default=True, server_default="true")
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    actualizado_en = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relaciones
     activos = relationship("Activo", back_populates="ubicacion_actual")

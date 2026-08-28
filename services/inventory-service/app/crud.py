@@ -2,24 +2,99 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from uuid import UUID
 
+from typing import Optional, List
+
 # --- LOCATION CRUD ---
 def obtener_ubicacion_por_id(db: Session, ubicacion_id: UUID):
     return db.query(models.Ubicacion).filter(models.Ubicacion.ubicacion_id == ubicacion_id).first()
 
-def obtener_ubicaciones(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Ubicacion).offset(skip).limit(limit).all()
+def obtener_ubicacion_por_codigo(db: Session, codigo_local: str):
+    return db.query(models.Ubicacion).filter(models.Ubicacion.codigo_local == codigo_local).first()
+
+def obtener_ubicaciones(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    convenio_id: Optional[UUID] = None,
+    es_bodega: Optional[bool] = None,
+    region: Optional[str] = None
+):
+    query = db.query(models.Ubicacion)
+    if convenio_id is not None:
+        query = query.filter(models.Ubicacion.convenio_id == convenio_id)
+    if es_bodega is not None:
+        query = query.filter(models.Ubicacion.es_bodega == es_bodega)
+    if region is not None:
+        query = query.filter(models.Ubicacion.region == region)
+    return query.offset(skip).limit(limit).all()
 
 def crear_ubicacion(db: Session, location_in: schemas.UbicacionCrear):
     db_location = models.Ubicacion(
+        codigo_local=location_in.codigo_local,
         nombre=location_in.nombre,
         direccion=location_in.direccion,
         region=location_in.region,
-        es_bodega=location_in.es_bodega
+        comuna=location_in.comuna,
+        es_bodega=location_in.es_bodega,
+        convenio_id=location_in.convenio_id,
+        nombre_encargado=location_in.nombre_encargado,
+        telefono_encargado=location_in.telefono_encargado,
+        correo_encargado=location_in.correo_encargado,
+        activo=location_in.activo
     )
     db.add(db_location)
     db.commit()
     db.refresh(db_location)
     return db_location
+
+def actualizar_ubicacion(db: Session, db_location: models.Ubicacion, location_update: schemas.UbicacionActualizar):
+    update_data = location_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_location, key, value)
+    db.commit()
+    db.refresh(db_location)
+    return db_location
+
+def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear]):
+    nuevos = []
+    for loc in locales:
+        # Check if local code already exists, if so update it, otherwise insert
+        if loc.codigo_local:
+            existente = obtener_ubicacion_por_codigo(db, loc.codigo_local)
+            if existente:
+                existente.nombre = loc.nombre
+                existente.direccion = loc.direccion
+                existente.region = loc.region
+                existente.comuna = loc.comuna
+                existente.es_bodega = loc.es_bodega
+                existente.convenio_id = loc.convenio_id
+                existente.nombre_encargado = loc.nombre_encargado
+                existente.telefono_encargado = loc.telefono_encargado
+                existente.correo_encargado = loc.correo_encargado
+                existente.activo = loc.activo
+                nuevos.append(existente)
+                continue
+
+        db_loc = models.Ubicacion(
+            codigo_local=loc.codigo_local,
+            nombre=loc.nombre,
+            direccion=loc.direccion,
+            region=loc.region,
+            comuna=loc.comuna,
+            es_bodega=loc.es_bodega,
+            convenio_id=loc.convenio_id,
+            nombre_encargado=loc.nombre_encargado,
+            telefono_encargado=loc.telefono_encargado,
+            correo_encargado=loc.correo_encargado,
+            activo=loc.activo
+        )
+        db.add(db_loc)
+        nuevos.append(db_loc)
+    
+    db.commit()
+    for db_loc in nuevos:
+        db.refresh(db_loc)
+    return nuevos
 
 # --- PRODUCT CATALOG CRUD ---
 def obtener_producto_por_id(db: Session, producto_id: UUID):

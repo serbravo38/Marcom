@@ -6,20 +6,44 @@ from app.models import EstadoActivoEnum
 
 # --- LOCATION SCHEMAS ---
 class UbicacionBase(BaseModel):
-    nombre: str = Field(..., max_length=100)
+    codigo_local: Optional[str] = Field(None, max_length=50, description="Código del local (ej: COP-042)")
+    nombre: str = Field(..., max_length=150)
     direccion: str
     region: str = Field(..., max_length=100)
+    comuna: Optional[str] = Field(None, max_length=100)
     es_bodega: bool = False
+    convenio_id: Optional[UUID] = None
+    nombre_encargado: Optional[str] = Field(None, max_length=150)
+    telefono_encargado: Optional[str] = Field(None, max_length=20)
+    correo_encargado: Optional[str] = Field(None, max_length=150)
+    activo: bool = True
 
 class UbicacionCrear(UbicacionBase):
     pass
 
+class UbicacionActualizar(BaseModel):
+    codigo_local: Optional[str] = None
+    nombre: Optional[str] = None
+    direccion: Optional[str] = None
+    region: Optional[str] = None
+    comuna: Optional[str] = None
+    es_bodega: Optional[bool] = None
+    convenio_id: Optional[UUID] = None
+    nombre_encargado: Optional[str] = None
+    telefono_encargado: Optional[str] = None
+    correo_encargado: Optional[str] = None
+    activo: Optional[bool] = None
+
 class UbicacionRespuesta(UbicacionBase):
     ubicacion_id: UUID
     creado_en: datetime
+    actualizado_en: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+class UbicacionCargaMasiva(BaseModel):
+    locales: List[UbicacionCrear]
 
 # --- PRODUCT CATALOG SCHEMAS ---
 class CatalogoProductosBase(BaseModel):

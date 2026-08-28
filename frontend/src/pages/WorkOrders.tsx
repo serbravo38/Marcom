@@ -214,7 +214,7 @@ export const WorkOrders: React.FC = () => {
                     <tr key={wo.orden_trabajo_id}>
                       <td style={{ fontWeight: 600 }}>{wo.numero_orden}</td>
                       <td>{agreement ? agreement.nombre_empresa : "Cliente Estándar"}</td>
-                      <td>{location ? location.nombre : "N/A"}</td>
+                      <td>{location ? `${location.codigo_local ? `[${location.codigo_local}] ` : ""}${location.nombre}${location.comuna ? ` (${location.comuna})` : ""}` : "N/A"}</td>
                       <td>{tech ? `${tech.nombre} ${tech.apellido}` : "Sin Asignar"}</td>
                       <td>{new Date(wo.fecha_programada).toLocaleDateString()}</td>
                       <td>
@@ -269,7 +269,7 @@ export const WorkOrders: React.FC = () => {
                 <label>Ubicación / Bodega / Tienda Cliente</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={woLocationId} onChange={e=>setWoLocationId(e.target.value)} required>
                   <option value="">Selecciona ubicación...</option>
-                  {locations.map(l=><option key={l.ubicacion_id} value={l.ubicacion_id}>{l.nombre} - {l.direccion}</option>)}
+                  {locations.map(l=><option key={l.ubicacion_id} value={l.ubicacion_id}>{l.codigo_local ? `[${l.codigo_local}] ` : ""}{l.nombre} {l.comuna ? `(${l.comuna}) ` : ""}- {l.direccion}</option>)}
                 </select>
               </div>
               <div className="form-row">

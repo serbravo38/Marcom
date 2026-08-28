@@ -7,6 +7,8 @@ from app import crud, schemas, auth
 
 router = APIRouter()
 
+from typing import Optional
+
 # --- UBICACIONES ---
 
 @router.post("/ubicaciones", response_model=schemas.UbicacionRespuesta, status_code=status.HTTP_201_CREATED)
@@ -15,16 +17,57 @@ def create_location(
     db: Session = Depends(get_db),
     user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
 ):
+    if location_in.codigo_local:
+        db_existing = crud.obtener_ubicacion_por_codigo(db, codigo_local=location_in.codigo_local)
+        if db_existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ya existe una ubicación registrada con el código de local '{location_in.codigo_local}'."
+            )
     return crud.crear_ubicacion(db, location_in)
+
+@router.post("/ubicaciones/carga-masiva", response_model=List[schemas.UbicacionRespuesta], status_code=status.HTTP_201_CREATED)
+def bulk_create_locations(
+    bulk_data: schemas.UbicacionCargaMasiva,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
+):
+    return crud.crear_ubicaciones_masivo(db, bulk_data.locales)
 
 @router.get("/ubicaciones", response_model=List[schemas.UbicacionRespuesta])
 def get_locations(
     skip: int = 0,
     limit: int = 100,
+    convenio_id: Optional[UUID] = None,
+    es_bodega: Optional[bool] = None,
+    region: Optional[str] = None,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
-    return crud.obtener_ubicaciones(db, skip, limit)
+    return crud.obtener_ubicaciones(db, skip=skip, limit=limit, convenio_id=convenio_id, es_bodega=es_bodega, region=region)
+
+@router.get("/ubicaciones/{ubicacion_id}", response_model=schemas.UbicacionRespuesta)
+def get_location_details(
+    ubicacion_id: UUID,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.verify_token)
+):
+    location = crud.obtener_ubicacion_por_id(db, ubicacion_id=ubicacion_id)
+    if not location:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
+    return location
+
+@router.patch("/ubicaciones/{ubicacion_id}", response_model=schemas.UbicacionRespuesta)
+def update_location(
+    ubicacion_id: UUID,
+    location_update: schemas.UbicacionActualizar,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
+):
+    location = crud.obtener_ubicacion_por_id(db, ubicacion_id=ubicacion_id)
+    if not location:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
+    return crud.actualizar_ubicacion(db, location, location_update)
 
 
 # --- CATALOGO PRODUCTOS ---

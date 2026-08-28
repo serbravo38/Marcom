@@ -2,11 +2,19 @@ import { api } from "./api";
 
 export interface Ubicacion {
   ubicacion_id: string;
+  codigo_local?: string | null;
   nombre: string;
   direccion: string;
   region: string;
+  comuna?: string | null;
   es_bodega: boolean;
+  convenio_id?: string | null;
+  nombre_encargado?: string | null;
+  telefono_encargado?: string | null;
+  correo_encargado?: string | null;
+  activo?: boolean;
   creado_en: string;
+  actualizado_en?: string | null;
 }
 
 export interface CatalogoProductos {
@@ -46,11 +54,29 @@ export interface MovimientoStock {
 
 export const inventoryService = {
   // Ubicaciones
-  getLocations: async (): Promise<Ubicacion[]> => {
-    return api.get<Ubicacion[]>("/ubicaciones");
+  getLocations: async (params?: { convenio_id?: string; es_bodega?: boolean; region?: string }): Promise<Ubicacion[]> => {
+    let url = "/ubicaciones";
+    if (params) {
+      const search = new URLSearchParams();
+      if (params.convenio_id) search.append("convenio_id", params.convenio_id);
+      if (params.es_bodega !== undefined) search.append("es_bodega", String(params.es_bodega));
+      if (params.region) search.append("region", params.region);
+      const query = search.toString();
+      if (query) url += `?${query}`;
+    }
+    return api.get<Ubicacion[]>(url);
+  },
+  getLocationDetails: async (ubicacionId: string): Promise<Ubicacion> => {
+    return api.get<Ubicacion>(`/ubicaciones/${ubicacionId}`);
   },
   createLocation: async (data: any): Promise<Ubicacion> => {
     return api.post<Ubicacion>("/ubicaciones", data);
+  },
+  bulkCreateLocations: async (locales: any[]): Promise<Ubicacion[]> => {
+    return api.post<Ubicacion[]>("/ubicaciones/carga-masiva", { locales });
+  },
+  updateLocation: async (ubicacionId: string, data: any): Promise<Ubicacion> => {
+    return api.patch<Ubicacion>(`/ubicaciones/${ubicacionId}`, data);
   },
 
   // Catálogo de Productos
