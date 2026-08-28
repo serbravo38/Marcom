@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { 
   Plus, 
   X, 
   Loader2, 
-  Shuffle,
-  UploadCloud
+  Shuffle, 
+  UploadCloud, 
+  Store, 
+  Warehouse, 
+  MapPin, 
+  User, 
+  Briefcase 
 } from "lucide-react";
 import { inventoryService } from "../services/inventory";
 import { authService, type Convenio } from "../services/auth";
@@ -549,85 +555,391 @@ export const Inventory: React.FC = () => {
         </div>
       )}
 
-      {/* --- FORM MODALS --- */}
+      {/* --- FORM MODALS CON CREATEPORTAL DIRECTO AL BODY --- */}
 
       {/* Create Location Modal */}
-      {modalOpen === "location" && (
+      {modalOpen === "location" && createPortal(
         <div className="modal-overlay">
-          <div className="modal-content glass-panel" style={{ maxWidth: "600px" }}>
-            <button className="modal-close" onClick={closeModals}><X size={20} /></button>
-            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Local o Bodega</h3>
-            {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
-            <form onSubmit={handleCreateLocation}>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Código del Local (Opcional)</label>
-                  <input type="text" className="glass-input" placeholder="ej: COP-042, PRONTO-102" value={locCode} onChange={e=>setLocCode(e.target.value)} />
+          <div className="modal-content glass-panel" style={{ 
+            maxWidth: "1050px", 
+            width: "92vw", 
+            height: "88vh",
+            minHeight: "640px",
+            maxHeight: "92vh", 
+            padding: 0, 
+            display: "flex", 
+            flexDirection: "column", 
+            borderRadius: "16px", 
+            background: "#121625", 
+            border: "1px solid rgba(255,255,255,0.12)",
+            boxShadow: "0 30px 100px rgba(0,0,0,0.9)",
+            overflow: "hidden" 
+          }}>
+            {/* Header Fijo */}
+            <div style={{ 
+              padding: "16px 28px", 
+              borderBottom: "1px solid rgba(255,255,255,0.08)", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "space-between", 
+              background: "rgba(255,255,255,0.02)",
+              flexShrink: 0 
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg, hsla(var(--primary), 0.3) 0%, hsla(var(--secondary), 0.15) 100%)",
+                  border: "1px solid hsla(var(--primary), 0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "hsl(var(--primary))",
+                  boxShadow: "0 0 15px hsla(var(--primary), 0.2)"
+                }}>
+                  {locIsWarehouse ? <Warehouse size={22} /> : <Store size={22} />}
                 </div>
-                <div className="form-group">
-                  <label>Convenio Asociado</label>
-                  <select className="glass-input" style={{ background: "#1b2030" }} value={locAgreementId} onChange={e=>setLocAgreementId(e.target.value)}>
-                    <option value="">Ninguno / Instalación Propia</option>
-                    {agreements.map(a=><option key={a.convenio_id} value={a.convenio_id}>{a.nombre_empresa} ({a.rut})</option>)}
-                  </select>
+                <div>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0 }} className="accent-text-gradient">
+                    {locIsWarehouse ? "Registrar Nueva Bodega Central" : "Registrar Local / Punto de Venta"}
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "hsl(var(--text-muted))", margin: "2px 0 0 0" }}>
+                    {locIsWarehouse 
+                      ? "Centro de acopio, distribución y almacenamiento general de activos." 
+                      : "Puntos de venta, tiendas y estaciones de servicio de convenio."}
+                  </p>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Nombre del Local o Bodega</label>
-                <input type="text" className="glass-input" placeholder="Tienda Pronto Copec Pudahuel" value={locName} onChange={e=>setLocName(e.target.value)} required />
-              </div>
-
-              <div className="form-group">
-                <label>Dirección Física</label>
-                <input type="text" className="glass-input" placeholder="Av. Américo Vespucio 1234" value={locAddress} onChange={e=>setLocAddress(e.target.value)} required />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Comuna</label>
-                  <input type="text" className="glass-input" placeholder="Pudahuel" value={locComuna} onChange={e=>setLocComuna(e.target.value)} />
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                {/* Selector de Tipo Segmentado */}
+                <div style={{ 
+                  display: "flex", 
+                  gap: "6px", 
+                  background: "rgba(255,255,255,0.04)",
+                  padding: "3px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255,255,255,0.08)"
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setLocIsWarehouse(false)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 14px",
+                      borderRadius: "6px",
+                      border: !locIsWarehouse ? "1px solid hsl(var(--primary))" : "1px solid transparent",
+                      background: !locIsWarehouse ? "hsl(var(--primary))" : "transparent",
+                      color: !locIsWarehouse ? "#fff" : "hsl(var(--text-muted))",
+                      cursor: "pointer",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <Store size={15} />
+                    <span>Punto de Venta</span>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setLocIsWarehouse(true)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 14px",
+                      borderRadius: "6px",
+                      border: locIsWarehouse ? "1px solid hsl(var(--primary))" : "1px solid transparent",
+                      background: locIsWarehouse ? "hsl(var(--primary))" : "transparent",
+                      color: locIsWarehouse ? "#fff" : "hsl(var(--text-muted))",
+                      cursor: "pointer",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <Warehouse size={15} />
+                    <span>Bodega Central</span>
+                  </button>
                 </div>
-                <div className="form-group">
-                  <label>Región</label>
-                  <input type="text" className="glass-input" placeholder="Región Metropolitana" value={locRegion} onChange={e=>setLocRegion(e.target.value)} required />
+
+                <button 
+                  className="modal-close" 
+                  onClick={closeModals}
+                  style={{ position: "static", padding: "6px", borderRadius: "6px", background: "rgba(255,255,255,0.05)" }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Formulario con Scroll Interno Suave si es necesario */}
+            <form onSubmit={handleCreateLocation} style={{ display: "flex", flexDirection: "column", flexGrow: 1, overflow: "hidden" }}>
+              <div style={{ padding: "20px 28px", overflowY: "auto", flexGrow: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
+                
+                {modalError && (
+                  <div className="badge error" style={{ width: "100%", padding: "10px 14px", borderRadius: "6px", fontSize: "0.85rem" }}>
+                    {modalError}
+                  </div>
+                )}
+
+                {/* Grid Principal Extendido */}
+                <div style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: "18px", flexGrow: 1 }}>
+                  
+                  {/* COLUMNA IZQUIERDA: Identificación y Ubicación */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    
+                    {/* Tarjeta Identificación */}
+                    <div style={{ background: "rgba(255,255,255,0.018)", border: "1px solid rgba(255,255,255,0.06)", padding: "16px 20px", borderRadius: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px", color: "hsl(var(--primary))", fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <Briefcase size={15} />
+                        <span>Identificación y Empresa</span>
+                      </div>
+
+                      <div className="form-row" style={{ marginBottom: "10px" }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Código del Local (Opcional)</label>
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            placeholder="ej: COP-042" 
+                            value={locCode} 
+                            onChange={e=>setLocCode(e.target.value)} 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Convenio Cliente</label>
+                          <select 
+                            className="glass-input" 
+                            style={{ background: "#181d2e", padding: "8px 12px", fontSize: "0.85rem" }} 
+                            value={locAgreementId} 
+                            onChange={e=>setLocAgreementId(e.target.value)}
+                          >
+                            <option value="">Ninguno / Propio</option>
+                            {agreements.map(a=><option key={a.convenio_id} value={a.convenio_id}>{a.nombre_empresa} ({a.rut})</option>)}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Nombre del Local o Bodega *</label>
+                        <input 
+                          type="text" 
+                          className="glass-input" 
+                          placeholder="ej: Tienda Pronto Copec Las Condes" 
+                          value={locName} 
+                          onChange={e=>setLocName(e.target.value)} 
+                          required 
+                          style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Tarjeta Ubicación Geográfica */}
+                    <div style={{ background: "rgba(255,255,255,0.018)", border: "1px solid rgba(255,255,255,0.06)", padding: "16px 20px", borderRadius: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px", color: "hsl(var(--primary))", fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <MapPin size={15} />
+                        <span>Ubicación Geográfica</span>
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: "10px" }}>
+                        <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Dirección Física Completa *</label>
+                        <input 
+                          type="text" 
+                          className="glass-input" 
+                          placeholder="ej: Av. Presidente Kennedy 5000" 
+                          value={locAddress} 
+                          onChange={e=>setLocAddress(e.target.value)} 
+                          required 
+                          style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                        />
+                      </div>
+
+                      <div className="form-row" style={{ margin: 0 }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Comuna</label>
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            placeholder="ej: Las Condes" 
+                            value={locComuna} 
+                            onChange={e=>setLocComuna(e.target.value)} 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Región *</label>
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            placeholder="ej: Región Metropolitana" 
+                            value={locRegion} 
+                            onChange={e=>setLocRegion(e.target.value)} 
+                            required 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* COLUMNA DERECHA: Contacto y Tarjeta de Resumen */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    
+                    {/* Tarjeta Contacto */}
+                    <div style={{ background: "rgba(255,255,255,0.018)", border: "1px solid rgba(255,255,255,0.06)", padding: "16px 20px", borderRadius: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px", color: "hsl(var(--primary))", fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <User size={15} />
+                        <span>Contacto del Encargado en Terreno</span>
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: "10px" }}>
+                        <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Nombre del Encargado</label>
+                        <input 
+                          type="text" 
+                          className="glass-input" 
+                          placeholder="ej: Carlos Soto" 
+                          value={locManagerName} 
+                          onChange={e=>setLocManagerName(e.target.value)} 
+                          style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                        />
+                      </div>
+
+                      <div className="form-row" style={{ margin: 0 }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Teléfono</label>
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            placeholder="ej: +56 9 8765 4321" 
+                            value={locManagerPhone} 
+                            onChange={e=>setLocManagerPhone(e.target.value)} 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Correo Electrónico</label>
+                          <input 
+                            type="email" 
+                            className="glass-input" 
+                            placeholder="ej: csoto@copec.cl" 
+                            value={locManagerEmail} 
+                            onChange={e=>setLocManagerEmail(e.target.value)} 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tarjeta de Resumen en Vivo */}
+                    <div style={{ 
+                      background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", 
+                      border: "1px dashed rgba(255,255,255,0.14)", 
+                      padding: "16px 18px", 
+                      borderRadius: "10px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      flexGrow: 1
+                    }}>
+                      <div>
+                        <div style={{ fontSize: "0.74rem", color: "hsl(var(--text-muted))", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span>Ficha de Vista Previa</span>
+                          <span className={`badge ${locIsWarehouse ? "success" : "primary"}`} style={{ fontSize: "0.7rem", padding: "2px 7px" }}>
+                            {locIsWarehouse ? "BODEGA CENTRAL" : "PUNTO DE VENTA"}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                          {locCode ? (
+                            <span className="badge secondary" style={{ fontSize: "0.74rem", padding: "2px 6px" }}>{locCode}</span>
+                          ) : null}
+                          <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "#fff" }}>
+                            {locName || "Nombre del Local / Bodega"}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: "0.8rem", color: "hsl(var(--primary))", marginBottom: "6px" }}>
+                          {locAgreementId 
+                            ? agreements.find(a => a.convenio_id === locAgreementId)?.nombre_empresa 
+                            : "Instalación Propia / Sin Convenio"}
+                        </div>
+
+                        <div style={{ fontSize: "0.78rem", color: "hsl(var(--text-muted))", lineHeight: "1.4" }}>
+                          📍 {locAddress || "Dirección no especificada"}{locComuna ? `, ${locComuna}` : ""}{locRegion ? ` (${locRegion})` : ""}
+                        </div>
+
+                        {locManagerName ? (
+                          <div style={{ fontSize: "0.76rem", color: "hsl(var(--text-muted))", marginTop: "4px" }}>
+                            👤 Encargado: <strong style={{ color: "#fff" }}>{locManagerName}</strong> {locManagerPhone ? `(${locManagerPhone})` : ""}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div style={{ fontSize: "0.72rem", color: "hsl(var(--text-muted))", marginTop: "8px", opacity: 0.7, textAlign: "right" }}>
+                        ✔ Sincronización automática
+                      </div>
+                    </div>
+
+                  </div>
+
                 </div>
+
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Nombre Encargado del Local</label>
-                  <input type="text" className="glass-input" placeholder="Juan Pérez" value={locManagerName} onChange={e=>setLocManagerName(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Teléfono Encargado</label>
-                  <input type="text" className="glass-input" placeholder="+56 9 1234 5678" value={locManagerPhone} onChange={e=>setLocManagerPhone(e.target.value)} />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Correo Electrónico Encargado</label>
-                <input type="email" className="glass-input" placeholder="encargado@tienda.cl" value={locManagerEmail} onChange={e=>setLocManagerEmail(e.target.value)} />
-              </div>
-
-              <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: "10px", margin: "15px 0" }}>
-                <input type="checkbox" id="is_wh" checked={locIsWarehouse} onChange={e=>setLocIsWarehouse(e.target.checked)} />
-                <label htmlFor="is_wh">¿Es una bodega / centro de distribución principal?</label>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar Local</button>
+              {/* Footer Fijo */}
+              <div style={{ 
+                padding: "14px 28px", 
+                borderTop: "1px solid rgba(255,255,255,0.08)", 
+                background: "rgba(10,14,24,0.6)", 
+                display: "flex", 
+                justifyContent: "flex-end", 
+                gap: "12px", 
+                flexShrink: 0 
+              }}>
+                <button 
+                  type="button" 
+                  className="btn-secondary" 
+                  onClick={closeModals}
+                  style={{ padding: "8px 18px", fontSize: "0.85rem", fontWeight: 500 }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  disabled={modalLoading}
+                  style={{ padding: "8px 22px", fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  {modalLoading ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      <span>{locIsWarehouse ? "Registrar Bodega" : "Registrar Local"}</span>
+                    </>
+                  )}
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Bulk Locations Modal */}
-      {modalOpen === "bulk_locations" && (
+      {modalOpen === "bulk_locations" && createPortal(
         <div className="modal-overlay">
-          <div className="modal-content glass-panel" style={{ maxWidth: "650px" }}>
+          <div className="modal-content glass-panel" style={{ maxWidth: "650px", padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
             <h3 style={{ marginBottom: "15px", fontWeight: 600 }} className="accent-text-gradient">Carga Masiva de Locales e Instalaciones</h3>
             <p style={{ fontSize: "0.85rem", color: "hsl(var(--text-muted))", marginBottom: "20px" }}>
@@ -687,13 +999,14 @@ export const Inventory: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Create Product Modal */}
-      {modalOpen === "product" && (
+      {modalOpen === "product" && createPortal(
         <div className="modal-overlay">
-          <div className="modal-content glass-panel">
+          <div className="modal-content glass-panel" style={{ padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
             <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Producto en Catálogo</h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
@@ -732,13 +1045,14 @@ export const Inventory: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Create Asset Modal */}
-      {modalOpen === "asset" && (
+      {modalOpen === "asset" && createPortal(
         <div className="modal-overlay">
-          <div className="modal-content glass-panel">
+          <div className="modal-content glass-panel" style={{ padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
             <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Activo Físico (Serie)</h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
@@ -781,13 +1095,14 @@ export const Inventory: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Register Movement Modal */}
-      {modalOpen === "movement" && (
+      {modalOpen === "movement" && createPortal(
         <div className="modal-overlay">
-          <div className="modal-content glass-panel">
+          <div className="modal-content glass-panel" style={{ padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
             <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Traslado de Stock</h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
@@ -816,7 +1131,8 @@ export const Inventory: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
       <style>{`
