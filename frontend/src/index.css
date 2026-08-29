@@ -88,11 +88,34 @@ body {
   font-size: 0.95rem;
   transition: var(--transition-smooth);
   outline: none;
+  color-scheme: dark;
 }
 .glass-input:focus {
   border-color: hsl(var(--border-focus));
   background: rgba(255, 255, 255, 0.06);
   box-shadow: 0 0 15px hsla(var(--primary), 0.2);
+}
+
+select,
+select.glass-input {
+  background-color: #141829;
+  color: #f8fafc;
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+select option,
+.glass-input option,
+option {
+  background-color: #141829 !important;
+  color: #f8fafc !important;
+  padding: 10px 14px;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
 }
 
 /* Premium Buttons */
@@ -511,31 +534,35 @@ body {
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10px);
+  background: rgba(4, 7, 18, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  overflow: hidden;
   margin: 0;
   box-sizing: border-box;
+  overflow-y: auto;
 }
+
 .modal-content {
   width: 100%;
   max-width: 860px;
-  max-height: 90vh;
+  max-height: 92vh;
   background: #141829;
   border-radius: 16px;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 40px hsla(var(--primary), 0.1);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 40px hsla(var(--primary), 0.15);
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   position: relative;
-  margin: 0 auto;
+  margin: auto;
+  overflow-y: auto;
+  padding: 28px;
 }
+
 .modal-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -544,27 +571,33 @@ body {
   border-radius: 4px;
 }
 .modal-content::-webkit-scrollbar-thumb {
-  background: hsla(var(--primary), 0.3);
+  background: hsla(var(--primary), 0.4);
   border-radius: 4px;
 }
 .modal-content::-webkit-scrollbar-thumb:hover {
-  background: hsla(var(--primary), 0.5);
+  background: hsla(var(--primary), 0.6);
 }
+
 .modal-close {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: none;
-  border: none;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: hsl(var(--text-muted));
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 50%;
   transition: var(--transition-smooth);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .modal-close:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 /* Form Styles */

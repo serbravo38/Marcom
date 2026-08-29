@@ -21,7 +21,7 @@ def crear_orden_trabajo(db: Session, work_order_in: schemas.OrdenTrabajoCrear):
         estado=work_order_in.estado,
         fecha_programada=work_order_in.fecha_programada,
         fecha_termino=work_order_in.fecha_termino,
-        notes=work_order_in.notes
+        notas=work_order_in.notas
     )
     db.add(db_wo)
     db.commit()

@@ -53,7 +53,7 @@ async def gateway_proxy(request: Request, path: str):
         target_service_url = settings.INVENTORY_SERVICE_URL
     elif path.startswith("api/v1/ordenes-trabajo"):
         target_service_url = settings.WORK_ORDER_SERVICE_URL
-    elif path.startswith("api/v1/pedidos") or path.startswith("api/v1/pagos") or path.startswith("api/v1/documentos-dte"):
+    elif path.startswith("api/v1/pedidos") or path.startswith("api/v1/pagos") or path.startswith("api/v1/documentos-dte") or path.startswith("api/v1/cotizaciones"):
         target_service_url = settings.BILLING_SERVICE_URL
     
     if not target_service_url:

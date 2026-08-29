@@ -21,23 +21,25 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    print("GLOBAL EXCEPTION:", repr(exc))
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "InternalServerError",
             "message": "Ha ocurrido un error interno en el servidor.",
-            "detail": str(exc) if app.debug else None
+            "detail": str(exc)
         }
     )
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+    print("SQLALCHEMY EXCEPTION:", repr(exc))
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
             "error": "DatabaseError",
             "message": "Ocurrió un problema con la persistencia de datos.",
-            "detail": str(exc) if app.debug else None
+            "detail": str(exc)
         }
     )
 

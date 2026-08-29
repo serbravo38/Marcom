@@ -2,6 +2,12 @@ import sys
 import time
 import httpx
 
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 GATEWAY_URL = "http://localhost:8000"
 
 def run_tests():
@@ -36,9 +42,10 @@ def run_tests():
     print("✅ Sesión iniciada con administrador semilla.")
 
     # 3. Registrar Administrador
-    admin_email = f"admin_{int(time.time())}@marcom.cl"
+    ts = int(time.time() * 1000)
+    admin_email = f"admin_{ts}@marcom.cl"
     register_payload = {
-        "rut": f"12.345.678-{int(time.time()) % 10}",
+        "rut": f"{(ts % 80000000) + 10000000}-{(ts % 9) + 1}",
         "correo": admin_email,
         "clave": "supersecurepassword",
         "nombre": "Admin",
@@ -81,9 +88,9 @@ def run_tests():
     # 6. Crear un Convenio (Auth Service)
     print("\n5. Creando convenio (enrutando a Auth Service)...")
     agreement_payload = {
-        "nombre_empresa": "Copec S.A.",
-        "rut": f"99.888.777-{int(time.time()) % 10}",
-        "limite_credito": 75000.00,
+        "nombre_empresa": f"Copec S.A. {ts % 1000}",
+        "rut": f"99.{(ts % 800) + 100}.{(ts % 800) + 100}-{(ts % 9) + 1}",
+        "limite_credito": 7500000.00,
         "credito_usado": 0.00,
         "activo": True
     }
@@ -199,9 +206,47 @@ def run_tests():
         sys.exit(1)
     print(f"✅ Orden de trabajo creada exitosamente. N°: {wo_payload['numero_orden']}")
 
+    # 12. Módulo de Cotización para Clientes en Convenio y Carga de Orden de Compra (Billing Service)
+    print("\n11. Probando Módulo de Cotizaciones con cálculo interno y carga de Orden de Compra...")
+    quot_payload = {
+        "convenio_id": convenio_id,
+        "ubicacion_id": local_id,
+        "fecha_solicitud_aprobacion": "2026-09-02T10:00:00Z",
+        "tipo_soporte": "ESTANDAR_CONVENIO",
+        "items": [
+            {
+                "producto_id": producto_id,
+                "cantidad": 2,
+                "precio_unitario": 480000.0
+            }
+        ],
+        "notas": "Cotización solicitada para local Pronto Copec Las Condes"
+    }
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/cotizaciones", json=quot_payload, headers=headers)
+    if response.status_code != 201:
+        print(f"❌ Error al crear cotización: {response.status_code} - {response.text}")
+        sys.exit(1)
+    cotizacion = response.json()
+    cot_id = cotizacion["cotizacion_id"]
+    print(f"✅ Cotización generada. N°: {cotizacion['numero_cotizacion']}, Total: ${cotizacion['monto_total']:,.2f}")
+    print(f"   (Equipos: ${cotizacion['monto_equipos']:,.2f}, KM internamente calculados: {cotizacion['distancia_km']} km -> ${cotizacion['monto_kilometraje']:,.2f})")
+
+    # Aprobar Cotización con Carga de Orden de Compra (OC)
+    po_payload = {
+        "orden_compra_numero": f"OC-COPEC-2026-{int(time.time()) % 10000}",
+        "orden_compra_adjunto": "https://marcom.cl/docs/oc/OC-COPEC-2026.pdf",
+        "notas": "Aprobada por cliente con envío de Orden de Compra firmada"
+    }
+    response = httpx.post(f"{GATEWAY_URL}/api/v1/cotizaciones/{cot_id}/aprobar", json=po_payload, headers=headers)
+    if response.status_code != 200:
+        print(f"❌ Error al aprobar cotización con OC: {response.status_code} - {response.text}")
+        sys.exit(1)
+    cot_aprobada = response.json()
+    print(f"✅ Cotización aprobada con Orden de Compra '{cot_aprobada['orden_compra_numero']}'. Pedido ID: {cot_aprobada['pedido_id']}, OT ID: {cot_aprobada['orden_trabajo_id']}")
+
     print("\n====================================================")
     print("🎉 ¡TODAS LAS PRUEBAS DE INTEGRACIÓN PASARON CON ÉXITO!")
-    print("Locales, cruces de datos, convenios y órdenes de trabajo funcionan perfectamente.")
+    print("Locales, cruces de datos, convenios, cotizaciones y órdenes de compra funcionan perfectamente.")
     print("====================================================")
 
 if __name__ == "__main__":

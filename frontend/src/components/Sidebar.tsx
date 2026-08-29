@@ -5,6 +5,7 @@ import {
   FileText, 
   Boxes, 
   Briefcase, 
+  Calculator,
   LogOut,
   User
 } from "lucide-react";
@@ -42,6 +43,14 @@ export const Sidebar: React.FC = () => {
         >
           <FileText size={20} />
           <span>Convenios</span>
+        </NavLink>
+
+        <NavLink 
+          to="/quotations" 
+          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+        >
+          <Calculator size={20} />
+          <span>Cotizaciones</span>
         </NavLink>
 
         <NavLink 

@@ -23,11 +23,7 @@ class Ubicacion(Base):
     region = Column(String(100), nullable=False)
     comuna = Column(String(100), nullable=True)
     es_bodega = Column(Boolean, nullable=False, default=False, server_default="false")
-    convenio_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("esquema_auth_clientes.convenios.convenio_id", ondelete="SET NULL"),
-        nullable=True
-    )
+    convenio_id = Column(UUID(as_uuid=True), nullable=True)
     nombre_encargado = Column(String(150), nullable=True)
     telefono_encargado = Column(String(20), nullable=True)
     correo_encargado = Column(String(150), nullable=True)
@@ -105,11 +101,7 @@ class MovimientoStock(Base):
         ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
         nullable=False
     )
-    usuario_movimiento_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("esquema_auth_clientes.usuarios.usuario_id"),
-        nullable=False
-    )
+    usuario_movimiento_id = Column(UUID(as_uuid=True), nullable=False)
     motivo = Column(String, nullable=False)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
 

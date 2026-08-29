@@ -196,6 +196,50 @@ CREATE TABLE esquema_facturacion.documentos_dte (
     emitido_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE esquema_facturacion.cotizaciones (
+    cotizacion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    numero_cotizacion VARCHAR(50) UNIQUE NOT NULL,
+    convenio_id UUID NOT NULL REFERENCES esquema_auth_clientes.convenios(convenio_id) ON DELETE CASCADE,
+    ubicacion_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id) ON DELETE RESTRICT,
+    usuario_solicitante_id UUID REFERENCES esquema_auth_clientes.usuarios(usuario_id) ON DELETE SET NULL,
+    
+    -- Parámetros y cálculos internos
+    tipo_soporte VARCHAR(100) NOT NULL DEFAULT 'ESTANDAR_CONVENIO',
+    costo_soporte NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    distancia_km NUMERIC(8, 2) NOT NULL DEFAULT 0.00,
+    costo_por_km NUMERIC(10, 2) NOT NULL DEFAULT 450.00,
+    monto_kilometraje NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    costo_instalacion NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    monto_equipos NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    subtotal_neto NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    monto_iva NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    monto_total NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    
+    -- Solicitud de Aprobación y Orden de Compra
+    fecha_solicitud_aprobacion TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE_APROBACION', -- 'BORRADOR', 'PENDIENTE_APROBACION', 'APROBADA', 'RECHAZADA'
+    orden_compra_numero VARCHAR(100),
+    orden_compra_adjunto TEXT,
+    fecha_aprobacion TIMESTAMP WITH TIME ZONE,
+    notas TEXT,
+    
+    -- Vínculos generados tras aprobación
+    orden_trabajo_id UUID REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE SET NULL,
+    pedido_id UUID REFERENCES esquema_facturacion.pedidos(pedido_id) ON DELETE SET NULL,
+    
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE esquema_facturacion.cotizaciones_items (
+    item_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    cotizacion_id UUID NOT NULL REFERENCES esquema_facturacion.cotizaciones(cotizacion_id) ON DELETE CASCADE,
+    producto_id UUID NOT NULL REFERENCES esquema_inventario.catalogo_productos(producto_id) ON DELETE RESTRICT,
+    cantidad INTEGER NOT NULL DEFAULT 1,
+    precio_unitario NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    subtotal NUMERIC(12, 2) NOT NULL DEFAULT 0.00
+);
+
 -- =============================================================================
 -- ÍNDICES PARA CONSULTAS, FILTROS Y RENDIMIENTO
 -- =============================================================================
@@ -214,6 +258,9 @@ CREATE INDEX idx_ordenes_ubicacion ON esquema_ordenes_trabajo.ordenes_trabajo(ub
 
 CREATE INDEX idx_dte_pedido ON esquema_facturacion.documentos_dte(pedido_id);
 CREATE INDEX idx_pagos_pedido ON esquema_facturacion.pagos(pedido_id);
+CREATE INDEX idx_cotizaciones_convenio ON esquema_facturacion.cotizaciones(convenio_id);
+CREATE INDEX idx_cotizaciones_ubicacion ON esquema_facturacion.cotizaciones(ubicacion_id);
+CREATE INDEX idx_cotizaciones_estado ON esquema_facturacion.cotizaciones(estado);
 -- =============================================================================
 -- INSERCIÓN DE DATOS SEMILLA (Seed Data)
 -- =============================================================================

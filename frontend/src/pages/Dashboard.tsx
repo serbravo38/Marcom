@@ -2,14 +2,16 @@ import React, { useState, useEffect } from "react";
 import { 
   FileText, 
   MapPin, 
-  Boxes, 
+  Boxes,
   Shuffle, 
   TrendingUp, 
-  AlertCircle 
+  AlertCircle,
+  Calculator
 } from "lucide-react";
 import { authService } from "../services/auth";
 import { inventoryService } from "../services/inventory";
 import { workOrdersService } from "../services/workOrders";
+import { quotationsService } from "../services/quotations";
 import { MetricCard } from "../components/MetricCard";
 
 type StockMovement = {
@@ -32,6 +34,7 @@ export const Dashboard: React.FC = () => {
   const [assets, setAssets] = useState<unknown[]>([]);
   const [workOrders, setWorkOrders] = useState<DashboardWorkOrder[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [quotations, setQuotations] = useState<unknown[]>([]);
   
   const [error, setError] = useState<string | null>(null);
 
@@ -47,14 +50,16 @@ export const Dashboard: React.FC = () => {
           productsData,
           assetsData,
           workOrdersData,
-          movementsData
+          movementsData,
+          quotationsData
         ] = await Promise.all([
           authService.getAgreements().catch(() => [] as unknown[]),
           inventoryService.getLocations().catch(() => [] as unknown[]),
           inventoryService.getProducts().catch(() => [] as unknown[]),
           inventoryService.getAssets().catch(() => [] as unknown[]),
           workOrdersService.getWorkOrders().catch(() => [] as DashboardWorkOrder[]),
-          inventoryService.getMovements().catch(() => [] as StockMovement[])
+          inventoryService.getMovements().catch(() => [] as StockMovement[]),
+          quotationsService.getQuotations().catch(() => [] as unknown[])
         ]);
 
         setAgreements(agreementsData);
@@ -63,6 +68,7 @@ export const Dashboard: React.FC = () => {
         setAssets(assetsData);
         setWorkOrders(workOrdersData);
         setMovements(movementsData);
+        setQuotations(quotationsData);
       } catch (err: any) {
         console.error("Dashboard Loading Error:", err);
         setError("Algunos servicios no respondieron. Mostrando datos parciales.");
@@ -82,7 +88,7 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* Metric Cards Grid */}
-      <div className="metrics-grid">
+      <div className="metrics-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
         <MetricCard 
           title="Convenios Activos" 
           value={agreements.length} 
@@ -91,24 +97,31 @@ export const Dashboard: React.FC = () => {
           description="Contratos corporativos vigentes"
         />
         <MetricCard 
-          title="Bodegas e Instalaciones" 
-          value={locations.length} 
-          icon={<MapPin size={20} />} 
+          title="Cotizaciones Emitidas" 
+          value={quotations.length} 
+          icon={<Calculator size={20} />} 
           color="secondary"
-          description="Puntos de stock declarados"
+          description="Propuestas y solicitudes de OC"
         />
         <MetricCard 
           title="Catálogo de Equipos" 
           value={products.length} 
           icon={<Boxes size={20} />} 
           color="success"
-          description="Modelos y marcas únicas"
+          description="Modelos de monitores y POS"
+        />
+        <MetricCard 
+          title="Bodegas e Instalaciones" 
+          value={locations.length} 
+          icon={<MapPin size={20} />} 
+          color="warning"
+          description="Puntos de stock y locales"
         />
         <MetricCard 
           title="Total Activos Seriados" 
           value={assets.length} 
           icon={<TrendingUp size={20} />} 
-          color="warning"
+          color="primary"
           description="Equipos físicos monitoreados"
         />
       </div>

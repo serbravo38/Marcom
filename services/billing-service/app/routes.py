@@ -86,3 +86,63 @@ def generate_dte_document(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado para emitir DTE.")
         
     return crud.crear_documento_dte(db, dte_in)
+
+
+# --- COTIZACIONES (QUOTATIONS) ---
+
+@router.post("/cotizaciones", response_model=schemas.CotizacionRespuesta, status_code=status.HTTP_201_CREATED)
+def create_quotation(
+    quotation_in: schemas.CotizacionCrear,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.verify_token)
+):
+    usuario_id = UUID(user.get("usuario_id")) if user.get("usuario_id") else None
+    return crud.crear_cotizacion(db, quotation_in, usuario_id=usuario_id)
+
+@router.get("/cotizaciones", response_model=List[schemas.CotizacionRespuesta])
+def get_quotations(
+    convenio_id: UUID = None,
+    estado: str = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.verify_token)
+):
+    return crud.obtener_cotizaciones(db, convenio_id=convenio_id, estado=estado, skip=skip, limit=limit)
+
+@router.get("/cotizaciones/{cotizacion_id}", response_model=schemas.CotizacionRespuesta)
+def get_quotation_details(
+    cotizacion_id: UUID,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.verify_token)
+):
+    cotizacion = crud.obtener_cotizacion_por_id(db, cotizacion_id=cotizacion_id)
+    if not cotizacion:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cotización no encontrada.")
+    return cotizacion
+
+@router.post("/cotizaciones/{cotizacion_id}/aprobar", response_model=schemas.CotizacionRespuesta)
+def approve_quotation_with_purchase_order(
+    cotizacion_id: UUID,
+    aprobar_in: schemas.CotizacionAprobarOC,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.verify_token)
+):
+    usuario_id = UUID(user.get("usuario_id")) if user.get("usuario_id") else None
+    cotizacion = crud.aprobar_cotizacion_con_orden_compra(db, cotizacion_id=cotizacion_id, aprobar_in=aprobar_in, usuario_id=usuario_id)
+    if not cotizacion:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cotización no encontrada.")
+    return cotizacion
+
+@router.patch("/cotizaciones/{cotizacion_id}/estado", response_model=schemas.CotizacionRespuesta)
+def update_quotation_status(
+    cotizacion_id: UUID,
+    estado_in: schemas.CotizacionActualizarEstado,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.verify_token)
+):
+    cotizacion = crud.actualizar_estado_cotizacion(db, cotizacion_id=cotizacion_id, estado_in=estado_in)
+    if not cotizacion:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cotización no encontrada.")
+    return cotizacion
+

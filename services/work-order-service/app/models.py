@@ -18,21 +18,9 @@ class OrdenTrabajo(Base):
 
     orden_trabajo_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     numero_orden = Column(String(20), unique=True, nullable=False)
-    convenio_cliente_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("esquema_auth_clientes.convenios.convenio_id"),
-        nullable=True
-    )
-    ubicacion_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
-        nullable=False
-    )
-    tecnico_asignado_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("esquema_auth_clientes.usuarios.usuario_id"),
-        nullable=True
-    )
+    convenio_cliente_id = Column(UUID(as_uuid=True), nullable=True)
+    ubicacion_id = Column(UUID(as_uuid=True), nullable=False)
+    tecnico_asignado_id = Column(UUID(as_uuid=True), nullable=True)
     estado = Column(
         Enum(EstadoOTEnum, name="estado_ot_enum", schema="esquema_ordenes_trabajo"),
         nullable=False,
@@ -58,16 +46,8 @@ class ActivoOrdenTrabajo(Base):
         ForeignKey("esquema_ordenes_trabajo.ordenes_trabajo.orden_trabajo_id", ondelete="CASCADE"),
         nullable=False
     )
-    activo_instalado_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("esquema_inventario.activos.activo_id"),
-        nullable=True
-    )
-    activo_retirado_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("esquema_inventario.activos.activo_id"),
-        nullable=True
-    )
+    activo_instalado_id = Column(UUID(as_uuid=True), nullable=True)
+    activo_retirado_id = Column(UUID(as_uuid=True), nullable=True)
     tipo_accion = Column(String(50), nullable=False) # ej. 'INSTALACION_NUEVA', 'REEMPLAZO_POR_FALLA', 'RETIRO'
 
     # Relaciones

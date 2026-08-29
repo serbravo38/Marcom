@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Plus, X, Loader2, CreditCard, AlertCircle } from "lucide-react";
 import { authService } from "../services/auth";
 
@@ -128,7 +129,7 @@ export const Agreements: React.FC = () => {
       </div>
 
       {/* Create Agreement Modal */}
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div className="modal-overlay">
           <div className="modal-content glass-panel">
             <button className="modal-close" onClick={() => setIsModalOpen(false)}>
@@ -200,7 +201,8 @@ export const Agreements: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
       <style>{`
