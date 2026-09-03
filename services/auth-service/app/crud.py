@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app import models, schemas
 from app.config import settings
 import bcrypt
@@ -93,7 +94,9 @@ def obtener_usuario_por_id(db: Session, usuario_id: UUID):
     return db.query(models.Usuario).filter(models.Usuario.usuario_id == usuario_id).first()
 
 def obtener_usuario_por_correo(db: Session, correo: str):
-    return db.query(models.Usuario).filter(models.Usuario.correo == correo).first()
+    if not correo:
+        return None
+    return db.query(models.Usuario).filter(func.lower(models.Usuario.correo) == correo.strip().lower()).first()
 
 def obtener_usuario_por_rut(db: Session, rut: str):
     return db.query(models.Usuario).filter(models.Usuario.rut == rut).first()
@@ -104,11 +107,11 @@ def obtener_usuarios(db: Session, skip: int = 0, limit: int = 100):
 def crear_usuario(db: Session, usuario_in: schemas.UsuarioCrear):
     clave_hash = obtener_clave_hash(usuario_in.clave)
     db_usuario = models.Usuario(
-        rut=usuario_in.rut,
-        correo=usuario_in.correo,
+        rut=usuario_in.rut.strip(),
+        correo=usuario_in.correo.strip().lower(),
         clave_hash=clave_hash,
-        nombre=usuario_in.nombre,
-        apellido=usuario_in.apellido,
+        nombre=usuario_in.nombre.strip(),
+        apellido=usuario_in.apellido.strip(),
         rol=usuario_in.rol,
         activo=usuario_in.activo,
         intentos_fallidos=0,
