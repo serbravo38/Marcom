@@ -140,6 +140,14 @@ def reset_password(datos: schemas.RestablecerClave, db: Session = Depends(get_db
 def get_me(current_user: models.Usuario = Depends(auth.get_current_user)):
     return current_user
 
+@router.put("/usuarios/me", response_model=schemas.UsuarioRespuesta)
+def update_my_profile(
+    profile_in: schemas.UsuarioActualizarMe,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.get_current_user)
+):
+    return crud.actualizar_datos_propios(db=db, db_usuario=current_user, datos=profile_in)
+
 @router.get("/usuarios", response_model=List[schemas.UsuarioRespuesta])
 def get_all_users(
     skip: int = 0, 
@@ -195,9 +203,9 @@ def update_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
     
     # If updating email, check if it already exists
-    if user_update.correo and user_update.correo != db_user.correo:
+    if user_update.correo and user_update.correo.strip().lower() != db_user.correo.lower():
         other_user = crud.obtener_usuario_por_correo(db, correo=user_update.correo)
-        if other_user:
+        if other_user and other_user.usuario_id != db_user.usuario_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El correo electrónico ya está registrado por otro usuario."
@@ -206,7 +214,7 @@ def update_user(
     # If updating RUT, check if it already exists
     if user_update.rut and user_update.rut != db_user.rut:
         other_user_rut = crud.obtener_usuario_por_rut(db, rut=user_update.rut)
-        if other_user_rut:
+        if other_user_rut and other_user_rut.usuario_id != db_user.usuario_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El RUT ya está registrado por otro usuario."
@@ -224,7 +232,7 @@ def delete_user(
     if current_user.usuario_id == usuario_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puedes eliminar tu propia cuenta de administrador."
+            detail="No puedes eliminar tu propia cuenta de administrador mientras tienes la sesión activa."
         )
         
     db_user = crud.obtener_usuario_por_id(db, usuario_id=usuario_id)
@@ -233,13 +241,12 @@ def delete_user(
     
     from sqlalchemy.exc import IntegrityError
     try:
-        db.delete(db_user)
-        db.commit()
+        crud.eliminar_usuario_seguro(db, db_usuario=db_user)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No se puede eliminar el usuario porque tiene registros asociados (movimientos, órdenes, etc.). Te recomendamos desactivarlo."
+            detail="No se puede eliminar el usuario porque tiene registros asociados (movimientos, órdenes, etc.). Te recomendamos desactivarlo cambiando su estado a Inactivo."
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

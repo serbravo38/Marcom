@@ -129,12 +129,88 @@ def actualizar_usuario(db: Session, db_usuario: models.Usuario, usuario_update: 
         db_usuario.clave_hash = clave_hash
         del update_data["clave"]
     
+    if "correo" in update_data and update_data["correo"]:
+        update_data["correo"] = update_data["correo"].strip().lower()
+    
     for key, value in update_data.items():
         setattr(db_usuario, key, value)
         
     db.commit()
     db.refresh(db_usuario)
     return db_usuario
+
+def actualizar_datos_propios(db: Session, db_usuario: models.Usuario, datos: schemas.UsuarioActualizarMe):
+    from fastapi import HTTPException, status
+    
+    # 1. Validar correo electrónico si cambia
+    if datos.correo and datos.correo.strip().lower() != db_usuario.correo.lower():
+        correo_normalizado = datos.correo.strip().lower()
+        otro_usuario = obtener_usuario_por_correo(db, correo_normalizado)
+        if otro_usuario and otro_usuario.usuario_id != db_usuario.usuario_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El correo electrónico ya está registrado por otro usuario."
+            )
+        db_usuario.correo = correo_normalizado
+
+    # 2. Validar y actualizar contraseña si se solicita
+    if datos.nueva_clave:
+        if not datos.clave_actual:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debes ingresar tu contraseña actual para establecer una nueva contraseña."
+            )
+        if not verificar_clave(datos.clave_actual, db_usuario.clave_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña actual ingresada es incorrecta."
+            )
+        db_usuario.clave_hash = obtener_clave_hash(datos.nueva_clave)
+        db_usuario.intentos_fallidos = 0
+        db_usuario.bloqueado_hasta = None
+
+    # 3. Actualizar nombres
+    if datos.nombre is not None:
+        db_usuario.nombre = datos.nombre.strip()
+    if datos.apellido is not None:
+        db_usuario.apellido = datos.apellido.strip()
+
+    # 4. Actualizar datos de perfil (teléfono, dirección, región, comuna)
+    tiene_datos_perfil = any(v is not None for v in [datos.telefono, datos.direccion, datos.region, datos.comuna])
+    if tiene_datos_perfil:
+        perfil = obtener_perfil_por_usuario_id(db, db_usuario.usuario_id)
+        if perfil:
+            if datos.telefono is not None:
+                perfil.telefono = datos.telefono.strip()
+            if datos.direccion is not None:
+                perfil.direccion = datos.direccion.strip()
+            if datos.region is not None:
+                perfil.region = datos.region.strip()
+            if datos.comuna is not None:
+                perfil.comuna = datos.comuna.strip()
+        else:
+            perfil = models.PerfilCliente(
+                usuario_id=db_usuario.usuario_id,
+                telefono=datos.telefono.strip() if datos.telefono else None,
+                direccion=datos.direccion.strip() if datos.direccion else None,
+                region=datos.region.strip() if datos.region else None,
+                comuna=datos.comuna.strip() if datos.comuna else None
+            )
+            db.add(perfil)
+
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+def eliminar_usuario_seguro(db: Session, db_usuario: models.Usuario):
+    # Desvincular o limpiar perfil asociado antes de eliminar
+    perfil = obtener_perfil_por_usuario_id(db, db_usuario.usuario_id)
+    if perfil:
+        db.delete(perfil)
+        db.flush()
+        
+    db.delete(db_usuario)
+    db.commit()
 
 def cambiar_clave_usuario(db: Session, db_usuario: models.Usuario, nueva_clave: str):
     clave_hash = obtener_clave_hash(nueva_clave)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, X, Loader2, Users as UsersIcon, Edit2, Trash2, AlertCircle, Search, Filter, UserMinus, UserCheck } from "lucide-react";
+import { Plus, X, Loader2, Users as UsersIcon, Edit2, Trash2, AlertCircle, Search, Filter, UserMinus, UserCheck, CheckCircle2 } from "lucide-react";
 import { authService } from "../services/auth";
 import type { Usuario } from "../services/auth";
 
@@ -7,6 +7,10 @@ export const Users: React.FC = () => {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const loggedUserJson = localStorage.getItem("marcom_user");
+  const loggedUser = loggedUserJson ? JSON.parse(loggedUserJson) : null;
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,6 +100,7 @@ export const Users: React.FC = () => {
           rol: role,
           activo: isActive
         });
+        setSuccessMessage(`Usuario ${firstName} ${lastName} creado exitosamente.`);
       } else if (modalType === "edit" && selectedUser) {
         const updatePayload: any = {
           rut,
@@ -111,6 +116,7 @@ export const Users: React.FC = () => {
         }
 
         await authService.updateUser(selectedUser.usuario_id, updatePayload);
+        setSuccessMessage(`Usuario ${firstName} ${lastName} actualizado exitosamente.`);
       }
 
       setIsModalOpen(false);
@@ -123,12 +129,19 @@ export const Users: React.FC = () => {
   };
 
   const handleDeleteUser = async (user: Usuario) => {
-    const confirmMsg = `¿Estás seguro de que deseas eliminar al usuario ${user.nombre} ${user.apellido}?`;
+    if (loggedUser && loggedUser.usuario_id === user.usuario_id) {
+      setError("No puedes eliminar tu propia cuenta de administrador mientras estás en la sesión actual.");
+      return;
+    }
+
+    const confirmMsg = `¿Estás seguro de que deseas eliminar permanentemente la cuenta de ${user.nombre} ${user.apellido} (${user.correo})? Esta acción no se puede deshacer.`;
     if (!window.confirm(confirmMsg)) return;
 
     try {
       setError(null);
+      setSuccessMessage(null);
       await authService.deleteUser(user.usuario_id);
+      setSuccessMessage(`La cuenta de ${user.nombre} ${user.apellido} ha sido eliminada correctamente.`);
       fetchUsers();
     } catch (err: any) {
       setError(err?.message || `No se pudo eliminar al usuario.`);
@@ -200,6 +213,13 @@ export const Users: React.FC = () => {
           <div className="badge error" style={{ width: "100%", padding: "12px", marginBottom: "20px", borderRadius: "8px", boxSizing: "border-box", display: "flex", alignItems: "center", gap: "8px" }}>
             <AlertCircle size={16} />
             <span>{error}</span>
+          </div>
+        )}
+
+        {successMessage && (
+          <div style={{ width: "100%", padding: "12px", marginBottom: "20px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#34d399", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", boxSizing: "border-box" }}>
+            <CheckCircle2 size={18} />
+            <span>{successMessage}</span>
           </div>
         )}
 

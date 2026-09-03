@@ -1,5 +1,15 @@
 import { api } from "./api";
 
+export interface PerfilCliente {
+  perfil_id?: string;
+  usuario_id?: string;
+  convenio_id?: string | null;
+  telefono?: string;
+  direccion?: string;
+  region?: string;
+  comuna?: string;
+}
+
 export interface Usuario {
   usuario_id: string;
   rut: string;
@@ -8,7 +18,10 @@ export interface Usuario {
   apellido: string;
   rol: "ADMIN" | "JEFE_BODEGA" | "TECNICO_TERRENO" | "CLIENTE_CONVENIO" | "CLIENTE_ESTANDAR";
   activo: boolean;
+  intentos_fallidos?: number;
+  bloqueado_hasta?: string | null;
   creado_en: string;
+  perfil?: PerfilCliente | null;
 }
 
 export interface Convenio {
@@ -48,9 +61,12 @@ export const authService = {
     return api.post<Usuario>("/auth/registrar", datosUsuario);
   },
 
-
   getMe: async (): Promise<Usuario> => {
     return api.get<Usuario>("/usuarios/me");
+  },
+
+  updateMe: async (datos: any): Promise<Usuario> => {
+    return api.put<Usuario>("/usuarios/me", datos);
   },
 
   getUsers: async (): Promise<Usuario[]> => {

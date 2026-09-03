@@ -48,6 +48,17 @@ class UsuarioActualizar(BaseModel):
     intentos_fallidos: Optional[int] = None
     bloqueado_hasta: Optional[datetime] = None
 
+class UsuarioActualizarMe(BaseModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    correo: Optional[EmailStr] = None
+    clave_actual: Optional[str] = None
+    nueva_clave: Optional[str] = Field(None, min_length=6, description="Nueva contraseña (mínimo 6 caracteres)")
+    telefono: Optional[str] = None
+    direccion: Optional[str] = None
+    region: Optional[str] = None
+    comuna: Optional[str] = None
+
 class UsuarioRespuesta(UsuarioBase):
     usuario_id: UUID
     intentos_fallidos: int = 0

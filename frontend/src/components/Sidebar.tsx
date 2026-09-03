@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -7,13 +7,19 @@ import {
   Briefcase, 
   Calculator,
   LogOut,
-  User
+  User,
+  Settings
 } from "lucide-react";
+import { ProfileModal } from "./ProfileModal";
+import type { Usuario } from "../services/auth";
 
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
-  const userJson = localStorage.getItem("marcom_user");
-  const user = userJson ? JSON.parse(userJson) : null;
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<Usuario | null>(() => {
+    const userJson = localStorage.getItem("marcom_user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("marcom_token");
@@ -69,7 +75,7 @@ export const Sidebar: React.FC = () => {
           <span>Órdenes de Trabajo</span>
         </NavLink>
 
-        {user && user.rol === "ADMIN" && (
+        {currentUser && currentUser.rol === "ADMIN" && (
           <NavLink 
             to="/users" 
             className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
@@ -81,15 +87,21 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="sidebar-footer">
-        {user && (
-          <div className="user-badge">
+        {currentUser && (
+          <div 
+            className="user-badge" 
+            onClick={() => setIsProfileOpen(true)}
+            style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+            title="Haz clic para ver y editar tu perfil"
+          >
             <div className="user-avatar">
               <User size={16} />
             </div>
-            <div className="user-info">
-              <p className="user-name">{user.nombre} {user.apellido}</p>
-              <p className="user-role">{user.rol}</p>
+            <div className="user-info" style={{ flex: 1 }}>
+              <p className="user-name">{currentUser.nombre} {currentUser.apellido}</p>
+              <p className="user-role">{currentUser.rol.replace("_", " ")}</p>
             </div>
+            <Settings size={14} style={{ opacity: 0.6, color: "var(--accent-color, #38bdf8)" }} />
           </div>
         )}
         <button className="btn-logout" onClick={handleLogout}>
@@ -97,6 +109,12 @@ export const Sidebar: React.FC = () => {
           <span>Cerrar Sesión</span>
         </button>
       </div>
+
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)}
+        onProfileUpdated={(updated) => setCurrentUser(updated)}
+      />
     </aside>
   );
 };
