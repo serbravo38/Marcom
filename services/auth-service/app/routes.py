@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 from app.db import get_db
+from app.config import settings
 from app import crud, schemas, auth, models
 
 router = APIRouter()
@@ -60,13 +61,14 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
             minutos = max(1, (segs + 59) // 60)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Demasiados intentos fallidos. Por motivos de seguridad, tu cuenta ha sido bloqueada temporalmente por {minutos} minutos.",
+                detail=f"Demasiados intentos fallidos. Por motivos de seguridad, tu cuenta ha sido bloqueada temporalmente por {minutos} minutos. Puedes esperar o restablecer tu contraseña para desbloquearla.",
                 headers={"Retry-After": str(segs)}
             )
         else:
+            intentos_restantes = max(0, settings.MAX_FAILED_LOGIN_ATTEMPTS - intentos)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales incorrectas.",
+                detail=f"Credenciales incorrectas. Te quedan {intentos_restantes} intento(s) antes del bloqueo temporal de 5 minutos.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
             

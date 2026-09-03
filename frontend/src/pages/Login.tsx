@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Lock, Mail, Loader2, KeyRound, ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Lock, Mail, Loader2, KeyRound, ArrowLeft, CheckCircle2, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
 import { authService } from "../services/auth";
 
 type AuthMode = "login" | "request_reset" | "reset_password";
@@ -144,7 +144,55 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        {error && (
+        {error && (error.toLowerCase().includes("bloquead") || error.toLowerCase().includes("bloqueo")) ? (
+          <div
+            style={{
+              width: "100%",
+              padding: "16px",
+              marginBottom: "20px",
+              borderRadius: "10px",
+              background: "rgba(239, 68, 68, 0.12)",
+              border: "1px solid rgba(239, 68, 68, 0.35)",
+              color: "#fca5a5",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+              textAlign: "left"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#f87171", fontWeight: 600, fontSize: "0.95rem" }}>
+              <ShieldAlert size={20} />
+              <span>Bloqueo Temporal de Seguridad (5 min)</span>
+            </div>
+            <p style={{ margin: 0, fontSize: "0.86rem", lineHeight: 1.4, color: "rgba(255, 255, 255, 0.9)" }}>
+              {error}
+            </p>
+            {mode === "login" && (
+              <button
+                type="button"
+                onClick={() => switchMode("request_reset")}
+                style={{
+                  alignSelf: "flex-start",
+                  marginTop: "6px",
+                  background: "rgba(239, 68, 68, 0.25)",
+                  border: "1px solid rgba(239, 68, 68, 0.5)",
+                  color: "#fff",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontWeight: 500
+                }}
+              >
+                <KeyRound size={14} />
+                <span>Restablecer contraseña para desbloquear ahora</span>
+              </button>
+            )}
+          </div>
+        ) : error ? (
           <div
             className="badge error"
             style={{
@@ -159,9 +207,10 @@ export const Login: React.FC = () => {
               gap: "8px"
             }}
           >
+            <AlertTriangle size={16} />
             <span>{error}</span>
           </div>
-        )}
+        ) : null}
 
         {successMessage && (
           <div
