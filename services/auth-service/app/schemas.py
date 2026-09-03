@@ -45,9 +45,13 @@ class UsuarioActualizar(BaseModel):
     clave: Optional[str] = None
     rut: Optional[str] = None
     correo: Optional[EmailStr] = None
+    intentos_fallidos: Optional[int] = None
+    bloqueado_hasta: Optional[datetime] = None
 
 class UsuarioRespuesta(UsuarioBase):
     usuario_id: UUID
+    intentos_fallidos: int = 0
+    bloqueado_hasta: Optional[datetime] = None
     creado_en: datetime
     actualizado_en: datetime
     perfil: Optional[PerfilClienteRespuesta] = None

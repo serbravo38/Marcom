@@ -34,17 +34,51 @@ def register_user(
 @router.post("/auth/iniciar-sesion", response_model=schemas.Token)
 def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(get_db)):
     user = crud.obtener_usuario_por_correo(db, correo=user_login.correo)
-    if not user or not crud.verificar_clave(user_login.clave, user.clave_hash):
+    if not user:
+        # Prevenir enumeración y ataques de tiempo (timing attack mitigation)
+        crud.verificar_clave_dummy(user_login.clave)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # 1. Verificar si la cuenta se encuentra actualmente bloqueada
+    esta_bloqueado, segundos_restantes = crud.esta_cuenta_bloqueada(user)
+    if esta_bloqueado:
+        minutos_restantes = max(1, (segundos_restantes + 59) // 60)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Cuenta bloqueada temporalmente por múltiples intentos fallidos. Inténtalo nuevamente en {minutos_restantes} minuto(s) o restablece tu contraseña.",
+            headers={"Retry-After": str(segundos_restantes)}
+        )
+    
+    # 2. Verificar contraseña
+    if not crud.verificar_clave(user_login.clave, user.clave_hash):
+        intentos, bloqueado_ahora, segs = crud.registrar_intento_fallido(db, user)
+        if bloqueado_ahora:
+            minutos = max(1, (segs + 59) // 60)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Demasiados intentos fallidos. Por motivos de seguridad, tu cuenta ha sido bloqueada temporalmente por {minutos} minutos.",
+                headers={"Retry-After": str(segs)}
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciales incorrectas.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            
+    # 3. Comprobar si el usuario está activo
     if not user.activo:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Usuario inactivo. Contacta al administrador."
         )
+    
+    # 4. Login exitoso: Resetear contador de intentos fallidos
+    crud.resetear_intentos_fallidos(db, user)
     
     # Generate token
     token_data = {

@@ -1,7 +1,12 @@
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from app import models, schemas
+from app.config import settings
 import bcrypt
 from uuid import UUID
+
+# Hash dummy para mitigar ataques de tiempo (timing attacks / user enumeration)
+DUMMY_BCRYPT_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewK.bVbV6v6jO37e"
 
 # Configuración de hashing de contraseñas
 def obtener_clave_hash(clave: str) -> str:
@@ -11,9 +16,77 @@ def obtener_clave_hash(clave: str) -> str:
     return hashed.decode('utf-8')
 
 def verificar_clave(clave_plana: str, clave_hash: str) -> bool:
-    pwd_bytes = clave_plana.encode('utf-8')
-    hashed_bytes = clave_hash.encode('utf-8')
-    return bcrypt.checkpw(pwd_bytes, hashed_bytes)
+    try:
+        pwd_bytes = clave_plana.encode('utf-8')
+        hashed_bytes = clave_hash.encode('utf-8')
+        return bcrypt.checkpw(pwd_bytes, hashed_bytes)
+    except Exception:
+        return False
+
+def verificar_clave_dummy(clave_plana: str) -> bool:
+    return verificar_clave(clave_plana, DUMMY_BCRYPT_HASH)
+
+# --- SEGURIDAD Y BLOQUEO TEMPORAL ---
+def esta_cuenta_bloqueada(db_usuario: models.Usuario) -> tuple[bool, int]:
+    """
+    Determina si la cuenta está actualmente bloqueada.
+    Retorna (bloqueado: bool, segundos_restantes: int).
+    """
+    if not db_usuario.bloqueado_hasta:
+        return False, 0
+    
+    ahora = datetime.now(timezone.utc)
+    bloqueado = db_usuario.bloqueado_hasta
+    if bloqueado.tzinfo is None:
+        bloqueado = bloqueado.replace(tzinfo=timezone.utc)
+    
+    if bloqueado > ahora:
+        segundos_restantes = int((bloqueado - ahora).total_seconds())
+        return True, max(1, segundos_restantes)
+    
+    return False, 0
+
+def registrar_intento_fallido(db: Session, db_usuario: models.Usuario) -> tuple[int, bool, int]:
+    """
+    Registra un intento fallido de contraseña. Si supera el umbral configurado,
+    establece el bloqueo temporal.
+    Retorna (intentos_actuales: int, esta_bloqueado: bool, segundos_bloqueo: int).
+    """
+    ahora = datetime.now(timezone.utc)
+    
+    # Si existía un bloqueo anterior y ya expiró, reiniciamos contador antes de contar este nuevo fallo
+    if db_usuario.bloqueado_hasta:
+        bloqueado = db_usuario.bloqueado_hasta
+        if bloqueado.tzinfo is None:
+            bloqueado = bloqueado.replace(tzinfo=timezone.utc)
+        if bloqueado <= ahora:
+            db_usuario.intentos_fallidos = 0
+            db_usuario.bloqueado_hasta = None
+
+    db_usuario.intentos_fallidos = (db_usuario.intentos_fallidos or 0) + 1
+    esta_bloqueado = False
+    segundos_bloqueo = 0
+
+    if db_usuario.intentos_fallidos >= settings.MAX_FAILED_LOGIN_ATTEMPTS:
+        delta = timedelta(minutes=settings.LOCKOUT_DURATION_MINUTES)
+        db_usuario.bloqueado_hasta = ahora + delta
+        esta_bloqueado = True
+        segundos_bloqueo = int(delta.total_seconds())
+
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario.intentos_fallidos, esta_bloqueado, segundos_bloqueo
+
+def resetear_intentos_fallidos(db: Session, db_usuario: models.Usuario):
+    """
+    Restablece a 0 los intentos fallidos y anula el bloqueo temporal al autenticar exitosamente.
+    """
+    if (db_usuario.intentos_fallidos and db_usuario.intentos_fallidos > 0) or db_usuario.bloqueado_hasta is not None:
+        db_usuario.intentos_fallidos = 0
+        db_usuario.bloqueado_hasta = None
+        db.commit()
+        db.refresh(db_usuario)
+    return db_usuario
 
 # --- CRUD USUARIOS ---
 def obtener_usuario_por_id(db: Session, usuario_id: UUID):
@@ -37,7 +110,9 @@ def crear_usuario(db: Session, usuario_in: schemas.UsuarioCrear):
         nombre=usuario_in.nombre,
         apellido=usuario_in.apellido,
         rol=usuario_in.rol,
-        activo=usuario_in.activo
+        activo=usuario_in.activo,
+        intentos_fallidos=0,
+        bloqueado_hasta=None
     )
     db.add(db_usuario)
     db.commit()
@@ -61,6 +136,8 @@ def actualizar_usuario(db: Session, db_usuario: models.Usuario, usuario_update: 
 def cambiar_clave_usuario(db: Session, db_usuario: models.Usuario, nueva_clave: str):
     clave_hash = obtener_clave_hash(nueva_clave)
     db_usuario.clave_hash = clave_hash
+    db_usuario.intentos_fallidos = 0
+    db_usuario.bloqueado_hasta = None
     db.commit()
     db.refresh(db_usuario)
     return db_usuario

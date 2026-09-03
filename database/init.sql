@@ -23,6 +23,8 @@ CREATE TABLE esquema_auth_clientes.usuarios (
     apellido VARCHAR(100) NOT NULL,
     rol esquema_auth_clientes.rol_usuario NOT NULL DEFAULT 'CLIENTE_ESTANDAR',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
+    intentos_fallidos INTEGER NOT NULL DEFAULT 0,
+    bloqueado_hasta TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
