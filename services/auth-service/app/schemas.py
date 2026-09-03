@@ -93,3 +93,15 @@ class DatosToken(BaseModel):
     usuario_id: Optional[UUID] = None
     correo: Optional[EmailStr] = None
     rol: Optional[RolUsuario] = None
+
+class SolicitudRecuperacionClave(BaseModel):
+    correo: EmailStr
+
+class RestablecerClave(BaseModel):
+    token: str
+    nueva_clave: str = Field(..., min_length=6, description="Nueva contraseña (mínimo 6 caracteres)")
+
+class RespuestaRecuperacion(BaseModel):
+    mensaje: str
+    token_temporal: Optional[str] = None
+

@@ -58,3 +58,40 @@ def require_role(roles: list[models.RolUsuario]):
             )
         return current_user
     return dependency
+
+def create_password_reset_token(usuario_id: str, correo: str, expires_minutes: int = 30) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    to_encode = {
+        "usuario_id": str(usuario_id),
+        "correo": correo,
+        "type": "password_reset",
+        "exp": expire
+    }
+    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+def verify_password_reset_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") != "password_reset":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El token proporcionado no es válido para recuperación de contraseña."
+            )
+        usuario_id = payload.get("usuario_id")
+        if not usuario_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token de recuperación inválido o malformado."
+            )
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El enlace de recuperación ha expirado. Por favor solicita uno nuevo."
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de recuperación inválido o alterado."
+        )
+

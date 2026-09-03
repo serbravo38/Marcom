@@ -58,6 +58,14 @@ def actualizar_usuario(db: Session, db_usuario: models.Usuario, usuario_update: 
     db.refresh(db_usuario)
     return db_usuario
 
+def cambiar_clave_usuario(db: Session, db_usuario: models.Usuario, nueva_clave: str):
+    clave_hash = obtener_clave_hash(nueva_clave)
+    db_usuario.clave_hash = clave_hash
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+
 # --- CRUD CONVENIOS ---
 def obtener_convenio_por_id(db: Session, convenio_id: UUID):
     return db.query(models.Convenio).filter(models.Convenio.convenio_id == convenio_id).first()

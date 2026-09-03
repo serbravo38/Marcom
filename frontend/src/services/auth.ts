@@ -26,14 +26,28 @@ export interface RespuestaIniciarSesion {
   token_type: string;
 }
 
+export interface RespuestaRecuperacion {
+  mensaje: string;
+  token_temporal?: string;
+}
+
 export const authService = {
   login: async (credenciales: any): Promise<RespuestaIniciarSesion> => {
     return api.post<RespuestaIniciarSesion>("/auth/iniciar-sesion", credenciales);
   },
 
+  requestPasswordReset: async (correo: string): Promise<RespuestaRecuperacion> => {
+    return api.post<RespuestaRecuperacion>("/auth/solicitar-recuperacion", { correo });
+  },
+
+  resetPassword: async (token: string, nueva_clave: string): Promise<RespuestaRecuperacion> => {
+    return api.post<RespuestaRecuperacion>("/auth/restablecer-clave", { token, nueva_clave });
+  },
+
   register: async (datosUsuario: any): Promise<Usuario> => {
     return api.post<Usuario>("/auth/registrar", datosUsuario);
   },
+
 
   getMe: async (): Promise<Usuario> => {
     return api.get<Usuario>("/usuarios/me");

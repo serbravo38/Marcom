@@ -55,6 +55,48 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     access_token = auth.create_access_token(data=token_data)
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/auth/solicitar-recuperacion", response_model=schemas.RespuestaRecuperacion)
+def request_password_reset(solicitud: schemas.SolicitudRecuperacionClave, db: Session = Depends(get_db)):
+    user = crud.obtener_usuario_por_correo(db, correo=solicitud.correo)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No se encontró ningún usuario con el correo electrónico proporcionado."
+        )
+    if not user.activo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La cuenta se encuentra inactiva. Por favor contacta al administrador."
+        )
+    
+    reset_token = auth.create_password_reset_token(usuario_id=str(user.usuario_id), correo=user.correo)
+    return {
+        "mensaje": "Se ha generado el token para restablecer tu contraseña. Completa el formulario para actualizarla.",
+        "token_temporal": reset_token
+    }
+
+@router.post("/auth/restablecer-clave", response_model=schemas.RespuestaRecuperacion)
+def reset_password(datos: schemas.RestablecerClave, db: Session = Depends(get_db)):
+    payload = auth.verify_password_reset_token(datos.token)
+    usuario_id = payload.get("usuario_id")
+    
+    user = crud.obtener_usuario_por_id(db, usuario_id=UUID(usuario_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario asociado al token no encontrado."
+        )
+    if not user.activo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La cuenta se encuentra inactiva. Contacta al administrador."
+        )
+        
+    crud.cambiar_clave_usuario(db=db, db_usuario=user, nueva_clave=datos.nueva_clave)
+    return {
+        "mensaje": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña."
+    }
+
 
 # --- USER ENDPOINTS ---
 

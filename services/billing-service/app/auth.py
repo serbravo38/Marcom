@@ -1,5 +1,9 @@
-import jwt
-from jwt.exceptions import PyJWTError as JWTError
+try:
+    import jwt
+    from jwt import PyJWTError as JWTError
+except ImportError:
+    raise ImportError("PyJWT is not installed. Please run 'pip install PyJWT'")
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.config import settings
