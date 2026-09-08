@@ -14,7 +14,7 @@ def obtener_ubicacion_por_codigo(db: Session, codigo_local: str):
 def obtener_ubicaciones(
     db: Session,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
     convenio_id: Optional[UUID] = None,
     es_bodega: Optional[bool] = None,
     region: Optional[str] = None
@@ -33,8 +33,13 @@ def crear_ubicacion(db: Session, location_in: schemas.UbicacionCrear):
         codigo_local=location_in.codigo_local,
         nombre=location_in.nombre,
         direccion=location_in.direccion,
+        zona=location_in.zona,
         region=location_in.region,
+        provincia=location_in.provincia,
         comuna=location_in.comuna,
+        cantidad_pantallas=location_in.cantidad_pantallas,
+        precio_instalacion_uf=location_in.precio_instalacion_uf,
+        precio_transporte_uf=location_in.precio_transporte_uf,
         es_bodega=location_in.es_bodega,
         convenio_id=location_in.convenio_id,
         nombre_encargado=location_in.nombre_encargado,
@@ -64,10 +69,19 @@ def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear])
             if existente:
                 existente.nombre = loc.nombre
                 existente.direccion = loc.direccion
+                existente.zona = loc.zona
                 existente.region = loc.region
+                existente.provincia = loc.provincia
                 existente.comuna = loc.comuna
+                if loc.cantidad_pantallas is not None:
+                    existente.cantidad_pantallas = loc.cantidad_pantallas
+                if loc.precio_instalacion_uf is not None:
+                    existente.precio_instalacion_uf = loc.precio_instalacion_uf
+                if loc.precio_transporte_uf is not None:
+                    existente.precio_transporte_uf = loc.precio_transporte_uf
                 existente.es_bodega = loc.es_bodega
-                existente.convenio_id = loc.convenio_id
+                if loc.convenio_id is not None:
+                    existente.convenio_id = loc.convenio_id
                 existente.nombre_encargado = loc.nombre_encargado
                 existente.telefono_encargado = loc.telefono_encargado
                 existente.correo_encargado = loc.correo_encargado
@@ -79,8 +93,13 @@ def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear])
             codigo_local=loc.codigo_local,
             nombre=loc.nombre,
             direccion=loc.direccion,
+            zona=loc.zona,
             region=loc.region,
+            provincia=loc.provincia,
             comuna=loc.comuna,
+            cantidad_pantallas=loc.cantidad_pantallas,
+            precio_instalacion_uf=loc.precio_instalacion_uf,
+            precio_transporte_uf=loc.precio_transporte_uf,
             es_bodega=loc.es_bodega,
             convenio_id=loc.convenio_id,
             nombre_encargado=loc.nombre_encargado,
@@ -92,8 +111,8 @@ def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear])
         nuevos.append(db_loc)
     
     db.commit()
-    for db_loc in nuevos:
-        db.refresh(db_loc)
+    for n in nuevos:
+        db.refresh(n)
     return nuevos
 
 # --- PRODUCT CATALOG CRUD ---

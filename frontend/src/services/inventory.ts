@@ -5,8 +5,13 @@ export interface Ubicacion {
   codigo_local?: string | null;
   nombre: string;
   direccion: string;
+  zona?: string | null;
   region: string;
+  provincia?: string | null;
   comuna?: string | null;
+  cantidad_pantallas?: number;
+  precio_instalacion_uf?: number;
+  precio_transporte_uf?: number;
   es_bodega: boolean;
   convenio_id?: string | null;
   nombre_encargado?: string | null;

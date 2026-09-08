@@ -37,7 +37,7 @@ def bulk_create_locations(
 @router.get("/ubicaciones", response_model=List[schemas.UbicacionRespuesta])
 def get_locations(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
     convenio_id: Optional[UUID] = None,
     es_bodega: Optional[bool] = None,
     region: Optional[str] = None,

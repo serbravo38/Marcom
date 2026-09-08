@@ -6,11 +6,16 @@ from app.models import EstadoActivoEnum
 
 # --- LOCATION SCHEMAS ---
 class UbicacionBase(BaseModel):
-    codigo_local: Optional[str] = Field(None, max_length=50, description="Código del local (ej: COP-042)")
+    codigo_local: Optional[str] = Field(None, max_length=50, description="Código del local / EDS (ej: 10097, COP-042)")
     nombre: str = Field(..., max_length=150)
     direccion: str
+    zona: Optional[str] = Field(None, max_length=50, description="Zona geográfica / operativa (ej: OZN, OZC, OS, OZS)")
     region: str = Field(..., max_length=100)
+    provincia: Optional[str] = Field(None, max_length=100)
     comuna: Optional[str] = Field(None, max_length=100)
+    cantidad_pantallas: Optional[int] = Field(0, description="Cantidad de pantallas")
+    precio_instalacion_uf: Optional[float] = Field(0.0, description="Precio instalación en UF")
+    precio_transporte_uf: Optional[float] = Field(0.0, description="Precio transporte en UF")
     es_bodega: bool = False
     convenio_id: Optional[UUID] = None
     nombre_encargado: Optional[str] = Field(None, max_length=150)
@@ -25,8 +30,13 @@ class UbicacionActualizar(BaseModel):
     codigo_local: Optional[str] = None
     nombre: Optional[str] = None
     direccion: Optional[str] = None
+    zona: Optional[str] = None
     region: Optional[str] = None
+    provincia: Optional[str] = None
     comuna: Optional[str] = None
+    cantidad_pantallas: Optional[int] = None
+    precio_instalacion_uf: Optional[float] = None
+    precio_transporte_uf: Optional[float] = None
     es_bodega: Optional[bool] = None
     convenio_id: Optional[UUID] = None
     nombre_encargado: Optional[str] = None

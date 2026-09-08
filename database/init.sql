@@ -60,11 +60,16 @@ CREATE TYPE esquema_inventario.estado_activo_enum AS ENUM (
 
 CREATE TABLE esquema_inventario.ubicaciones (
     ubicacion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo_local VARCHAR(50) UNIQUE, -- Código de identificación del local (ej: 'COP-042', 'PRONTO-102')
-    nombre VARCHAR(150) NOT NULL,    -- ej: "Bodega M3storage - Enea", "Tienda Pronto Copec Pudahuel"
+    codigo_local VARCHAR(50) UNIQUE, -- Código de identificación del local / EDS (ej: '10097', 'COP-042', 'PRONTO-102')
+    nombre VARCHAR(150) NOT NULL,    -- ej: "EDS 10097 - ALTO HOSPICIO", "Tienda Pronto Copec Pudahuel"
     direccion TEXT NOT NULL,
+    zona VARCHAR(50),                -- ej: "OZN", "OZC", "OS", "OZS"
     region VARCHAR(100) NOT NULL,
+    provincia VARCHAR(100),          -- ej: "IQUIQUE", "ANTOFAGASTA", "SANTIAGO"
     comuna VARCHAR(100),
+    cantidad_pantallas INTEGER DEFAULT 0,
+    precio_instalacion_uf NUMERIC(10, 2) DEFAULT 0.00,
+    precio_transporte_uf NUMERIC(10, 2) DEFAULT 0.00,
     es_bodega BOOLEAN NOT NULL DEFAULT FALSE,
     
     -- Relación con cliente de convenio si corresponde
@@ -247,6 +252,9 @@ CREATE TABLE esquema_facturacion.cotizaciones_items (
 -- =============================================================================
 CREATE INDEX idx_ubicaciones_codigo ON esquema_inventario.ubicaciones(codigo_local);
 CREATE INDEX idx_ubicaciones_region ON esquema_inventario.ubicaciones(region);
+CREATE INDEX idx_ubicaciones_zona ON esquema_inventario.ubicaciones(zona);
+CREATE INDEX idx_ubicaciones_provincia ON esquema_inventario.ubicaciones(provincia);
+CREATE INDEX idx_ubicaciones_comuna ON esquema_inventario.ubicaciones(comuna);
 CREATE INDEX idx_ubicaciones_convenio ON esquema_inventario.ubicaciones(convenio_id);
 
 CREATE INDEX idx_activos_serie ON esquema_inventario.activos(numero_serie);
