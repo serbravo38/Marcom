@@ -23,7 +23,7 @@ El sistema resuelve la falta de registro centralizado integrando:
 
 | Nombre | Rol Principal | Responsabilidades Clave |
 | :--- | :--- | :--- |
-| **Julio Cesar Mena Torres** | **Frontend Developer & QA Lead** | Desarrollo de la SPA en React + TypeScript, maquetado con Tailwind CSS, consumo de API Gateway, captura de evidencias digitales, desarrollo del Dashboard de KPIs y ejecución de la suite de pruebas unitarias/integración (Jest / React Testing Library). |
+| **Julio Mena** | **Frontend Developer & QA Lead** | Desarrollo de la SPA en React + TypeScript, maquetado con Tailwind CSS, consumo de API Gateway, captura de evidencias digitales, desarrollo del Dashboard de KPIs y ejecución de la suite de pruebas unitarias/integración (Jest / React Testing Library). |
 | **Sergio Bravo** | **Backend Developer** | Diseño y construcción de microservicios RESTful en Python (FastAPI), modelos ORM (SQLAlchemy), esquemas Pydantic y API Gateway. |
 | **Felipe Madrid** | **Scrum Master** | Facilitación de ceremonias Scrum, control del Sprint Backlog, remoción de impedimentos y gestión de entregables académicos. |
 | **Marco Mena** | **Product Owner** | Levantamiento de requerimientos de negocio, priorización del Product Backlog y validación de Criterios de Aceptación. |
