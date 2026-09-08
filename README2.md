@@ -92,7 +92,7 @@ El desarrollo se gestiona bajo el marco **Agile Scrum**, dividido en 4 Sprints p
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone [https://github.com/tu-usuario/MARCOM.git](https://github.com/tu-usuario/MARCOM.git)
+   git clone [https://github.com/serbravo38/Marcom.git](https://github.com/serbravo38/Marcom.git)
    cd MARCOM
 
 ```
