@@ -88,7 +88,7 @@ def upload_field_evidence(
     orden_trabajo_id: UUID,
     evidence_in: schemas.EvidenciaTerrenoCrear,
     db: Session = Depends(get_db),
-    user: dict = Depends(auth.require_role(["ADMIN", "TECNICO_TERRENO"]))
+    user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO"]))
 ):
     db_wo = crud.obtener_orden_trabajo_por_id(db, orden_trabajo_id=orden_trabajo_id)
     if not db_wo:

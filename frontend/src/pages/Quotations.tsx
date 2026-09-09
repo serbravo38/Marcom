@@ -907,7 +907,14 @@ export const Quotations: React.FC = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #334155", paddingBottom: "20px", marginBottom: "20px", gap: "20px" }}>
                   {/* Emisor Oficial */}
                   <div style={{ flex: 1 }}>
-                    <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.5px", lineHeight: "1.4", margin: "0 0 8px 0" }}>
+                    <div style={{ marginBottom: "12px" }}>
+                      <img 
+                        src="/logo_marcom.png" 
+                        alt="MARCOM" 
+                        style={{ height: "45px", width: "auto", objectFit: "contain", filter: "brightness(1.15)" }} 
+                      />
+                    </div>
+                    <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.5px", lineHeight: "1.4", margin: "0 0 8px 0" }}>
                       SOCIEDAD DE INSTALACIONES MARCOM COMPANIA LIMITADA
                     </h2>
                     <p style={{ fontSize: "0.85rem", color: "#e2e8f0", margin: "4px 0", fontWeight: 600 }}>

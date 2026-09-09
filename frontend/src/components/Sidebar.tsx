@@ -30,8 +30,24 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="sidebar glass-panel">
       <div className="sidebar-brand">
-        <span className="brand-dot"></span>
-        <h2>MARCOM</h2>
+        <img 
+          src="/logo_icon.png" 
+          alt="MARCOM" 
+          style={{ 
+            height: "36px", 
+            width: "auto", 
+            objectFit: "contain",
+            filter: "drop-shadow(0 0 10px rgba(0, 194, 255, 0.45))" 
+          }} 
+        />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, letterSpacing: "1px", lineHeight: 1.1, color: "#fff" }}>
+            MARCOM
+          </h2>
+          <span style={{ fontSize: "0.58rem", color: "#38bdf8", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", marginTop: "2px" }}>
+            Soluciones Digitales
+          </span>
+        </div>
       </div>
 
       <nav className="sidebar-menu">

@@ -126,19 +126,24 @@ export const Login: React.FC = () => {
   return (
     <div className="login-wrapper">
       <div className="login-card glass-panel animate-fade-in" style={{ maxWidth: "440px", width: "100%" }}>
-        <div className="login-header">
-          <div className="login-logo">
-            {mode === "login" ? (
-              <Lock size={24} style={{ color: "#fff" }} />
-            ) : mode === "request_reset" ? (
-              <Mail size={24} style={{ color: "#fff" }} />
-            ) : (
-              <KeyRound size={24} style={{ color: "#fff" }} />
-            )}
+        <div className="login-header" style={{ marginBottom: "28px" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+            <img 
+              src="/logo_icon.png" 
+              alt="MARCOM" 
+              style={{ 
+                height: "64px", 
+                width: "auto", 
+                objectFit: "contain",
+                filter: "drop-shadow(0 0 20px rgba(0, 194, 255, 0.45))" 
+              }} 
+            />
           </div>
-          <h2 className="accent-text-gradient">MARCOM</h2>
-          <p>
-            {mode === "login" && "Plataforma Modular de Operaciones"}
+          <h2 className="accent-text-gradient" style={{ fontSize: "1.75rem", fontWeight: 700, letterSpacing: "1px", margin: "0 0 6px 0" }}>
+            MARCOM
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "hsl(var(--text-muted))", fontWeight: 500, margin: 0 }}>
+            {mode === "login" && "Monitores Profesionales & Soluciones Digitales"}
             {mode === "request_reset" && "Recuperación de Contraseña"}
             {mode === "reset_password" && "Restablecer Nueva Contraseña"}
           </p>
