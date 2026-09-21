@@ -61,6 +61,16 @@ const processImageFile = (file: File, maxWidth = 1600, maxHeight = 1200, quality
 };
 
 export const WorkOrders: React.FC = () => {
+  const [currentUser] = useState<Usuario | null>(() => {
+    const userJson = localStorage.getItem("marcom_user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
+
+  const userRole = currentUser?.rol || "CLIENTE_ESTANDAR";
+  const isClient = userRole === "CLIENTE_CONVENIO" || userRole === "CLIENTE_ESTANDAR";
+  const isTech = userRole === "TECNICO_TERRENO";
+  const isAdminOrJefe = userRole === "ADMIN" || userRole === "JEFE_BODEGA";
+
   const [workOrders, setWorkOrders] = useState<OrdenTrabajo[]>([]);
   const [technicians, setTechnicians] = useState<Usuario[]>([]);
   const [agreements, setAgreements] = useState<Convenio[]>([]);
@@ -317,11 +327,19 @@ export const WorkOrders: React.FC = () => {
 
       <div className="glass-panel card-container">
         <div className="panel-title">
-          <span>Órdenes de Trabajo en Terreno</span>
-          <button className="btn-primary" onClick={() => setIsCreateOpen(true)}>
-            <Plus size={16} />
-            <span>Crear OT</span>
-          </button>
+          <span>
+            {isTech 
+              ? "Mis Órdenes de Trabajo Asignadas" 
+              : isClient 
+              ? "Órdenes de Trabajo y Servicios en Mis Locales" 
+              : "Órdenes de Trabajo en Terreno"}
+          </span>
+          {isAdminOrJefe && (
+            <button className="btn-primary" onClick={() => setIsCreateOpen(true)}>
+              <Plus size={16} />
+              <span>Crear OT</span>
+            </button>
+          )}
         </div>
 
         <div className="table-responsive">
@@ -331,16 +349,20 @@ export const WorkOrders: React.FC = () => {
             </div>
           ) : workOrders.length === 0 ? (
             <p style={{ color: "hsl(var(--text-muted))", textAlign: "center", padding: "35px" }}>
-              No hay órdenes de trabajo programadas.
+              {isTech 
+                ? "No tienes órdenes de trabajo asignadas en este momento." 
+                : isClient
+                ? "No hay órdenes de trabajo activas en tus locales."
+                : "No hay órdenes de trabajo programadas."}
             </p>
           ) : (
             <table className="premium-table">
               <thead>
                 <tr>
                   <th>N° Orden</th>
-                  <th>Cliente (Convenio)</th>
-                  <th>Ubicación</th>
-                  <th>Técnico Asignado</th>
+                  {!isClient && <th>Cliente (Convenio)</th>}
+                  <th>Ubicación / Local</th>
+                  {!isTech && <th>Técnico Asignado</th>}
                   <th>Fecha Programada</th>
                   <th>Estado</th>
                   <th>Acción</th>
@@ -354,9 +376,9 @@ export const WorkOrders: React.FC = () => {
                   return (
                     <tr key={wo.orden_trabajo_id}>
                       <td style={{ fontWeight: 600 }}>{wo.numero_orden}</td>
-                      <td>{agreement ? agreement.nombre_empresa : "Cliente Estándar"}</td>
+                      {!isClient && <td>{agreement ? agreement.nombre_empresa : "Cliente Estándar"}</td>}
                       <td>{location ? `${location.codigo_local ? `[${location.codigo_local}] ` : ""}${location.nombre}${location.comuna ? ` (${location.comuna})` : ""}` : "N/A"}</td>
-                      <td>{tech ? `${tech.nombre} ${tech.apellido}` : "Sin Asignar"}</td>
+                      {!isTech && <td>{tech ? `${tech.nombre} ${tech.apellido}` : "Sin Asignar"}</td>}
                       <td>{new Date(wo.fecha_programada).toLocaleDateString()}</td>
                       <td>
                         <span className={`badge ${
@@ -379,7 +401,7 @@ export const WorkOrders: React.FC = () => {
                           }}
                         >
                           <Eye size={14} />
-                          <span>Ver</span>
+                          <span>{isTech ? "Atender / Ver" : "Ver"}</span>
                         </button>
                       </td>
                     </tr>
@@ -518,28 +540,39 @@ export const WorkOrders: React.FC = () => {
                       {selectedWo.estado}
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    {selectedWo.estado !== "COMPLETADA" && (
-                      <button className="btn-primary" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => handleUpdateStatus("COMPLETADA")}>
-                        Completar
-                      </button>
-                    )}
-                    {selectedWo.estado !== "CANCELADA" && (
-                      <button className="btn-logout" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => handleUpdateStatus("CANCELADA")}>
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
+
+                  {/* Operational status buttons */}
+                  {!isClient && (
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      {isTech && selectedWo.estado !== "EN_PROCESO" && selectedWo.estado !== "COMPLETADA" && (
+                        <button className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderColor: "#38bdf8", color: "#38bdf8" }} onClick={() => handleUpdateStatus("EN_PROCESO")}>
+                          Iniciar Trabajo
+                        </button>
+                      )}
+                      {selectedWo.estado !== "COMPLETADA" && (
+                        <button className="btn-primary" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => handleUpdateStatus("COMPLETADA")}>
+                          {isTech ? "Finalizar y Completar" : "Completar"}
+                        </button>
+                      )}
+                      {isAdminOrJefe && selectedWo.estado !== "CANCELADA" && (
+                        <button className="btn-logout" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => handleUpdateStatus("CANCELADA")}>
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Linked Assets involved */}
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                     <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Equipos Instalados/Retirados</h4>
-                    <button className="btn-secondary" style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => { setModalView("VINCULAR_ACTIVO"); setModalError(null); }}>
-                      <Link2 size={12} />
-                      <span>Vincular Activo</span>
-                    </button>
+                    {!isClient && (
+                      <button className="btn-secondary" style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => { setModalView("VINCULAR_ACTIVO"); setModalError(null); }}>
+                        <Link2 size={12} />
+                        <span>Vincular Activo</span>
+                      </button>
+                    )}
                   </div>
                   {(!selectedWo.activos || selectedWo.activos.length === 0) ? (
                     <p style={{ fontSize: "0.85rem", color: "hsl(var(--text-muted))", margin: 0 }}>No se han declarado activos para esta orden.</p>
@@ -569,10 +602,12 @@ export const WorkOrders: React.FC = () => {
                       <Camera size={16} style={{ color: "hsl(var(--accent-primary))" }} />
                       <span>Evidencias y Firmas de Terreno</span>
                     </h4>
-                    <button className="btn-primary" style={{ padding: "5px 12px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => { setModalView("SUBIR_EVIDENCIA"); setModalError(null); }}>
-                      <Plus size={14} />
-                      <span>Subir Foto / Evidencia</span>
-                    </button>
+                    {!isClient && (
+                      <button className="btn-primary" style={{ padding: "5px 12px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => { setModalView("SUBIR_EVIDENCIA"); setModalError(null); }}>
+                        <Plus size={14} />
+                        <span>Subir Foto / Evidencia</span>
+                      </button>
+                    )}
                   </div>
 
                   {(!selectedWo.evidencias || selectedWo.evidencias.length === 0) ? (

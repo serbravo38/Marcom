@@ -13,6 +13,14 @@ type Agreement = {
 };
 
 export const Agreements: React.FC = () => {
+  const [currentUser] = useState<any>(() => {
+    const userJson = localStorage.getItem("marcom_user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
+
+  const isClientRole = currentUser?.rol === "CLIENTE_CONVENIO";
+  const isAdmin = currentUser?.rol === "ADMIN";
+
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,15 +79,51 @@ export const Agreements: React.FC = () => {
     }
   };
 
+  const clientAgreement = agreements.length > 0 ? agreements[0] : null;
+
   return (
     <div className="agreements-view animate-fade-in">
+      {isClientRole && clientAgreement && (
+        <div className="glass-panel" style={{ padding: "24px", marginBottom: "25px", borderRadius: "12px" }}>
+          <h3 style={{ fontSize: "1.3rem", fontWeight: 700, margin: "0 0 16px 0", color: "#fff" }}>
+            Estado de Mi Convenio: {clientAgreement.nombre_empresa}
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+            <div style={{ background: "rgba(255,255,255,0.02)", padding: "14px", borderRadius: "8px", border: "1px solid var(--glass-border)" }}>
+              <span style={{ fontSize: "0.8rem", color: "hsl(var(--text-muted))" }}>RUT Empresa</span>
+              <p style={{ fontSize: "1.1rem", fontWeight: 700, margin: "4px 0 0 0" }}>{clientAgreement.rut}</p>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.02)", padding: "14px", borderRadius: "8px", border: "1px solid var(--glass-border)" }}>
+              <span style={{ fontSize: "0.8rem", color: "hsl(var(--text-muted))" }}>Línea de Crédito</span>
+              <p style={{ fontSize: "1.1rem", fontWeight: 700, margin: "4px 0 0 0", color: "hsl(var(--secondary))" }}>
+                ${clientAgreement.limite_credito.toLocaleString('es-CL')}
+              </p>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.02)", padding: "14px", borderRadius: "8px", border: "1px solid var(--glass-border)" }}>
+              <span style={{ fontSize: "0.8rem", color: "hsl(var(--text-muted))" }}>Crédito Utilizado</span>
+              <p style={{ fontSize: "1.1rem", fontWeight: 700, margin: "4px 0 0 0" }}>
+                ${clientAgreement.credito_usado.toLocaleString('es-CL')}
+              </p>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.02)", padding: "14px", borderRadius: "8px", border: "1px solid var(--glass-border)" }}>
+              <span style={{ fontSize: "0.8rem", color: "hsl(var(--text-muted))" }}>Crédito Disponible</span>
+              <p style={{ fontSize: "1.1rem", fontWeight: 700, margin: "4px 0 0 0", color: "hsl(var(--success))" }}>
+                ${Math.max(0, clientAgreement.limite_credito - clientAgreement.credito_usado).toLocaleString('es-CL')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="glass-panel card-container">
         <div className="panel-title">
-          <span>Convenios Corporativos Registrados</span>
-          <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-            <Plus size={16} />
-            <span>Crear Convenio</span>
-          </button>
+          <span>{isClientRole ? "Mi Contrato Corporativo" : "Convenios Corporativos Registrados"}</span>
+          {isAdmin && (
+            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+              <Plus size={16} />
+              <span>Crear Convenio</span>
+            </button>
+          )}
         </div>
 
         {error && (
@@ -95,7 +139,7 @@ export const Agreements: React.FC = () => {
             </div>
           ) : agreements.length === 0 ? (
             <p style={{ color: "hsl(var(--text-muted))", textAlign: "center", padding: "35px" }}>
-              No hay convenios creados aún. Haz clic en "Crear Convenio" para registrar el primero.
+              {isClientRole ? "No se encontró un convenio asociado a tu cuenta." : "No hay convenios creados aún."}
             </p>
           ) : (
             <table className="premium-table">

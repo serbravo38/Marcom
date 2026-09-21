@@ -91,7 +91,19 @@ type StockMovement = {
 };
 
 export const Inventory: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"locations" | "products" | "assets" | "movements">("assets");
+  const [currentUser] = useState<any>(() => {
+    const userJson = localStorage.getItem("marcom_user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
+
+  const userRole = currentUser?.rol || "CLIENTE_ESTANDAR";
+  const isClient = userRole === "CLIENTE_CONVENIO" || userRole === "CLIENTE_ESTANDAR";
+  const isTech = userRole === "TECNICO_TERRENO";
+  const isAdminOrJefe = userRole === "ADMIN" || userRole === "JEFE_BODEGA";
+
+  const [activeTab, setActiveTab] = useState<"locations" | "products" | "assets" | "movements">(
+    isClient ? "locations" : "assets"
+  );
 
   // Data States
   const [locations, setLocations] = useState<Location[]>([]);
@@ -412,30 +424,36 @@ export const Inventory: React.FC = () => {
 
       {/* Tabs Header */}
       <div className="tabs-header">
-        <button 
-          className={`tab-btn ${activeTab === "assets" ? "active" : ""}`}
-          onClick={() => setActiveTab("assets")}
-        >
-          Activos Seriados
-        </button>
+        {!isClient && (
+          <button 
+            className={`tab-btn ${activeTab === "assets" ? "active" : ""}`}
+            onClick={() => setActiveTab("assets")}
+          >
+            Activos Seriados
+          </button>
+        )}
         <button 
           className={`tab-btn ${activeTab === "locations" ? "active" : ""}`}
           onClick={() => setActiveTab("locations")}
         >
-          Bodegas y Tiendas
+          {isClient ? "Mis Locales y Pantallas" : "Bodegas y Locales"}
         </button>
-        <button 
-          className={`tab-btn ${activeTab === "products" ? "active" : ""}`}
-          onClick={() => setActiveTab("products")}
-        >
-          Catálogo
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === "movements" ? "active" : ""}`}
-          onClick={() => setActiveTab("movements")}
-        >
-          Movimientos de Stock
-        </button>
+        {!isClient && (
+          <button 
+            className={`tab-btn ${activeTab === "products" ? "active" : ""}`}
+            onClick={() => setActiveTab("products")}
+          >
+            Catálogo
+          </button>
+        )}
+        {isAdminOrJefe && (
+          <button 
+            className={`tab-btn ${activeTab === "movements" ? "active" : ""}`}
+            onClick={() => setActiveTab("movements")}
+          >
+            Movimientos de Stock
+          </button>
+        )}
       </div>
 
       {/* Tab Contents */}
@@ -451,10 +469,12 @@ export const Inventory: React.FC = () => {
             <>
               <div className="panel-title">
                 <span>Inventario de Activos Físicos</span>
-                <button className="btn-primary" onClick={() => setModalOpen("asset")}>
-                  <Plus size={16} />
-                  <span>Registrar Activo</span>
-                </button>
+                {(isAdminOrJefe || isTech) && (
+                  <button className="btn-primary" onClick={() => setModalOpen("asset")}>
+                    <Plus size={16} />
+                    <span>Registrar Activo</span>
+                  </button>
+                )}
               </div>
 
               <div className="table-responsive">
@@ -502,17 +522,19 @@ export const Inventory: React.FC = () => {
           {activeTab === "locations" && (
             <>
               <div className="panel-title">
-                <span>Bodegas y Locales de Instalación (Convenios)</span>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button className="btn-secondary" onClick={() => setModalOpen("bulk_locations")}>
-                    <UploadCloud size={16} />
-                    <span>Carga Masiva</span>
-                  </button>
-                  <button className="btn-primary" onClick={() => setModalOpen("location")}>
-                    <Plus size={16} />
-                    <span>Crear Local / Ubicación</span>
-                  </button>
-                </div>
+                <span>{isClient ? "Mis Locales y Pantallas Instaladas" : "Bodegas y Locales de Instalación (Convenios)"}</span>
+                {isAdminOrJefe && (
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button className="btn-secondary" onClick={() => setModalOpen("bulk_locations")}>
+                      <UploadCloud size={16} />
+                      <span>Carga Masiva</span>
+                    </button>
+                    <button className="btn-primary" onClick={() => setModalOpen("location")}>
+                      <Plus size={16} />
+                      <span>Crear Local / Ubicación</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="table-responsive">

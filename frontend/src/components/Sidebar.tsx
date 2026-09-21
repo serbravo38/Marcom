@@ -51,53 +51,87 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <nav className="sidebar-menu">
+        {/* Dashboard Link - Visible to all authenticated roles */}
         <NavLink 
           to="/" 
           className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
         >
           <LayoutDashboard size={20} />
-          <span>Dashboard</span>
+          <span>
+            {currentUser?.rol === "CLIENTE_CONVENIO" || currentUser?.rol === "CLIENTE_ESTANDAR" 
+              ? "Mi Portal" 
+              : currentUser?.rol === "TECNICO_TERRENO"
+              ? "Panel Técnico"
+              : currentUser?.rol === "JEFE_BODEGA"
+              ? "Panel Bodega"
+              : "Dashboard"}
+          </span>
         </NavLink>
 
-        <NavLink 
-          to="/agreements" 
-          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-        >
-          <FileText size={20} />
-          <span>Convenios</span>
-        </NavLink>
+        {/* Convenios - ADMIN, JEFE_BODEGA, CLIENTE_CONVENIO */}
+        {currentUser && ["ADMIN", "JEFE_BODEGA", "CLIENTE_CONVENIO"].includes(currentUser.rol) && (
+          <NavLink 
+            to="/agreements" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <FileText size={20} />
+            <span>{currentUser.rol === "CLIENTE_CONVENIO" ? "Mi Convenio" : "Convenios"}</span>
+          </NavLink>
+        )}
 
-        <NavLink 
-          to="/quotations" 
-          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-        >
-          <Calculator size={20} />
-          <span>Cotizaciones</span>
-        </NavLink>
+        {/* Cotizaciones - ADMIN, JEFE_BODEGA, CLIENTE_CONVENIO, CLIENTE_ESTANDAR */}
+        {currentUser && ["ADMIN", "JEFE_BODEGA", "CLIENTE_CONVENIO", "CLIENTE_ESTANDAR"].includes(currentUser.rol) && (
+          <NavLink 
+            to="/quotations" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <Calculator size={20} />
+            <span>{currentUser.rol === "CLIENTE_CONVENIO" ? "Mis Cotizaciones (OC)" : "Cotizaciones"}</span>
+          </NavLink>
+        )}
 
-        <NavLink 
-          to="/inventory" 
-          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-        >
-          <Boxes size={20} />
-          <span>Inventario</span>
-        </NavLink>
+        {/* Inventario / Locales - ADMIN, JEFE_BODEGA, TECNICO_TERRENO, CLIENTE_CONVENIO */}
+        {currentUser && ["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO", "CLIENTE_CONVENIO"].includes(currentUser.rol) && (
+          <NavLink 
+            to="/inventory" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <Boxes size={20} />
+            <span>
+              {currentUser.rol === "CLIENTE_CONVENIO" 
+                ? "Mis Locales y Pantallas" 
+                : currentUser.rol === "TECNICO_TERRENO"
+                ? "Activos y Hardware"
+                : "Inventario"}
+            </span>
+          </NavLink>
+        )}
 
-        <NavLink 
-          to="/work-orders" 
-          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-        >
-          <Briefcase size={20} />
-          <span>Órdenes de Trabajo</span>
-        </NavLink>
+        {/* Órdenes de Trabajo - ADMIN, JEFE_BODEGA, TECNICO_TERRENO, CLIENTE_CONVENIO */}
+        {currentUser && ["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO", "CLIENTE_CONVENIO"].includes(currentUser.rol) && (
+          <NavLink 
+            to="/work-orders" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <Briefcase size={20} />
+            <span>
+              {currentUser.rol === "TECNICO_TERRENO" 
+                ? "Mis Órdenes de Trabajo" 
+                : currentUser.rol === "CLIENTE_CONVENIO"
+                ? "Servicios y OTs"
+                : "Órdenes de Trabajo"}
+            </span>
+          </NavLink>
+        )}
 
+        {/* Usuarios - Exclusivo ADMIN */}
         {currentUser && currentUser.rol === "ADMIN" && (
           <NavLink 
             to="/users" 
             className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
           >
             <User size={20} />
-            <span>Usuarios</span>
+            <span>Usuarios y Roles</span>
           </NavLink>
         )}
       </nav>

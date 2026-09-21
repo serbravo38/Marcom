@@ -82,11 +82,17 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     # 4. Login exitoso: Resetear contador de intentos fallidos
     crud.resetear_intentos_fallidos(db, user)
     
+    # Extraer convenio_id si existe perfil
+    convenio_id_val = None
+    if user.perfil and user.perfil.convenio_id:
+        convenio_id_val = str(user.perfil.convenio_id)
+    
     # Generate token
     token_data = {
         "usuario_id": str(user.usuario_id),
         "email": user.correo,
-        "role": user.rol.value
+        "role": user.rol.value,
+        "convenio_id": convenio_id_val
     }
     access_token = auth.create_access_token(data=token_data)
     return {"access_token": access_token, "token_type": "bearer"}
@@ -284,7 +290,7 @@ def update_user_profile(
 def create_new_agreement(
     agreement_in: schemas.ConvenioCrear,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN, models.RolUsuario.JEFE_BODEGA]))
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
 ):
     db_agreement = crud.obtener_convenio_por_rut(db, rut=agreement_in.rut)
     if db_agreement:
@@ -301,5 +307,52 @@ def list_agreements(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(auth.get_current_user)
 ):
-    # Any authenticated user can list agreements (e.g. technicians or clients looking up references)
-    return crud.obtener_convenios(db, skip=skip, limit=limit)
+    # CLIENTE_CONVENIO solo puede ver su propio convenio asignado
+    if current_user.rol == models.RolUsuario.CLIENTE_CONVENIO:
+        if current_user.perfil and current_user.perfil.convenio_id:
+            conv = crud.obtener_convenio_por_id(db, convenio_id=current_user.perfil.convenio_id)
+            return [conv] if conv else []
+        return []
+    
+    # ADMIN y JEFE_BODEGA pueden consultar los convenios corporativos
+    if current_user.rol in [models.RolUsuario.ADMIN, models.RolUsuario.JEFE_BODEGA]:
+        return crud.obtener_convenios(db, skip=skip, limit=limit)
+        
+    return []
+
+@router.get("/convenios/{convenio_id}", response_model=schemas.ConvenioRespuesta)
+def get_agreement_by_id(
+    convenio_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.get_current_user)
+):
+    # Seguridad multi-tenant: Si es CLIENTE_CONVENIO solo puede acceder al suyo
+    if current_user.rol == models.RolUsuario.CLIENTE_CONVENIO:
+        if not (current_user.perfil and current_user.perfil.convenio_id == convenio_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para consultar la información de este convenio corporativo."
+            )
+    elif current_user.rol not in [models.RolUsuario.ADMIN, models.RolUsuario.JEFE_BODEGA]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para consultar convenios corporativos."
+        )
+
+    conv = crud.obtener_convenio_por_id(db, convenio_id=convenio_id)
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
+    return conv
+
+@router.patch("/convenios/{convenio_id}", response_model=schemas.ConvenioRespuesta)
+def update_agreement(
+    convenio_id: UUID,
+    agreement_update: schemas.ConvenioActualizar,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    conv = crud.obtener_convenio_por_id(db, convenio_id=convenio_id)
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
+    return crud.actualizar_convenio(db, db_convenio=conv, convenio_update=agreement_update)
+

@@ -44,6 +44,22 @@ def get_locations(
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
+    user_role = user.get("role")
+    user_convenio = user.get("convenio_id")
+    
+    # Aislamiento multi-tenant: CLIENTE_CONVENIO sólo puede ver sus propios locales
+    if user_role == "CLIENTE_CONVENIO":
+        if not user_convenio:
+            return []
+        return crud.obtener_ubicaciones(
+            db, 
+            skip=skip, 
+            limit=limit, 
+            convenio_id=UUID(user_convenio), 
+            es_bodega=False, 
+            region=region
+        )
+        
     return crud.obtener_ubicaciones(db, skip=skip, limit=limit, convenio_id=convenio_id, es_bodega=es_bodega, region=region)
 
 @router.get("/ubicaciones/{ubicacion_id}", response_model=schemas.UbicacionRespuesta)
@@ -55,6 +71,17 @@ def get_location_details(
     location = crud.obtener_ubicacion_por_id(db, ubicacion_id=ubicacion_id)
     if not location:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
+        
+    user_role = user.get("role")
+    user_convenio = user.get("convenio_id")
+    
+    if user_role == "CLIENTE_CONVENIO":
+        if not user_convenio or str(location.convenio_id) != user_convenio:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para visualizar este local o instalación."
+            )
+            
     return location
 
 @router.patch("/ubicaciones/{ubicacion_id}", response_model=schemas.UbicacionRespuesta)

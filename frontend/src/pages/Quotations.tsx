@@ -35,6 +35,14 @@ interface Agreement {
 }
 
 export const Quotations: React.FC = () => {
+  const [currentUser] = useState<any>(() => {
+    const userJson = localStorage.getItem("marcom_user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
+
+  const isClientRole = currentUser?.rol === "CLIENTE_CONVENIO";
+  const userConvenioId = currentUser?.perfil?.convenio_id || "";
+
   // Data State
   const [quotations, setQuotations] = useState<Cotizacion[]>([]);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
@@ -44,7 +52,7 @@ export const Quotations: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Filter State
-  const [filterAgreement, setFilterAgreement] = useState<string>("");
+  const [filterAgreement, setFilterAgreement] = useState<string>(isClientRole ? userConvenioId : "");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -55,7 +63,7 @@ export const Quotations: React.FC = () => {
   const [showInternalDetails, setShowInternalDetails] = useState<boolean>(false);
 
   // Form Fields (Client facing parameters)
-  const [selectedAgreementId, setSelectedAgreementId] = useState<string>("");
+  const [selectedAgreementId, setSelectedAgreementId] = useState<string>(isClientRole ? userConvenioId : "");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [approvalDate, setApprovalDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [supportType, setSupportType] = useState<string>("ESTANDAR_CONVENIO");

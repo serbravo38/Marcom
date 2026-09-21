@@ -55,7 +55,7 @@ export const App: React.FC = () => {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
 
-        {/* Private Protected Routes */}
+        {/* Private Protected Routes with Granular RBAC */}
         <Route 
           path="/" 
           element={
@@ -69,7 +69,7 @@ export const App: React.FC = () => {
         <Route 
           path="/agreements" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["ADMIN", "JEFE_BODEGA", "CLIENTE_CONVENIO"]}>
               <Layout>
                 <Agreements />
               </Layout>
@@ -79,7 +79,7 @@ export const App: React.FC = () => {
         <Route 
           path="/quotations" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["ADMIN", "JEFE_BODEGA", "CLIENTE_CONVENIO", "CLIENTE_ESTANDAR"]}>
               <Layout>
                 <Quotations />
               </Layout>
@@ -89,7 +89,7 @@ export const App: React.FC = () => {
         <Route 
           path="/inventory" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO", "CLIENTE_CONVENIO"]}>
               <Layout>
                 <Inventory />
               </Layout>
@@ -99,7 +99,7 @@ export const App: React.FC = () => {
         <Route 
           path="/work-orders" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO", "CLIENTE_CONVENIO"]}>
               <Layout>
                 <WorkOrders />
               </Layout>
@@ -109,7 +109,7 @@ export const App: React.FC = () => {
         <Route 
           path="/users" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
               <Layout>
                 <Users />
               </Layout>
