@@ -48,7 +48,7 @@ export const Login: React.FC = () => {
       localStorage.setItem("marcom_user", JSON.stringify(userProfile));
 
       // 3. Redirect to dashboard
-      navigate("/");
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err?.message || "Credenciales incorrectas. Inténtalo de nuevo.");
     } finally {

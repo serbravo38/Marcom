@@ -10,6 +10,7 @@ import Inventory from "./pages/Inventory";
 import WorkOrders from "./pages/WorkOrders";
 import Users from "./pages/Users";
 import Quotations from "./pages/Quotations";
+import { LandingPage } from './pages/LandingPage';
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -18,7 +19,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Dynamic header title matching routing paths
   const getTitle = () => {
     switch (location.pathname) {
-      case "/":
+      case "/dashboard":
         return "Panel Principal (Dashboard)";
       case "/agreements":
         return "Convenios de Clientes";
@@ -54,67 +55,68 @@ export const App: React.FC = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
+        <Route path="/" element={<LandingPage />} />
 
         {/* Private Protected Routes */}
-        <Route 
-          path="/" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Layout>
                 <Dashboard />
               </Layout>
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/agreements" 
+        <Route
+          path="/agreements"
           element={
             <ProtectedRoute>
               <Layout>
                 <Agreements />
               </Layout>
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/quotations" 
+        <Route
+          path="/quotations"
           element={
             <ProtectedRoute>
               <Layout>
                 <Quotations />
               </Layout>
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/inventory" 
+        <Route
+          path="/inventory"
           element={
             <ProtectedRoute>
               <Layout>
                 <Inventory />
               </Layout>
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/work-orders" 
+        <Route
+          path="/work-orders"
           element={
             <ProtectedRoute>
               <Layout>
                 <WorkOrders />
               </Layout>
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/users" 
+        <Route
+          path="/users"
           element={
             <ProtectedRoute>
               <Layout>
                 <Users />
               </Layout>
             </ProtectedRoute>
-          } 
+          }
         />
       </Routes>
     </Router>

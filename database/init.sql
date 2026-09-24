@@ -270,7 +270,7 @@ INSERT INTO esquema_auth_clientes.usuarios (rut, correo, clave_hash, nombre, ape
 VALUES (
   '12345678-9',
   'admin@marcom.cl',
-  '$2b$12$0kJpQwNGdXl.HYxg.JJAJOGGDUAPHPFf1TZiexXcHf840hB7icM/G', -- password: admin123
+  '$2b$12$gV0FCZE94nvwGW.VIU0VreE..UZ7ldJUEpQfgpy0ypFB7e0GJORdm', -- password: admin123
   'Admin',
   'Principal',
   'ADMIN'

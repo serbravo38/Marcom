@@ -1,5 +1,171 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
+.marcom-hero {
+  position: relative;
+  min-height: 420px;
+  height: 420px;
+  color: white;
+  background: #020617;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.marcom-hero-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.68), transparent);
+  z-index: 1;
+}
+
+.marcom-hero-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.05);
+  transition: transform 10s ease;
+}
+
+.marcom-hero-content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+
+.marcom-hero-content-inner {
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.marcom-hero-copy {
+  max-width: min(680px, 60vw);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.marcom-hero-title {
+  font-size: clamp(2.5rem, 4vw, 3.6rem);
+  line-height: 1.12;
+  font-weight: 800;
+  color: white;
+  margin: 0;
+}
+
+.marcom-hero-subtitle {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.7;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.marcom-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 0.8rem;
+}
+
+.marcom-hero-primary-button {
+  background: #2563eb;
+  color: white;
+  padding: 0.85rem 1.4rem;
+  border-radius: 0.8rem;
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.45);
+  transition: background 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.marcom-hero-primary-button:hover {
+  background: #1d4ed8;
+}
+
+.marcom-hero-secondary-button {
+  background: rgba(30, 41, 59, 0.8);
+  color: #e2e8f0;
+  padding: 0.85rem 1.4rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #475569;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.marcom-hero-secondary-button:hover {
+  background: #1e293b;
+  border-color: #94a3b8;
+}
+
+.marcom-hero-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  pointer-events: none;
+}
+
+.marcom-carousel-button {
+  pointer-events: auto;
+  color: white;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.marcom-carousel-button:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.marcom-carousel-button svg {
+  width: 28px;
+  height: 28px;
+}
+
+.marcom-carousel-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.marcom-carousel-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(100, 116, 139, 0.8);
+  cursor: pointer;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.marcom-carousel-dot.active {
+  width: 32px;
+  background: #3b82f6;
+}
+
 :root {
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   
@@ -652,4 +818,1074 @@ select option:hover {
 .login-header p {
   color: hsl(var(--text-muted));
   font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   MARCOM SYSTEM - LANDING PAGE SCOPED STYLES (index.css)
+   Aislamiento visual para evitar conflictos con la zona de Dashboard/Admin.
+   ========================================================================== */
+
+   /* Alineación estricta de la Fila Superior al estilo Falabella */
+.landing-page-wrapper .marcom-header .h-20 {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.landing-page-wrapper .marcom-header .ml-auto {
+  margin-left: auto !important;
+}
+
+   .landing-page-wrapper {
+  background-color: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+}
+
+/* Asegura scroll suave al hacer clic en enlaces del landing page */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 120px;
+}
+
+/* 1. HEADER & NAVEGACIÓN (Estilo Pestañas) */
+.landing-page-wrapper .marcom-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+/* Contención estricta para evitar que el Logo o SVGs se agiganten */
+.landing-page-wrapper .marcom-header img.marcom-logo {
+  height: 48px !important;
+  max-height: 48px !important;
+  width: auto !important;
+  max-width: 220px !important;
+  object-fit: contain;
+  /* Se sstablece un alto máximo relativo al header de 80px */
+  max-height: 52px; /* Se ajusta de 48px a 52px */
+  height: auto;
+  width: auto;
+  /* Margen arriba y abajo */
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.landing-page-wrapper .marcom-header svg {
+  flex-shrink: 0;
+}
+
+/* Input de Búsqueda cápsula */
+.landing-page-wrapper .marcom-search-input {
+  width: 240px;
+  padding-left: 2.5rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.875rem;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  color: #334155;
+  transition: all 0.2s ease-in-out;
+}
+
+.landing-page-wrapper .marcom-search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Botones Fila Superior */
+.landing-page-wrapper .marcom-btn-pill-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.landing-page-wrapper .marcom-btn-pill-secondary:hover {
+  background-color: #dbeafe;
+  color: #1e3a8a;
+}
+
+.landing-page-wrapper .marcom-btn-pill-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.landing-page-wrapper .marcom-btn-pill-primary:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+/* Navegación Fila Inferior (Menú Horizontal estilo Pestaña) */
+.landing-page-wrapper .marcom-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.25rem;
+  width: 100%;
+}
+
+.landing-page-wrapper .marcom-tab-item {
+  padding: 0.75rem 1.25rem;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #475569;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease-in-out;
+}
+
+.landing-page-wrapper .marcom-tab-item:hover {
+  background-color: #f8fafc;
+  color: #2563eb;
+}
+
+.landing-page-wrapper .marcom-tab-item.active {
+  background-color: rgba(239, 246, 255, 0.8);
+  color: #2563eb;
+  border-bottom: 2px solid #2563eb;
+}
+
+/* ==========================================================================
+   MARCOM SYSTEM - STYLES EXCLUSIVOS PARA LANDING PAGE
+   Proyecto: MARCOM (Capstone Duoc UC PTY4614)
+   Autor/Front-end & QA: Julio Mena
+   Propósito: Scoping estricto para evitar colisiones con el Dashboard/Admin
+   ========================================================================== */
+
+/* 1. WRAPPER PRINCIPAL Y RESET LOCAL */
+.landing-page-wrapper {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  padding-left: clamp(1rem, 2vw, 2rem);
+  padding-right: clamp(1rem, 2vw, 2rem);
+  box-sizing: border-box;
+}
+
+/* Separación entre el carrusel y la siguiente sección de texto */
+.landing-page-wrapper .marcom-hero {
+  margin-bottom: 2rem;
+}
+
+/* 2. HEADER Y BARRA DE NAVEGACIÓN MARCOM */
+.landing-page-wrapper .marcom-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.04);
+  width: 100%;
+}
+
+/* Forzar contención de tamaño en logos y SVG dentro del Header para evitar deformación */
+.landing-page-wrapper .marcom-header img.marcom-logo {
+  height: 48px !important;
+  max-height: 48px !important;
+  width: auto !important;
+  max-width: 220px !important;
+  object-fit: contain;
+  display: block;
+}
+
+.landing-page-wrapper .marcom-header svg {
+  flex-shrink: 0;
+}
+
+/* Botones de acción en Header (Fila Superior) */
+.landing-page-wrapper .marcom-btn-pill-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.landing-page-wrapper .marcom-btn-pill-primary:hover {
+  background-color: #1d4ed8 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.35);
+}
+
+.landing-page-wrapper .marcom-btn-pill-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+  border: 1px solid #bfdbfe !important;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.landing-page-wrapper .marcom-btn-pill-secondary:hover {
+  background-color: #dbeafe !important;
+  color: #1e3a8a !important;
+}
+
+/* Navegación por Pestañas (Tabs en Fila Inferior) */
+.landing-page-wrapper .marcom-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.25rem;
+  width: 100%;
+}
+
+.landing-page-wrapper .marcom-tab-item {
+  padding: 0.75rem 1.25rem;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #475569 !important;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease-in-out;
+}
+
+.landing-page-wrapper .marcom-tab-item:hover {
+  background-color: #f8fafc;
+  color: #2563eb !important;
+}
+
+.landing-page-wrapper .marcom-tab-item.active {
+  background-color: rgba(239, 246, 255, 0.85);
+  color: #2563eb !important;
+  border-bottom: 2px solid #2563eb !important;
+}
+
+/* ==========================================================================
+   MARCOM SYSTEM - STYLES EXCLUSIVOS PARA LANDING PAGE
+   ========================================================================== */
+
+/* Footer estilo banco / imagen de referencia */
+.landing-page-wrapper .marcom-footer {
+  background: linear-gradient(180deg, #171b22 0%, #11151c 100%);
+  color: #e5e7eb;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: auto;
+  padding: 2rem 4rem 3rem;
+  font-family: var(--font-sans);
+  box-sizing: border-box;
+}
+
+.landing-page-wrapper .marcom-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr)) minmax(260px, 1fr);
+  gap: 2.75rem;
+  align-items: start;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.landing-page-wrapper .marcom-footer-column {
+  min-width: 0;
+}
+
+.landing-page-wrapper .marcom-footer-column h3 {
+  color: #e6eaf2;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  margin-bottom: 1.4rem;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.landing-page-wrapper .marcom-footer-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.landing-page-wrapper .marcom-footer-column li {
+  color: #cbd5e1;
+  font-size: 0.92rem;
+  line-height: 1.9;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.landing-page-wrapper .marcom-footer-column li:hover {
+  color: #636aef;
+}
+
+.landing-page-wrapper .marcom-footer-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+  min-width: 250px;
+}
+
+.landing-page-wrapper .marcom-footer-block-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 180px;
+  background: #eaf0ee;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 800;
+  font-size: 0.92rem;
+  text-decoration: none;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-transform: uppercase;
+}
+
+.landing-page-wrapper .marcom-footer-block-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.landing-page-wrapper .marcom-footer-social {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.landing-page-wrapper .marcom-social-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #94a3b8;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.4);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.landing-page-wrapper .marcom-social-icon-content {
+  display: inline-flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.landing-page-wrapper .marcom-social-icon:hover {
+  background: #e2e8f0;
+  color: #111827;
+  transform: translateY(-2px);
+}
+
+.landing-page-wrapper .marcom-footer-bottom {
+  max-width: 1400px;
+  margin: 3rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.landing-page-wrapper .marcom-footer-topline {
+  margin-bottom: 1.5rem;
+}
+
+.landing-page-wrapper .marcom-footer-topline p,
+.landing-page-wrapper .marcom-footer-bottomline p {
+  color: #cbd5e1;
+  font-size: 0.93rem;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.landing-page-wrapper .marcom-footer-topline a {
+  color: #86efac;
+  text-decoration: none;
+}
+
+.landing-page-wrapper .marcom-footer-topline a:hover {
+  color: #bbf7d0;
+}
+
+.landing-page-wrapper .marcom-footer-bottomline {
+  margin-top: 0.5rem;
+}
+
+/* Ajuste general de scroll y márgenes en secciones */
+html {
+  scroll-behavior: smooth;
+}
+
+.landing-page-wrapper section[id] {
+  scroll-margin-top: 50px;
+}
+
+.landing-page-wrapper .marcom-section {
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.landing-page-wrapper .marcom-about-section {
+  background: #f8fafc !important;
+}
+
+.landing-page-wrapper .marcom-about-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
+  align-items: stretch;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding: clamp(2rem, 4vw, 3rem);
+  background: #bfdbfe;
+  border: 1px solid #102a43;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.landing-page-wrapper .marcom-about-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.landing-page-wrapper .marcom-about-copy h1,
+.landing-page-wrapper .marcom-about-copy h2 {
+  color: #0f2d46;
+  margin: 0;
+}
+
+.landing-page-wrapper .marcom-about-copy h1 {
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+}
+
+.landing-page-wrapper .marcom-about-copy h2 {
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  line-height: 1.2;
+}
+
+.landing-page-wrapper .marcom-about-copy p {
+  color: #27455a;
+  margin: 0;
+}
+
+.landing-page-wrapper .marcom-about-stats {
+  width: 100%;
+  border-color: #d8d1c1;
+}
+
+.landing-page-wrapper .marcom-about-stats .text-blue-600 {
+  color: #2563eb;
+}
+
+.landing-page-wrapper .marcom-about-image-wrap {
+  min-height: 340px;
+}
+
+.landing-page-wrapper .marcom-about-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 340px;
+  border: 1px solid rgba(15, 45, 70, 0.12);
+  border-radius: 0.75rem;
+  object-fit: cover;
+  object-position: 50% 25%;
+  box-shadow: 0 14px 30px rgba(15, 45, 70, 0.12);
+}
+
+.landing-page-wrapper .marcom-purpose-section {
+  background: #f8fafc !important;
+}
+
+.landing-page-wrapper .marcom-purpose-heading {
+  max-width: 760px;
+  margin: 0 0 2rem;
+}
+
+.landing-page-wrapper .marcom-purpose-heading h1,
+.landing-page-wrapper .marcom-purpose-heading h2,
+.landing-page-wrapper .marcom-purpose-heading p {
+  margin: 0;
+}
+
+.landing-page-wrapper .marcom-purpose-heading h1 {
+  color: #0f2d46;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.landing-page-wrapper .marcom-purpose-heading h1 span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 800;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.landing-page-wrapper .marcom-purpose-heading h2 {
+  margin-top: 0.35rem;
+  color: #0f2d46;
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  line-height: 1.2;
+}
+
+.landing-page-wrapper .marcom-purpose-heading p {
+  margin-top: 0.7rem;
+  color: #27455a;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.landing-page-wrapper .marcom-purpose-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.landing-page-wrapper .marcom-purpose-card {
+  display: flex;
+  min-height: 245px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(1.35rem, 3vw, 2rem);
+  background: #bfdbfe;
+  border: 1px solid #102a43;
+  border-radius: 1rem;
+  box-shadow: 0 10px 24px rgba(15, 45, 70, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-page-wrapper .marcom-purpose-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 30px rgba(15, 45, 70, 0.1);
+}
+
+.landing-page-wrapper .marcom-purpose-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  margin-bottom: 1.25rem;
+  border-radius: 0.75rem;
+}
+
+.landing-page-wrapper .marcom-purpose-icon svg {
+  width: 1.55rem;
+  height: 1.55rem;
+  stroke-width: 2.2;
+}
+
+.landing-page-wrapper .marcom-purpose-icon-blue {
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+.landing-page-wrapper .marcom-purpose-icon-green {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.landing-page-wrapper .marcom-purpose-icon-indigo {
+  color: #4f46e5;
+  background: #e0e7ff;
+}
+
+.landing-page-wrapper .marcom-purpose-card h3 {
+  margin: 0 0 0.65rem;
+  color: #0f2d46;
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.landing-page-wrapper .marcom-purpose-card p {
+  margin: 0;
+  color: #40566a;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.landing-page-wrapper .marcom-services-section {
+  background: #f8fafc !important;
+}
+
+.landing-page-wrapper .marcom-services-heading {
+  max-width: 760px;
+  margin: 0 0 2rem;
+}
+
+.landing-page-wrapper .marcom-services-heading h1,
+.landing-page-wrapper .marcom-services-heading h2,
+.landing-page-wrapper .marcom-services-heading p {
+  margin: 0;
+}
+
+.landing-page-wrapper .marcom-services-heading h1 {
+  color: #0f2d46;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.landing-page-wrapper .marcom-services-heading h1 span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 800;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.landing-page-wrapper .marcom-services-heading h2 {
+  margin-top: 0.35rem;
+  color: #0f2d46;
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  line-height: 1.2;
+}
+
+.landing-page-wrapper .marcom-services-heading p {
+  margin-top: 0.7rem;
+  color: #27455a;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.landing-page-wrapper .marcom-services-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.landing-page-wrapper .marcom-service-card {
+  display: flex;
+  min-height: 270px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+  background: #bfdbfe;
+  border: 1px solid #102a43;
+  border-radius: 1rem;
+  box-shadow: 0 10px 24px rgba(15, 45, 70, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-page-wrapper .marcom-service-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 30px rgba(15, 45, 70, 0.1);
+}
+
+.landing-page-wrapper .marcom-service-icon {
+  display: grid;
+  width: 2.9rem;
+  height: 2.9rem;
+  place-items: center;
+  margin-bottom: 1.15rem;
+  border-radius: 0.75rem;
+}
+
+.landing-page-wrapper .marcom-service-icon svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  stroke-width: 2.2;
+}
+
+.landing-page-wrapper .marcom-service-icon-blue {
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+.landing-page-wrapper .marcom-service-icon-green {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.landing-page-wrapper .marcom-service-icon-indigo {
+  color: #4f46e5;
+  background: #e0e7ff;
+}
+
+.landing-page-wrapper .marcom-service-icon-purple {
+  color: #9333ea;
+  background: #f3e8ff;
+}
+
+.landing-page-wrapper .marcom-service-card h4 {
+  margin: 0 0 0.6rem;
+  color: #0f2d46;
+  font-size: 1.08rem;
+  line-height: 1.25;
+}
+
+.landing-page-wrapper .marcom-service-card p {
+  margin: 0;
+  color: #40566a;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+/* Espaciado del Hero (Carrusel) */
+.landing-page-wrapper .marcom-hero {
+  margin-bottom: 3rem !important;
+}
+
+/* Modal y Formulario */
+.landing-page-wrapper input,
+.landing-page-wrapper select,
+.landing-page-wrapper textarea {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+}
+
+.landing-page-wrapper select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* 6. MODAL DE REGISTRO / FORMULARIO */
+.landing-page-wrapper .registration-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.landing-page-wrapper .registration-modal {
+  position: relative;
+  width: min(100%, 1080px);
+  max-height: min(720px, calc(100vh - 2.5rem));
+  overflow: auto;
+  display: grid;
+  grid-template-columns: minmax(270px, 0.9fr) minmax(420px, 1.1fr);
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1.25rem;
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.34);
+}
+
+.landing-page-wrapper .registration-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.landing-page-wrapper .registration-modal-close:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  transform: rotate(4deg);
+}
+
+.landing-page-wrapper .registration-modal-content {
+  display: contents;
+}
+
+.landing-page-wrapper .registration-modal-intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  min-height: 560px;
+  padding: 3rem 2.5rem 2.5rem;
+  background: #f8fafc;
+}
+
+.landing-page-wrapper .registration-modal-image-frame {
+  order: 2;
+  overflow: hidden;
+  width: min(100%, 280px);
+  aspect-ratio: 1 / 0.82;
+  margin-top: auto;
+  border-radius: 1rem;
+  background: #dbeafe;
+}
+
+.landing-page-wrapper .registration-modal-image-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.landing-page-wrapper .registration-modal-intro-copy {
+  order: 1;
+  max-width: 380px;
+}
+
+.landing-page-wrapper .registration-modal-intro-copy h2 {
+  max-width: 340px;
+  margin-bottom: 1rem;
+  color: #1e293b;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  font-weight: 700;
+  line-height: 1.04;
+}
+
+.landing-page-wrapper .registration-modal-intro-copy p {
+  max-width: 360px;
+  color: #475569;
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+.landing-page-wrapper .registration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+  min-width: 0;
+  padding: 3.5rem 3.2rem 2.75rem;
+  background: #102a43;
+}
+
+.landing-page-wrapper .registration-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.landing-page-wrapper .registration-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.landing-page-wrapper .registration-field label {
+  color: #bfdbfe;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.landing-page-wrapper .registration-field input,
+.landing-page-wrapper .registration-field select,
+.landing-page-wrapper .registration-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.45rem 0.05rem 0.7rem;
+  border: 0;
+  border-bottom: 1px solid rgba(147, 197, 253, 0.68);
+  border-radius: 0;
+  outline: none;
+  background: transparent !important;
+  color: #f8fafc !important;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-page-wrapper .registration-field select {
+  appearance: auto;
+}
+
+.landing-page-wrapper .registration-field textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.landing-page-wrapper .registration-field input::placeholder,
+.landing-page-wrapper .registration-field textarea::placeholder {
+  color: rgba(226, 232, 240, 0.58);
+}
+
+.landing-page-wrapper .registration-field input:focus,
+.landing-page-wrapper .registration-field select:focus,
+.landing-page-wrapper .registration-field textarea:focus {
+  border-bottom-color: #bfdbfe;
+  box-shadow: 0 2px 0 #bfdbfe;
+}
+
+.landing-page-wrapper .registration-field select option {
+  background: #102a43 !important;
+  color: #f8fafc !important;
+}
+
+.landing-page-wrapper .registration-submit {
+  width: 100%;
+  margin-top: 0.1rem;
+  padding: 0.8rem 1.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #bfdbfe;
+  color: #102a43;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-page-wrapper .registration-submit:hover {
+  background: #dbeafe;
+  box-shadow: 0 8px 20px rgba(147, 197, 253, 0.18);
+  transform: translateY(-1px);
+}
+
+.landing-page-wrapper .registration-success {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  min-height: 420px;
+  padding: 3rem;
+  text-align: center;
+}
+
+.landing-page-wrapper .registration-success-icon {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.landing-page-wrapper .registration-success h3 {
+  color: #1e293b;
+  font-size: 1.6rem;
+}
+
+.landing-page-wrapper .registration-success p {
+  max-width: 430px;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  .landing-page-wrapper .marcom-services-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .landing-page-wrapper .marcom-services-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-page-wrapper .marcom-service-card {
+    min-height: auto;
+  }
+
+  .landing-page-wrapper .marcom-purpose-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-page-wrapper .marcom-purpose-card {
+    min-height: auto;
+  }
+
+  .landing-page-wrapper .marcom-about-panel {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .landing-page-wrapper .marcom-about-image-wrap,
+  .landing-page-wrapper .marcom-about-image {
+    min-height: 260px;
+  }
+
+  .landing-page-wrapper .registration-modal {
+    grid-template-columns: 1fr;
+    max-height: calc(100vh - 1.5rem);
+  }
+
+  .landing-page-wrapper .registration-modal-intro {
+    min-height: auto;
+    padding: 2.75rem 1.5rem 1.75rem;
+  }
+
+  .landing-page-wrapper .registration-modal-image-frame {
+    display: none;
+  }
+
+  .landing-page-wrapper .registration-modal-intro-copy h2 {
+    font-size: 2rem;
+  }
+
+  .landing-page-wrapper .registration-form {
+    padding: 2rem 1.5rem 1.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-page-wrapper .registration-form-row {
+    grid-template-columns: 1fr;
+    gap: 1.05rem;
+  }
+}
+
+.landing-page-wrapper h1,
+.landing-page-wrapper h2,
+.landing-page-wrapper h3,
+.landing-page-wrapper h4 {
+  font-family: inherit;
 }

@@ -36,7 +36,7 @@ export const Sidebar: React.FC = () => {
 
       <nav className="sidebar-menu">
         <NavLink 
-          to="/" 
+          to="/dashboard" 
           className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
         >
           <LayoutDashboard size={20} />
