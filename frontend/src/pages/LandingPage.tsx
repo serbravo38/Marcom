@@ -234,11 +234,22 @@ export const LandingPage: React.FC = () => {
                 Líderes en Gestión Operativa e Infraestructura Tecnológica
               </h2>
               <p className="text-slate-600 leading-relaxed text-base">
-                En <strong>MARCOM</strong> somos especialistas en el desarrollo e implementación de soluciones tecnológicas distribuidas para la gestión eficiente de activos, infraestructura crítica y soporte técnico en terreno.
+                <strong>MARCOM</strong> es una empresa chilena especializada en <strong>telecomunicaciones y tecnologías avanzadas</strong>, con amplia experiencia en proyectos de televisión satelital, digital y redes internas. Ha trabajado en infraestructuras de telecomunicación para clientes de gran escala como aeropuertos, campamentos mineros y edificios corporativos.
               </p>
               <p className="text-slate-600 leading-relaxed text-base">
-                Nuestra plataforma integra en un ecosistema único el control de inventario por serialización, la automatización de órdenes de trabajo con evidencias digitales y la gestión financiera con facturación electrónica (DTE), garantizando visibilidad operativa completa en estaciones de servicio, tiendas de conveniencia y centros logísticos a nivel nacional.
+                Además, colabora directamente con <strong>Arcoprime Ltda.</strong> y <strong>Copec S.A.</strong>, realizando instalaciones de monitores profesionales en estaciones de servicio y tiendas Pronto Copec a lo largo del país, desde Arica hasta Punta Arenas. Su propuesta de valor se centra en:     
               </p>
+              <p className="text-slate-600 leading-relaxed text-base">
+                Un aspecto clave de su negocio es la instalación de monitores de última tecnología, incluyendo innovaciones como monitores en placa superiores a 100 pulgadas, lo que posiciona a Marcom como un referente en soluciones audiovisuales de gran escala.
+              </p>  
+              
+                  <ul className="list-disc list-outside pl-8">
+                    <li>Calidad y agilidad en la ejecución de proyectos.</li>
+                    <li>Soluciones flexibles y competitivas en costos.</li>
+                    <li>Comunicación constante con los clientes.</li>
+                  </ul>
+                
+                        
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 marcom-about-stats">
                 <div>
                   <span className="block text-3xl font-extrabold text-blue-600">99.8% </span>
@@ -304,9 +315,9 @@ export const LandingPage: React.FC = () => {
               <div className="marcom-purpose-icon marcom-purpose-icon-indigo">
                 <BarChart3 />
               </div>
-              <h3>Toma de Decisiones Inteligente</h3>
+              <h3>Consolidar su liderazgo nacional</h3>
               <p>
-                Convertir datos operativos dispersos en dashboards consolidados de KPIs, permitiendo a ejecutivos y jefes de bodega proyectar presupuestos y optimizar líneas de crédito.
+               Consolidar su liderazgo nacional en la instalación y mantenimiento de infraestructuras de televisión y monitores profesionales, expandiendo sus capacidades hacia formatos de gran escala 
               </p>
             </div>
           </div>
@@ -335,9 +346,9 @@ export const LandingPage: React.FC = () => {
               <div className="marcom-service-icon marcom-service-icon-blue">
                 <Layers />
               </div>
-              <h4>Inventario por Serie</h4>
+              <h4>Implementación y mantenimiento de redes de televisión</h4>
               <p>
-                Control de insumos y equipos por número de serie, alertas de bajo stock y trazabilidad de hardware defectuoso o en tránsito.
+                Implementación y mantenimiento de redes de televisión (análogas, digitales, satelitales y cabeceras de televisión).
               </p>
             </div>
 
@@ -345,9 +356,9 @@ export const LandingPage: React.FC = () => {
               <div className="marcom-service-icon marcom-service-icon-green">
                 <Truck />
               </div>
-              <h4>Órdenes de Trabajo</h4>
+              <h4>Instalación de monitores profesionales</h4>
               <p>
-                Gestión de atenciones técnicas en terreno, firmas digitales táctiles en pantalla y respaldo fotográfico automático.
+                Instalación de monitores profesionales en estaciones de servicio, tiendas y concesiones de Copec, incluyendo soporte y configuración.
               </p>
             </div>
 
@@ -355,9 +366,9 @@ export const LandingPage: React.FC = () => {
               <div className="marcom-service-icon marcom-service-icon-indigo">
                 <FileText />
               </div>
-              <h4>Facturación y Pasarela</h4>
+              <h4>Gestión de bodegas y logística tecnológica</h4>
               <p>
-                Emisión de DTEs (SII), recaudación automatizada con pasarela de pagos Flow y control de líneas de crédito por convenio.
+                Gestión de bodegas y logística tecnológica, con recepción, clasificación y disposición de equipos electrónicos (monitores, impresoras, escáneres, notebooks, UPS, etc.).
               </p>
             </div>
 
@@ -365,9 +376,9 @@ export const LandingPage: React.FC = () => {
               <div className="marcom-service-icon marcom-service-icon-purple">
                 <BarChart3 />
               </div>
-              <h4>Dashboard de KPIs</h4>
+              <h4>Instalación de sistemas POS y equipos complementarios</h4>
               <p>
-                Visualización ejecutiva en tiempo real del cumplimiento de SLAs, gastos operativos y rotación de inventarios.
+                Instalación de sistemas POS y equipos complementarios (monitores táctiles, comandas electrónicas y de papel, impresoras de pedidos).
               </p>
             </div>
           </div>
