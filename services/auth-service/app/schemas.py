@@ -63,6 +63,7 @@ class UsuarioRespuesta(UsuarioBase):
     usuario_id: UUID
     intentos_fallidos: int = 0
     bloqueado_hasta: Optional[datetime] = None
+    mfa_habilitado: bool = False
     creado_en: datetime
     actualizado_en: datetime
     perfil: Optional[PerfilClienteRespuesta] = None
@@ -101,8 +102,10 @@ class IniciarSesionUsuario(BaseModel):
     clave: str
 
 class Token(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: Optional[str] = None
+    token_type: Optional[str] = "bearer"
+    requiere_mfa: bool = False
+    token_temporal_mfa: Optional[str] = None
 
 class DatosToken(BaseModel):
     usuario_id: Optional[UUID] = None
@@ -119,4 +122,27 @@ class RestablecerClave(BaseModel):
 class RespuestaRecuperacion(BaseModel):
     mensaje: str
     token_temporal: Optional[str] = None
+
+# --- MFA SCHEMAS ---
+class SolicitudVerificarMFA(BaseModel):
+    token_temporal: str
+    codigo_totp: str = Field(..., min_length=6, max_length=12, description="Código de 6 dígitos de la app autenticadora o código de respaldo")
+
+class RespuestaConfigurarMFA(BaseModel):
+    secreto_manual: str
+    qr_codigo_base64: str
+    otpauth_url: str
+
+class SolicitudActivarMFA(BaseModel):
+    codigo_totp: str = Field(..., min_length=6, max_length=6, description="Código de 6 dígitos generado por la app")
+
+class RespuestaActivarMFA(BaseModel):
+    mensaje: str
+    mfa_habilitado: bool = True
+    codigos_respaldo: List[str]
+
+class SolicitudDesactivarMFA(BaseModel):
+    clave: str = Field(..., description="Contraseña actual del usuario para confirmar")
+    codigo_totp: str = Field(..., description="Código de 6 dígitos o código de respaldo")
+
 

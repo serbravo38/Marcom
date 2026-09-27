@@ -20,6 +20,7 @@ export interface Usuario {
   activo: boolean;
   intentos_fallidos?: number;
   bloqueado_hasta?: string | null;
+  mfa_habilitado?: boolean;
   creado_en: string;
   perfil?: PerfilCliente | null;
 }
@@ -35,8 +36,10 @@ export interface Convenio {
 }
 
 export interface RespuestaIniciarSesion {
-  access_token: string;
-  token_type: string;
+  access_token?: string;
+  token_type?: string;
+  requiere_mfa?: boolean;
+  token_temporal_mfa?: string;
 }
 
 export interface RespuestaRecuperacion {
@@ -44,9 +47,40 @@ export interface RespuestaRecuperacion {
   token_temporal?: string;
 }
 
+export interface RespuestaConfigurarMFA {
+  secreto_manual: string;
+  qr_codigo_base64: string;
+  otpauth_url: string;
+}
+
+export interface RespuestaActivarMFA {
+  mensaje: string;
+  mfa_habilitado: boolean;
+  codigos_respaldo: string[];
+}
+
 export const authService = {
   login: async (credenciales: any): Promise<RespuestaIniciarSesion> => {
     return api.post<RespuestaIniciarSesion>("/auth/iniciar-sesion", credenciales);
+  },
+
+  verifyMfaLogin: async (tokenTemporal: string, codigoTotp: string): Promise<RespuestaIniciarSesion> => {
+    return api.post<RespuestaIniciarSesion>("/auth/verificar-mfa", {
+      token_temporal: tokenTemporal,
+      codigo_totp: codigoTotp
+    });
+  },
+
+  setupMfa: async (): Promise<RespuestaConfigurarMFA> => {
+    return api.post<RespuestaConfigurarMFA>("/auth/mfa/configurar", {});
+  },
+
+  activateMfa: async (codigoTotp: string): Promise<RespuestaActivarMFA> => {
+    return api.post<RespuestaActivarMFA>("/auth/mfa/activar", { codigo_totp: codigoTotp });
+  },
+
+  deactivateMfa: async (clave: string, codigoTotp: string): Promise<{ mensaje: string }> => {
+    return api.post<{ mensaje: string }>("/auth/mfa/desactivar", { clave, codigo_totp: codigoTotp });
   },
 
   requestPasswordReset: async (correo: string): Promise<RespuestaRecuperacion> => {
