@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Mail, Loader2, KeyRound, ArrowLeft, CheckCircle2, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
 import { authService } from "../services/auth";
 
-type AuthMode = "login" | "request_reset" | "reset_password";
+type AuthMode = "login" | "request_reset" | "reset_password" | "mfa_challenge";
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +18,10 @@ export const Login: React.FC = () => {
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // MFA states
+  const [mfaChallengeToken, setMfaChallengeToken] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
 
   // Feedback states
   const [loading, setLoading] = useState(false);
@@ -39,18 +43,55 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
-      // 1. Get access token
+      // 1. Get access token or MFA challenge
       const authData = await authService.login({ correo: email, clave: password });
-      localStorage.setItem("marcom_token", authData.access_token);
+      
+      // Si el usuario tiene 2FA activado, pasar a la pantalla de desafío 2FA
+      if (authData.requiere_mfa && authData.token_temporal_mfa) {
+        setMfaChallengeToken(authData.token_temporal_mfa);
+        setMfaCode("");
+        setMode("mfa_challenge");
+        return;
+      }
 
-      // 2. Fetch and store user profile
-      const userProfile = await authService.getMe();
-      localStorage.setItem("marcom_user", JSON.stringify(userProfile));
+      if (authData.access_token) {
+        localStorage.setItem("marcom_token", authData.access_token);
 
-      // 3. Redirect to dashboard
-      navigate("/");
+        // 2. Fetch and store user profile
+        const userProfile = await authService.getMe();
+        localStorage.setItem("marcom_user", JSON.stringify(userProfile));
+
+        // 3. Redirect to dashboard
+        navigate("/");
+      }
     } catch (err: any) {
       setError(err?.message || "Credenciales incorrectas. Inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaCode.trim()) {
+      setError("Por favor ingresa el código de 6 dígitos o un código de respaldo.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const authData = await authService.verifyMfaLogin(mfaChallengeToken, mfaCode.trim());
+      if (authData.access_token) {
+        localStorage.setItem("marcom_token", authData.access_token);
+        const userProfile = await authService.getMe();
+        localStorage.setItem("marcom_user", JSON.stringify(userProfile));
+        navigate("/");
+      } else {
+        setError("Error al validar la sesión.");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Código 2FA incorrecto o expirado.");
     } finally {
       setLoading(false);
     }
@@ -144,6 +185,7 @@ export const Login: React.FC = () => {
           </h2>
           <p style={{ fontSize: "0.85rem", color: "hsl(var(--text-muted))", fontWeight: 500, margin: 0 }}>
             {mode === "login" && "Monitores Profesionales & Soluciones Digitales"}
+            {mode === "mfa_challenge" && "Verificación de Seguridad en Dos Pasos (2FA)"}
             {mode === "request_reset" && "Recuperación de Contraseña"}
             {mode === "reset_password" && "Restablecer Nueva Contraseña"}
           </p>
@@ -308,6 +350,87 @@ export const Login: React.FC = () => {
               ) : (
                 <span>Ingresar</span>
               )}
+            </button>
+          </form>
+        )}
+
+        {/* 1.5. MODO DESAFÍO 2FA / MFA */}
+        {mode === "mfa_challenge" && (
+          <form onSubmit={handleVerifyMfa}>
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <div style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(56, 189, 248, 0.15)",
+                border: "1px solid rgba(56, 189, 248, 0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 12px auto",
+                color: "#38bdf8"
+              }}>
+                <ShieldCheck size={28} />
+              </div>
+              <p style={{ fontSize: "0.88rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4, margin: 0 }}>
+                Tu cuenta tiene activada la protección 2FA. Ingresa el código de <strong>6 dígitos</strong> de tu aplicación autenticadora o uno de tus códigos de respaldo.
+              </p>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: "22px" }}>
+              <label htmlFor="mfa-code" style={{ textAlign: "center", display: "block", marginBottom: "8px" }}>
+                Código de Verificación
+              </label>
+              <input
+                id="mfa-code"
+                type="text"
+                className="glass-input"
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  fontSize: "1.4rem",
+                  letterSpacing: "4px",
+                  fontWeight: 700,
+                  padding: "12px 14px",
+                  textTransform: "uppercase"
+                }}
+                placeholder="000000"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\s+/g, ''))}
+                autoFocus
+                required
+                maxLength={12}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary"
+              style={{ width: "100%", justifyContent: "center", marginBottom: "14px" }}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                  <span>Validando código...</span>
+                </>
+              ) : (
+                <span>Verificar e Iniciar Sesión</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setMfaChallengeToken("");
+                setMfaCode("");
+                switchMode("login");
+              }}
+              style={{ width: "100%", justifyContent: "center", display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              <ArrowLeft size={16} />
+              <span>Volver e ingresar con otra cuenta</span>
             </button>
           </form>
         )}

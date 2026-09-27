@@ -25,6 +25,9 @@ CREATE TABLE esquema_auth_clientes.usuarios (
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     intentos_fallidos INTEGER NOT NULL DEFAULT 0,
     bloqueado_hasta TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    mfa_habilitado BOOLEAN NOT NULL DEFAULT FALSE,
+    mfa_secreto VARCHAR(500) DEFAULT NULL,
+    mfa_codigos_respaldo TEXT DEFAULT NULL,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

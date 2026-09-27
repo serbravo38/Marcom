@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, String, Boolean, Numeric, DateTime, ForeignKey, Enum, text, Integer
+from sqlalchemy import Column, String, Boolean, Numeric, DateTime, ForeignKey, Enum, text, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -31,6 +31,9 @@ class Usuario(Base):
     activo = Column(Boolean, nullable=False, default=True, server_default="true")
     intentos_fallidos = Column(Integer, nullable=False, default=0, server_default="0")
     bloqueado_hasta = Column(DateTime(timezone=True), nullable=True)
+    mfa_habilitado = Column(Boolean, nullable=False, default=False, server_default="false")
+    mfa_secreto = Column(String(500), nullable=True)
+    mfa_codigos_respaldo = Column(Text, nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
     actualizado_en = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

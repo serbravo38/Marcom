@@ -280,3 +280,32 @@ def crear_o_actualizar_perfil(db: Session, usuario_id: UUID, perfil_in: schemas.
     db.commit()
     db.refresh(db_perfil)
     return db_perfil
+
+# --- CRUD MFA / 2FA ---
+def guardar_secreto_mfa(db: Session, db_usuario: models.Usuario, secreto_cifrado: str) -> models.Usuario:
+    db_usuario.mfa_secreto = secreto_cifrado
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+def activar_mfa(db: Session, db_usuario: models.Usuario, codigos_respaldo_json: str) -> models.Usuario:
+    db_usuario.mfa_habilitado = True
+    db_usuario.mfa_codigos_respaldo = codigos_respaldo_json
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+def desactivar_mfa(db: Session, db_usuario: models.Usuario) -> models.Usuario:
+    db_usuario.mfa_habilitado = False
+    db_usuario.mfa_secreto = None
+    db_usuario.mfa_codigos_respaldo = None
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+def actualizar_codigos_respaldo(db: Session, db_usuario: models.Usuario, nuevos_codigos_json: str) -> models.Usuario:
+    db_usuario.mfa_codigos_respaldo = nuevos_codigos_json
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
