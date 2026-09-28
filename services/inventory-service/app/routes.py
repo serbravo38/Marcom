@@ -154,7 +154,7 @@ def create_asset(
 @router.get("/activos", response_model=List[schemas.ActivoRespuesta])
 def get_assets(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):

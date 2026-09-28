@@ -7,7 +7,7 @@ if sys.stdout.encoding != 'utf-8':
     except Exception:
         pass
 
-os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test_db"
+os.environ["DATABASE_URL"] = "postgresql+psycopg2://test:test@localhost:5432/test_db"
 os.environ["JWT_SECRET_KEY"] = "test_secret_key_1234567890_test_secret"
 
 

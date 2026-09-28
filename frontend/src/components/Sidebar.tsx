@@ -34,7 +34,7 @@ export const Sidebar: React.FC = () => {
           src="/logo_icon.png" 
           alt="MARCOM" 
           style={{ 
-            height: "36px", 
+            height: "38px", 
             width: "auto", 
             objectFit: "contain",
             filter: "drop-shadow(0 0 10px rgba(0, 194, 255, 0.45))" 
@@ -44,7 +44,7 @@ export const Sidebar: React.FC = () => {
           <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, letterSpacing: "1px", lineHeight: 1.1, color: "#fff" }}>
             MARCOM
           </h2>
-          <span style={{ fontSize: "0.58rem", color: "#38bdf8", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", marginTop: "2px" }}>
+          <span style={{ fontSize: "0.62rem", color: "#38bdf8", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", marginTop: "2px" }}>
             Soluciones Digitales
           </span>
         </div>
@@ -137,11 +137,29 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="sidebar-footer">
+        {/* Client selector button matching reference */}
+        <div className="sidebar-client-dropdown" title="Cambiar filtro de cliente">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Boxes size={16} style={{ color: "#38bdf8" }} />
+            <span>Todos los Clientes</span>
+          </div>
+          <span style={{ fontSize: "0.7rem", color: "#64748b" }}>▼</span>
+        </div>
+
+        {/* System Online Status Indicator */}
+        <div className="sidebar-online-indicator">
+          <span className="dot"></span>
+          <div>
+            <p className="title">Sistema Operativo</p>
+            <p className="sub">Última actualización: 14:32</p>
+          </div>
+        </div>
+
         {currentUser && (
           <div 
             className="user-badge" 
             onClick={() => setIsProfileOpen(true)}
-            style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+            style={{ cursor: "pointer", transition: "all 0.2s ease", marginTop: "4px" }}
             title="Haz clic para ver y editar tu perfil"
           >
             <div className="user-avatar">
@@ -154,8 +172,8 @@ export const Sidebar: React.FC = () => {
             <Settings size={14} style={{ opacity: 0.6, color: "var(--accent-color, #38bdf8)" }} />
           </div>
         )}
-        <button className="btn-logout" onClick={handleLogout}>
-          <LogOut size={18} />
+        <button className="btn-logout" onClick={handleLogout} style={{ marginTop: "4px" }}>
+          <LogOut size={16} />
           <span>Cerrar Sesión</span>
         </button>
       </div>
