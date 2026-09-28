@@ -1,3 +1,25 @@
+/**
+ * @file NotificationsDropdown.tsx
+ * @description Centro de notificaciones y alertas operacionales del sistema Marcom.
+ * 
+ * Contexto Funcional:
+ * En una red de cientos de pantallas y tótems distribuidos en el país, los operadores
+ * deben ser notificados de forma prioritaria ante incidentes (desconexiones de red,
+ * pantallas fuera de línea), asignación de nuevas órdenes de trabajo (OTs), confirmaciones
+ * de mantenimiento preventivo y avisos de seguridad (2FA).
+ * 
+ * Decisiones Técnicas y UX:
+ * 1. Menú Flotante con Backdrop-filter: Proporciona un panel translúcido de alta legibilidad
+ *    anclado de forma relativa a la campana del encabezado.
+ * 2. Accesibilidad y Manejo de Eventos:
+ *    - Click Outside: Si el usuario hace clic fuera del menú, este se cierra automáticamente.
+ *    - Escape Key: Presionar la tecla ESC descarta el panel de inmediato.
+ *    - Todos los event listeners globales se remueven en la función de limpieza del efecto para evitar fugas.
+ * 3. Persistencia en LocalStorage: Las notificaciones leídas, eliminadas o restablecidas
+ *    mantienen su estado entre recargas del navegador.
+ * 4. Filtrado por Pestañas: Permite conmutar rápidamente entre 'Todas' y 'No leídas'.
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Bell, 
@@ -13,17 +35,31 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+/**
+ * Esquema de una notificación del sistema.
+ */
 export interface SystemNotification {
+  /** Identificador único alfanumérico */
   id: string;
+  /** Título conciso del evento (ej. 'Pérdida de señal en monitor') */
   title: string;
+  /** Detalle explicativo con contexto de la estación o equipo */
   message: string;
+  /** Marca de tiempo humana relativa (ej. 'Hace 12 min') */
   timeAgo: string;
+  /** Categoría del evento que determina el color e iconografía */
   type: "alert" | "work_order" | "success" | "info" | "security";
+  /** Estado de lectura: true = leída, false = pendiente/nueva */
   read: boolean;
+  /** Ruta interna opcional de navegación directa al módulo relacionado */
   link?: string;
+  /** Etiqueta destacada (ej. código EDS de la estación o número de OT) */
   badge?: string;
 }
 
+/**
+ * Conjunto de notificaciones iniciales de demostración para el centro de operaciones.
+ */
 const DEFAULT_NOTIFICATIONS: SystemNotification[] = [
   {
     id: "notif-1",
@@ -78,8 +114,11 @@ const DEFAULT_NOTIFICATIONS: SystemNotification[] = [
 ];
 
 interface NotificationsDropdownProps {
+  /** Controla la visibilidad del menú desplegable */
   isOpen: boolean;
+  /** Callback para cerrar el menú */
   onClose: () => void;
+  /** Notifica al componente Header la cantidad de notificaciones no leídas para actualizar la insignia */
   onUnreadCountChange: (count: number) => void;
 }
 
@@ -88,6 +127,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
   onClose,
   onUnreadCountChange
 }) => {
+  // Inicialización perezosa (lazy initial state) recuperando desde localStorage
   const [notifications, setNotifications] = useState<SystemNotification[]>(() => {
     try {
       const saved = localStorage.getItem("marcom_notifications");
@@ -97,23 +137,29 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
     }
   });
 
+  // Filtro activo entre 'all' (todas) y 'unread' (solo no leídas)
   const [filterTab, setFilterTab] = useState<"all" | "unread">("all");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Calcular y reportar cantidad de no leídas
+  // Cálculo de notificaciones pendientes
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Propagación del contador hacia el componente Header
   useEffect(() => {
     onUnreadCountChange(unreadCount);
   }, [unreadCount, onUnreadCountChange]);
 
-  // Persistir cambios
+  /**
+   * Actualiza el estado local y sincroniza de forma atómica en localStorage.
+   */
   const saveNotifications = (updated: SystemNotification[]) => {
     setNotifications(updated);
     localStorage.setItem("marcom_notifications", JSON.stringify(updated));
   };
 
-  // Cerrar al hacer clic fuera o presionar escape
+  /**
+   * Manejador de eventos globales para cierre por clic exterior o tecla Escape.
+   */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -135,32 +181,48 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
     };
   }, [isOpen, onClose]);
 
+  /**
+   * Marca todas las notificaciones como leídas en una sola acción.
+   */
   const markAllAsRead = () => {
     const updated = notifications.map(n => ({ ...n, read: true }));
     saveNotifications(updated);
   };
 
+  /**
+   * Marca una notificación individual como leída al hacer clic en ella.
+   */
   const markAsRead = (id: string) => {
     const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
     saveNotifications(updated);
   };
 
+  /**
+   * Elimina individualmente una notificación de la lista.
+   */
   const removeNotification = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Evitar que el clic desencadene el markAsRead del elemento padre
     const updated = notifications.filter(n => n.id !== id);
     saveNotifications(updated);
   };
 
+  /**
+   * Vacía el registro completo de notificaciones.
+   */
   const clearAllNotifications = () => {
     saveNotifications([]);
   };
 
+  // Filtrado reactivo según la pestaña seleccionada
   const filtered = filterTab === "unread" 
     ? notifications.filter(n => !n.read) 
     : notifications;
 
   if (!isOpen) return null;
 
+  /**
+   * Renderiza el icono correspondiente al tipo de notificación con colores semánticos.
+   */
   const getIcon = (type: SystemNotification["type"]) => {
     switch (type) {
       case "alert":
@@ -179,7 +241,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
 
   return (
     <div className="notifications-dropdown-menu animate-fade-in" ref={dropdownRef}>
-      {/* Header */}
+      {/* Cabecera del Panel */}
       <div className="notif-dropdown-header">
         <div className="notif-header-title">
           <div className="notif-title-badge">
@@ -223,7 +285,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         </div>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Pestañas de Filtrado */}
       <div className="notif-filter-tabs">
         <button 
           className={`notif-tab-btn ${filterTab === "all" ? "active" : ""}`}
@@ -239,7 +301,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         </button>
       </div>
 
-      {/* Notifications List */}
+      {/* Listado con Scroll Independiente */}
       <div className="notif-list-scroll">
         {filtered.length === 0 ? (
           <div className="notif-empty-state">
@@ -290,6 +352,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
                 </div>
               </div>
 
+              {/* Botón para descartar notificación individual */}
               <button
                 className="notif-dismiss-btn"
                 title="Eliminar notificación"
@@ -302,7 +365,7 @@ export const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         )}
       </div>
 
-      {/* Footer */}
+      {/* Pie del Panel con Opción de Restablecer */}
       <div className="notif-dropdown-footer">
         <span>Marcom Centro de Eventos y Monitoreo</span>
         <button 

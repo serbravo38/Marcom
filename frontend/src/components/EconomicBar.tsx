@@ -1,3 +1,22 @@
+/**
+ * @file EconomicBar.tsx
+ * @description Cinta de telemetría e indicadores en tiempo real ubicada en la parte superior
+ * del panel principal (Dashboard) de Marcom.
+ * 
+ * Funcionalidad de Negocio:
+ * Despliega los valores económicos oficiales del Banco Central de Chile (UF, Dólar, Euro, UTM, IPC)
+ * y el clima actual del centro de operaciones.
+ * - UF: Esencial para los cotizadores y ejecutivos comerciales que calculan contratos de servicio de pantallas.
+ * - Dólar/Euro: Utilizados para estimar costos de reposición de módulos LED, placas controladoras y monitores importados.
+ * - Clima: Indicador contextual de operaciones en terreno.
+ * 
+ * Patrones y Buenas Prácticas:
+ * 1. Concurrencia con Promise.all: Ejecuta en paralelo las peticiones a mindicador.cl y Open-Meteo,
+ *    reduciendo el tiempo total de bloqueo de la interfaz al valor máximo de ambas (no a su suma).
+ * 2. Formato Monetario Estándar: Emplea la API nativa del navegador `Intl.NumberFormat` con localización 'es-CL',
+ *    asegurando el uso correcto de separadores de miles con punto (.) y decimales con coma (,).
+ */
+
 import React, { useState, useEffect } from "react";
 import { 
   TrendingUp, 
@@ -17,10 +36,16 @@ import { indicatorsService, type IndicadoresEconomicos } from "../services/indic
 import { weatherService, type WeatherData } from "../services/weather";
 
 export const EconomicBar: React.FC = () => {
+  // Estado local para los indicadores financieros
   const [data, setData] = useState<IndicadoresEconomicos | null>(null);
+  // Estado local para el reporte meteorológico
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  // Estado booleano de sincronización activa
   const [loading, setLoading] = useState<boolean>(true);
 
+  /**
+   * Carga concurrentemente los indicadores y el clima local.
+   */
   const loadData = async () => {
     setLoading(true);
     const [indResult, weatherResult] = await Promise.all([
@@ -32,10 +57,17 @@ export const EconomicBar: React.FC = () => {
     setLoading(false);
   };
 
+  // Carga inicial al montar el componente
   useEffect(() => {
     loadData();
   }, []);
 
+  /**
+   * Formatea un valor numérico a la convención monetaria chilena (CLP).
+   * 
+   * @param val - Monto numérico bruto
+   * @param decimals - Cantidad de dígitos decimales a mostrar
+   */
   const formatCurrency = (val?: number, decimals: number = 2) => {
     if (val === undefined || val === null) return "---";
     return new Intl.NumberFormat("es-CL", {
@@ -46,6 +78,9 @@ export const EconomicBar: React.FC = () => {
     }).format(val);
   };
 
+  /**
+   * Selector dinámico de icono meteorológico según la categoría del reporte.
+   */
   const renderWeatherIcon = (type?: WeatherData["iconType"]) => {
     switch (type) {
       case "sun":
@@ -65,10 +100,12 @@ export const EconomicBar: React.FC = () => {
     }
   };
 
+  // Si los datos no están disponibles aún, no renderizar para evitar saltos de layout (CLS)
   if (!data) return null;
 
   return (
     <div className="economic-indicators-bar animate-fade-in">
+      {/* Insignia de estado en vivo */}
       <div className="eco-header-badge">
         <span className="eco-live-dot"></span>
         <Activity size={14} style={{ color: "#38bdf8" }} />
@@ -76,7 +113,7 @@ export const EconomicBar: React.FC = () => {
       </div>
 
       <div className="eco-tickers-container">
-        {/* UF (Crucial para cotizaciones y aranceles) */}
+        {/* UF (Crucial para cotizaciones y contratos de monitores) */}
         <div className="eco-ticker-item" title="Unidad de Fomento oficial para contratos y cotizaciones">
           <div className="eco-icon-box gold">
             <Landmark size={14} />
@@ -87,7 +124,7 @@ export const EconomicBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Dólar Observado */}
+        {/* Dólar Observado (Importaciones de pantallas y hardware) */}
         <div className="eco-ticker-item" title="Dólar observado Banco Central de Chile">
           <div className="eco-icon-box cyan">
             <DollarSign size={14} />
@@ -109,7 +146,7 @@ export const EconomicBar: React.FC = () => {
           </div>
         </div>
 
-        {/* UTM */}
+        {/* UTM (Unidad Tributaria Mensual) */}
         <div className="eco-ticker-item" title="Unidad Tributaria Mensual">
           <div className="eco-icon-box purple">
             <TrendingUp size={14} />
@@ -120,7 +157,7 @@ export const EconomicBar: React.FC = () => {
           </div>
         </div>
 
-        {/* IPC */}
+        {/* IPC (Índice de Precios al Consumidor) */}
         {data.ipc && (
           <div className="eco-ticker-item" title="Índice de Precios al Consumidor mensual">
             <div className="eco-icon-box teal">
@@ -154,6 +191,7 @@ export const EconomicBar: React.FC = () => {
         )}
       </div>
 
+      {/* Botón interactivo de recarga manual con animación de giro */}
       <button 
         className="eco-refresh-btn" 
         onClick={loadData} 

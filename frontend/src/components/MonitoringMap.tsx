@@ -1,3 +1,28 @@
+/**
+ * @file MonitoringMap.tsx
+ * @description Componente de mapa cartográfico interactivo para la visualización y monitoreo
+ * en tiempo real de las estaciones de servicio (EDS) y locales de Marcom en Chile.
+ * 
+ * Tecnologías Utilizadas:
+ * - Leaflet.js: Motor cartográfico de código abierto, ultraligero y desacoplado de frameworks propietarios.
+ * - OpenStreetMap (OSM): Servidor de mosaicos libre y abierto (tile.openstreetmap.org) sin API Keys ni costos.
+ * - Open-Meteo API: Consulta meteorológica en vivo integrada por cada local individual.
+ * 
+ * Decisiones de Arquitectura Frontend:
+ * 1. Integración Leaflet en React: Dado que Leaflet manipula directamente el DOM, se gestiona
+ *    el ciclo de vida del mapa mediante referencias (`useRef`) y efectos (`useEffect`).
+ *    El desmontaje invoca rigurosamente `map.remove()` para evitar fugas de memoria (memory leaks).
+ * 2. Invalidation de Dimensiones (`invalidateSize`): Los contenedores CSS basados en Grid o Glassmorphism
+ *    pueden alterar su tamaño durante la fase inicial de renderizado. Se programa un micro-temporizador
+ *    de 200ms para forzar el recálculo geométrico del mapa.
+ * 3. Renderizado de Tema Oscuro (Dark GIS) sin dependencias comerciales: Se utilizan los mosaicos
+ *    estándar de OpenStreetMap combinados con una clase CSS de inversión y matiz azulado
+ *    (`.map-dark-tiles`), lo cual elimina la necesidad de proveedores pagos como Mapbox o CartoDB.
+ * 4. Carga Meteorológica Asíncrona (Lazy Weather): El clima de cada estación se consulta
+ *    únicamente cuando el usuario abre el popup del marcador (`popupopen`) o cuando la estación
+ *    es seleccionada en la tarjeta flotante, protegiendo el ancho de banda y la cuota de red.
+ */
+
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -20,9 +45,15 @@ import { getLocationCoordinates } from "../utils/coordinates";
 import { weatherService, type WeatherData } from "../services/weather";
 import { Link } from "react-router-dom";
 
+/**
+ * Propiedades de entrada del componente de mapa de monitoreo.
+ */
 interface MonitoringMapProps {
+  /** Listado completo de locales/estaciones obtenidas desde inventario */
   locations: Ubicacion[];
+  /** Callback opcional ejecutado al hacer clic en un pin o tarjeta */
   onSelectStation?: (loc: Ubicacion) => void;
+  /** Estación seleccionada por defecto desde el componente padre */
   selectedStation?: Ubicacion | null;
 }
 
@@ -31,18 +62,24 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
   onSelectStation,
   selectedStation
 }) => {
+  // Referencia al contenedor HTML nativo del mapa
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  // Instancia persistente del objeto Map de Leaflet
   const mapInstanceRef = useRef<L.Map | null>(null);
+  // Capa contenedora de marcadores para permitir limpieza y actualización atómica
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+
+  // Estados locales para interactividad
   const [activeStation, setActiveStation] = useState<Ubicacion | null>(null);
   const [stationWeather, setStationWeather] = useState<WeatherData | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
 
-  // Seleccionar la estación inicial o la provista por prop
+  // Sincronización de estación activa: respeta la prop exterior o selecciona la primera disponible
   useEffect(() => {
     if (selectedStation) {
       setActiveStation(selectedStation);
     } else if (!activeStation && locations.length > 0) {
+      // Priorizar una estación de la Región Metropolitana como vista inicial
       const stgo = locations.find(
         (l) =>
           (l.comuna || "").toUpperCase().includes("SANTIAGO") ||
@@ -52,7 +89,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     }
   }, [locations, selectedStation]);
 
-  // Cargar el clima de la estación activa seleccionada en tiempo real
+  // Carga asíncrona del clima de la estación activa actualmente seleccionada
   useEffect(() => {
     if (!activeStation) return;
     const coords = getLocationCoordinates(
@@ -65,22 +102,22 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     });
   }, [activeStation]);
 
-  // Inicializar Leaflet Map con OpenStreetMap Oficial (100% abierto sin API Key ni marcas de agua)
+  // Ciclo de Vida: Inicialización y destrucción de la instancia Leaflet
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Centro inicial: Santiago de Chile
+    // Configuración inicial centrada en Santiago de Chile
     const map = L.map(mapContainerRef.current, {
       center: [-33.4489, -70.6693],
       zoom: 11,
-      zoomControl: false,
+      zoomControl: false, // Desactivar controles por defecto para estilizarlos a medida
       attributionControl: false
     });
 
-    // Control de zoom en la esquina superior izquierda
+    // Control de zoom posicionado en la esquina superior izquierda
     L.control.zoom({ position: "topleft" }).addTo(map);
 
-    // Attribution discreto abajo a la izquierda
+    // Atribución de código abierto requerida por la licencia de OpenStreetMap
     L.control
       .attribution({ position: "bottomleft", prefix: false })
       .addAttribution(
@@ -88,18 +125,19 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
       )
       .addTo(map);
 
-    // Capa de mosaicos oficial OpenStreetMap (Open Source, sin restricciones)
+    // Capa de mosaicos oficial OpenStreetMap (Open Source y libre)
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       subdomains: ["a", "b", "c"],
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
+    // Grupo de marcadores para inserción y limpieza eficiente
     const markersLayer = L.layerGroup().addTo(map);
     markersLayerRef.current = markersLayer;
     mapInstanceRef.current = map;
 
-    // Forzar recalculo de dimensiones del mapa una vez montado
+    // Forzar recalculo de dimensiones del mapa una vez montado el DOM
     const timer = setTimeout(() => {
       map.invalidateSize();
     }, 200);
@@ -111,21 +149,24 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     };
   }, []);
 
-  // Renderizar y actualizar los marcadores de las estaciones con clima dinámico
+  // Ciclo de Vida: Creación y renderizado de pines geográficos y popups interactivos
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
+    // Limpiar marcadores previos para evitar duplicaciones
     markersLayerRef.current.clearLayers();
 
     locations.forEach((loc) => {
+      // Resolver coordenadas con el algoritmo de dispersión determinista
       const coords = getLocationCoordinates(
         loc.comuna,
         loc.region,
         loc.ubicacion_id || loc.codigo_local || ""
       );
 
-      // Crear icono pulsante con estilo neón cian
       const isSelected = activeStation?.ubicacion_id === loc.ubicacion_id;
+
+      // Icono personalizado basado en HTML/CSS con efecto de pulso radar cian
       const customIcon = L.divIcon({
         className: "custom-map-pin-container",
         html: `
@@ -140,6 +181,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
 
       const marker = L.marker([coords.lat, coords.lng], { icon: customIcon });
 
+      // Estructura HTML estilizada del popup con contenedor para inyección meteorológica
       const popupContent = `
         <div class="leaflet-custom-popup">
           <div class="l-pop-badge">${loc.codigo_local || "LOCAL"}</div>
@@ -147,7 +189,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
           <div class="l-pop-address">📍 ${loc.direccion}</div>
           <div class="l-pop-comuna">${loc.comuna || ""}, ${loc.region || ""}</div>
           
-          <!-- Clima en vivo en el local -->
+          <!-- Contenedor dinámico del clima en vivo -->
           <div id="popup-weather-${loc.ubicacion_id}" class="popup-weather-box">
             <span class="popup-weather-loading">Consultando clima en ${loc.comuna || "local"}...</span>
           </div>
@@ -165,7 +207,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
         offset: [0, -10]
       });
 
-      // Al abrir el popup, cargar el clima exacto de ese local desde Open-Meteo
+      // Hook de evento: Cuando el usuario abre el popup, se consulta Open-Meteo para ese punto exacto
       marker.on("popupopen", async () => {
         const weather = await weatherService.getWeather(coords.lat, coords.lng);
         const container = document.getElementById(`popup-weather-${loc.ubicacion_id}`);
@@ -180,6 +222,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
         }
       });
 
+      // Evento de clic: Sincroniza la estación activa en la tarjeta flotante inferior
       marker.on("click", () => {
         setActiveStation(loc);
         if (onSelectStation) {
@@ -191,7 +234,9 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     });
   }, [locations, activeStation, onSelectStation]);
 
-  // Centrar en Santiago
+  /**
+   * Navega con animación suave (flyTo) hacia la zona central de Santiago.
+   */
   const handleCenterSantiago = () => {
     if (!mapInstanceRef.current) return;
     mapInstanceRef.current.flyTo([-33.4489, -70.6693], 11, {
@@ -199,7 +244,10 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     });
   };
 
-  // Ajustar vista para ver todas las estaciones de Chile
+  /**
+   * Calcula los límites geográficos envolventes (bounding box) de todas las estaciones
+   * y encuadra automáticamente la vista para mostrar la red a lo largo de todo Chile.
+   */
   const handleFitAllChile = () => {
     if (!mapInstanceRef.current || locations.length === 0) return;
     const latLngs: L.LatLngExpression[] = locations.map((loc) => {
@@ -214,6 +262,9 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     mapInstanceRef.current.fitBounds(bounds, { padding: [30, 30] });
   };
 
+  /**
+   * Helper para renderizar iconos temáticos meteorológicos según el código WMO.
+   */
   const renderWeatherIcon = (type?: WeatherData["iconType"]) => {
     switch (type) {
       case "sun":
@@ -235,7 +286,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
 
   return (
     <div className="interactive-map-wrapper">
-      {/* Barra superior de controles del mapa */}
+      {/* Barra superior de herramientas y controles del mapa */}
       <div className="map-controls-toolbar">
         <div className="map-badge-count">
           <span className="live-pulse-dot"></span>
@@ -243,6 +294,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
         </div>
 
         <div className="map-actions-group">
+          {/* Acción rápida: Centrar en Santiago */}
           <button
             type="button"
             className="map-tool-btn"
@@ -253,16 +305,18 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
             <span>Santiago</span>
           </button>
 
+          {/* Acción rápida: Encuadre panorámico nacional */}
           <button
             type="button"
             className="map-tool-btn"
             onClick={handleFitAllChile}
-            title="Ver todo Chile"
+            title="Ver todas las estaciones a lo largo de Chile"
           >
             <Maximize2 size={13} />
             <span>Chile</span>
           </button>
 
+          {/* Alternar filtro visual: Oscuro (Dark GIS) / Claro (Natural OSM) */}
           <button
             type="button"
             className="map-tool-btn"
@@ -281,7 +335,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
         className={`leaflet-map-canvas ${isDarkMode ? "map-dark-tiles" : ""}`}
       />
 
-      {/* Tarjeta flotante interactiva con la estación seleccionada y su clima en vivo */}
+      {/* Tarjeta flotante interactiva sincronizada con la estación y su clima en vivo */}
       {activeStation && (
         <div className="map-floating-station-card interactive animate-fade-in">
           <div className="station-card-top">

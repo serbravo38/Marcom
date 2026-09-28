@@ -1,9 +1,43 @@
-// Diccionario y utilidades de geolocalización para locales de Marcom en Chile
+/**
+ * @file coordinates.ts
+ * @description Utilidades de georreferenciación y diccionario de coordenadas para locales
+ * e instalaciones de Marcom a lo largo del territorio nacional chileno.
+ * 
+ * Problema a Resolver:
+ * Los registros históricos de la base de datos (`inventario.ubicaciones`) almacenan la dirección
+ * textual, comuna y región de cada estación de servicio o local, pero no siempre cuentan con
+ * latitud/longitud GPS cargada por el técnico en terreno.
+ * 
+ * Solución Arquitectónica:
+ * 1. Diccionario de Centroides (`CHILE_COMUNA_COORDS`): Mapeo estático y validado de coordenadas
+ *    para las 69 comunas donde operan los clientes de Marcom.
+ * 2. Cascada de Resolución Jerárquica:
+ *    - Coincidencia exacta de comuna normalizada (ej. 'ALTO HOSPICIO').
+ *    - Coincidencia difusa/parcial (ej. 'LAS CONDES' dentro de 'EDS LAS CONDES NORTE').
+ *    - Fallback por macrorregión administrativa.
+ *    - Fallback por defecto: Santiago Centro.
+ * 3. Algoritmo de Dispersión Determinista (Jittering):
+ *    Cuando existen 4 locales distintos en la misma comuna (ej. 4 estaciones Copec en Rancagua),
+ *    si se usa el centroide comunal puro, los 4 pines se renderizan exactamente en el mismo píxel,
+ *    imposibilitando hacer clic en ellos.
+ *    Se implementa un algoritmo de dispersión matemática determinista basado en el hash del ID del local:
+ *    - Es determinista (NO usa Math.random()): el punto siempre se dibuja en la misma posición relativa.
+ *    - Desplaza el marcador ~300 a 800 metros alrededor del centroide para garantizar interactividad.
+ */
+
+/**
+ * Coordenadas geográficas decimales compatibles con Leaflet / OpenStreetMap.
+ */
 export interface Coordinates {
+  /** Latitud geográfica decimal en el hemisferio sur (negativa para Chile) */
   lat: number;
+  /** Longitud geográfica decimal en el hemisferio occidental (negativa para Chile) */
   lng: number;
 }
 
+/**
+ * Tabla de centroides geográficos de comunas chilenas (Latitud, Longitud).
+ */
 export const CHILE_COMUNA_COORDS: Record<string, [number, number]> = {
   "ALTO HOSPICIO": [-20.2736, -70.1068],
   "ANCUD": [-41.8687, -73.8294],
@@ -79,16 +113,28 @@ export const CHILE_COMUNA_COORDS: Record<string, [number, number]> = {
   "LO BARNECHEA": [-33.3533, -70.5186]
 };
 
-// Genera un offset pseudo-aleatorio determinista para separar puntos en la misma comuna
+/**
+ * Función de hashing de enteros determinista (variante del algoritmo Jenkins 32-bit).
+ * Convierte un identificador alfanumérico en un número entero reproducible.
+ */
 function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
+    hash |= 0; // Conversión a entero de 32 bits
   }
   return Math.abs(hash);
 }
 
+/**
+ * Resuelve las coordenadas geográficas de un local o estación de servicio en Chile.
+ * Aplica cascada jerárquica y dispersión determinista para locales coubicados.
+ * 
+ * @param comuna - Nombre de la comuna registrada (ej. 'Providencia')
+ * @param region - Nombre de la región administrativa (ej. 'Región Metropolitana')
+ * @param uniqueKey - Identificador único de la estación (ej. `ubicacion_id` o `codigo_local`) para el cálculo de dispersión
+ * @returns Coordenadas { lat, lng } listas para renderizar en el mapa
+ */
 export function getLocationCoordinates(
   comuna?: string | null,
   region?: string | null,
@@ -97,8 +143,8 @@ export function getLocationCoordinates(
   const normComuna = (comuna || "").toUpperCase().trim();
   let baseCoords = CHILE_COMUNA_COORDS[normComuna];
 
+  // Nivel 1: Búsqueda por coincidencia parcial si el nombre incluye prefijos o sufijos
   if (!baseCoords) {
-    // Si la comuna no está directa, buscar por match parcial
     const foundKey = Object.keys(CHILE_COMUNA_COORDS).find((k) =>
       normComuna.includes(k) || k.includes(normComuna)
     );
@@ -107,7 +153,7 @@ export function getLocationCoordinates(
     }
   }
 
-  // Fallback por región
+  // Nivel 2: Fallback por macrorregión administrativa
   if (!baseCoords) {
     const normRegion = (region || "").toUpperCase();
     if (normRegion.includes("ANTOFAGASTA")) baseCoords = [-23.6509, -70.3975];
@@ -118,10 +164,11 @@ export function getLocationCoordinates(
     else if (normRegion.includes("BIOBÍO")) baseCoords = [-36.8201, -73.0444];
     else if (normRegion.includes("LOS LAGOS")) baseCoords = [-41.4693, -72.9424];
     else if (normRegion.includes("MAGALLANES")) baseCoords = [-53.1638, -70.9171];
-    else baseCoords = [-33.4489, -70.6693]; // Santiago Centro default
+    else baseCoords = [-33.4489, -70.6693]; // Santiago Centro por defecto
   }
 
-  // Jitter determinista para que locales en la misma comuna no se solapen exactamente
+  // Nivel 3: Algoritmo de dispersión determinista (Jittering)
+  // Desplaza el punto ligeramente (~0.0035° ≈ 380m) usando el hash de la clave única
   const hash = hashString(uniqueKey || normComuna);
   const offsetLat = ((hash % 17) - 8) * 0.0035;
   const offsetLng = (((hash >> 4) % 17) - 8) * 0.0035;

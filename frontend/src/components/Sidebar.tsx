@@ -1,3 +1,21 @@
+/**
+ * @file Sidebar.tsx
+ * @description Barra lateral principal de navegación y anclaje de sesión de usuario en Marcom.
+ * 
+ * Principios y Responsabilidades:
+ * 1. Control de Acceso Basado en Roles (RBAC):
+ *    Segmenta dinámicamente las rutas visibles según el rol del usuario autenticado:
+ *    - ADMIN / JEFE_BODEGA: Acceso integral (Dashboard, Convenios, Cotizaciones, Inventario, OTs, Usuarios).
+ *    - TECNICO_TERRENO: Enfoque en trabajo de campo (Inventario/Hardware asignado y Órdenes de Trabajo).
+ *    - CLIENTE_CONVENIO / CLIENTE_ESTANDAR: Portal de cliente (Cotizaciones OC y Locales de su red).
+ * 2. Anclaje de Sesión Único (Single User Session Anchor):
+ *    Es la ubicación canónica exclusiva donde se despliega la identidad del usuario logeado
+ *    (`nombre`, `apellido` y `rol`), evitando duplicidades en el encabezado superior.
+ * 3. Gestión de Perfil y Cierre de Sesión:
+ *    - Al hacer clic en la tarjeta del usuario se despliega `ProfileModal` para editar datos o gestionar 2FA.
+ *    - El botón de cierre de sesión purga los tokens JWT de `localStorage` y redirige al flujo de login.
+ */
+
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { 
@@ -8,19 +26,25 @@ import {
   Calculator,
   LogOut,
   User,
-  Settings
+  Settings,
+  Globe
 } from "lucide-react";
 import { ProfileModal } from "./ProfileModal";
 import type { Usuario } from "../services/auth";
 
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
+  // Estado de visibilidad del modal de perfil de usuario
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  // Estado del usuario activo recuperado de la sesión local
   const [currentUser, setCurrentUser] = useState<Usuario | null>(() => {
     const userJson = localStorage.getItem("marcom_user");
     return userJson ? JSON.parse(userJson) : null;
   });
 
+  /**
+   * Finaliza la sesión activa purgando las credenciales y redirigiendo a /login.
+   */
   const handleLogout = () => {
     localStorage.removeItem("marcom_token");
     localStorage.removeItem("marcom_user");
@@ -29,6 +53,7 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="sidebar glass-panel">
+      {/* Logotipo e Identidad de Marca */}
       <div className="sidebar-brand">
         <img 
           src="/logo_icon.png" 
@@ -50,10 +75,11 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
+      {/* Menú de Navegación con Filtrado RBAC */}
       <nav className="sidebar-menu">
-        {/* Dashboard Link - Visible to all authenticated roles */}
+        {/* Dashboard / Portal Principal - Visible para todos los roles autenticados */}
         <NavLink 
-          to="/" 
+          to="/dashboard" 
           className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
         >
           <LayoutDashboard size={20} />
@@ -66,6 +92,17 @@ export const Sidebar: React.FC = () => {
               ? "Panel Bodega"
               : "Dashboard"}
           </span>
+        </NavLink>
+
+        {/* Portada Corporativa Pública */}
+        <NavLink 
+          to="/" 
+          className="sidebar-link"
+          style={{ opacity: 0.85 }}
+          title="Ver sitio web y presentación corporativa de Marcom"
+        >
+          <Globe size={20} />
+          <span>Sitio Corporativo</span>
         </NavLink>
 
         {/* Convenios - ADMIN, JEFE_BODEGA, CLIENTE_CONVENIO */}
@@ -118,13 +155,13 @@ export const Sidebar: React.FC = () => {
               {currentUser.rol === "TECNICO_TERRENO" 
                 ? "Mis Órdenes de Trabajo" 
                 : currentUser.rol === "CLIENTE_CONVENIO"
-                ? "Servicios y OTs"
+                ? "Solicitudes de Soporte" 
                 : "Órdenes de Trabajo"}
             </span>
           </NavLink>
         )}
 
-        {/* Usuarios - Exclusivo ADMIN */}
+        {/* Gestión de Usuarios y Permisos - Exclusivo Administradores */}
         {currentUser && currentUser.rol === "ADMIN" && (
           <NavLink 
             to="/users" 
@@ -136,8 +173,9 @@ export const Sidebar: React.FC = () => {
         )}
       </nav>
 
+      {/* Pie de la Barra Lateral: Tarjeta Canónica de Usuario y Acciones */}
       <div className="sidebar-footer">
-        {/* Client selector button matching reference */}
+        {/* Selector de Ámbito de Cliente */}
         <div className="sidebar-client-dropdown" title="Cambiar filtro de cliente">
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Boxes size={16} style={{ color: "#38bdf8" }} />
@@ -146,15 +184,7 @@ export const Sidebar: React.FC = () => {
           <span style={{ fontSize: "0.7rem", color: "#64748b" }}>▼</span>
         </div>
 
-        {/* System Online Status Indicator */}
-        <div className="sidebar-online-indicator">
-          <span className="dot"></span>
-          <div>
-            <p className="title">Sistema Operativo</p>
-            <p className="sub">Última actualización: 14:32</p>
-          </div>
-        </div>
-
+        {/* Tarjeta Canónica del Usuario Logeado (Única fuente de visualización en la UI) */}
         {currentUser && (
           <div 
             className="user-badge" 
@@ -172,12 +202,15 @@ export const Sidebar: React.FC = () => {
             <Settings size={14} style={{ opacity: 0.6, color: "var(--accent-color, #38bdf8)" }} />
           </div>
         )}
+
+        {/* Botón de Cierre de Sesión Seguro */}
         <button className="btn-logout" onClick={handleLogout} style={{ marginTop: "4px" }}>
           <LogOut size={16} />
           <span>Cerrar Sesión</span>
         </button>
       </div>
 
+      {/* Modal de Configuración de Perfil y Doble Factor (2FA) */}
       <ProfileModal 
         isOpen={isProfileOpen} 
         onClose={() => setIsProfileOpen(false)}
@@ -186,4 +219,5 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+
 export default Sidebar;

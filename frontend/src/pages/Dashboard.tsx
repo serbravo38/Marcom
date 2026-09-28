@@ -1,3 +1,18 @@
+/**
+ * @file Dashboard.tsx
+ * @description Vista principal del centro de control operacional de Marcom.
+ * 
+ * Arquitectura de la Vista:
+ * 1. Telemetría Económica y Clima: Componente <EconomicBar /> con datos de UF, divisas y Open-Meteo.
+ * 2. Banner de Continuidad Operacional: Resumen de monitores, equipos conectados y certificación RBAC.
+ * 3. Matriz Cuádruple de KPIs: Tarjetas interactivas con sparklines vectoriales que proyectan
+ *    crecimiento mensual en Puntos de Atención, Equipos Instalados, OTs y Convenios Activos.
+ * 4. Fila de Monitoreo Técnico:
+ *    - Panel Izquierdo: Gráfico Donut SVG de disponibilidad de hardware (En línea, Mantenimiento, Falla).
+ *    - Panel Derecho: Mapa interactivo OpenStreetMap (<MonitoringMap />) con georreferenciación de locales.
+ * 5. Bitácora Inferior: Órdenes de Trabajo recientes y registro de auditoría de actividad del sistema.
+ */
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -21,11 +36,13 @@ import { EconomicBar } from "../components/EconomicBar";
 import { MonitoringMap } from "../components/MonitoringMap";
 
 export const Dashboard: React.FC = () => {
+  // Recuperar sesión activa de localStorage para personalización de rol
   const [currentUser] = useState<Usuario | null>(() => {
     const userJson = localStorage.getItem("marcom_user");
     return userJson ? JSON.parse(userJson) : null;
   });
 
+  // Estados de entidades operacionales
   const [agreements, setAgreements] = useState<Convenio[]>([]);
   const [locations, setLocations] = useState<Ubicacion[]>([]);
   const [assets, setAssets] = useState<Activo[]>([]);
@@ -34,6 +51,7 @@ export const Dashboard: React.FC = () => {
 
   const userRole = currentUser?.rol || "ADMIN";
 
+  // Carga paralela de datos de todos los microservicios mediante el API Gateway
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -54,20 +72,28 @@ export const Dashboard: React.FC = () => {
         setAssets(assetsData || []);
         setWorkOrders(workOrdersData || []);
       } catch (err) {
-        console.error("Dashboard Loading Error:", err);
+        console.error("[Dashboard] Error al consolidar datos operacionales:", err);
       }
     };
 
     fetchDashboardData();
   }, [userRole]);
 
-  // REAL METRICS DYNAMICALLY CALCULATED FROM DATABASE
+  // =========================================================================
+  // CÁLCULO DE MÉTRICAS OPERACIONALES EN TIEMPO REAL
+  // =========================================================================
   const totalLocations = locations.length;
-  const totalAssets = assets.length > 0 ? assets.length : locations.reduce((sum, l) => sum + (l.cantidad_pantallas || 0), 0);
+  // Total de pantallas: prioriza el conteo de activos físicos, o suma la capacidad instalada
+  const totalAssets = assets.length > 0 
+    ? assets.length 
+    : locations.reduce((sum, l) => sum + (l.cantidad_pantallas || 0), 0);
   const totalWorkOrders = workOrders.length;
   const totalAgreements = agreements.length;
 
-  // Real breakdown from assets
+  // Clasificación de estado de salud del hardware:
+  // - En Línea: Equipos nuevos o usados en buen estado operativo
+  // - En Mantenimiento: Equipos en tránsito o asignados a soporte técnico
+  // - Fuera de Servicio: Equipos con fallas electrónicas o dados de baja
   const enLineaCount = assets.length > 0 
     ? assets.filter(a => a.estado_actual === 'USADO_BUEN_ESTADO' || a.estado_actual === 'NUEVO').length 
     : Math.round(totalAssets * 0.935);
@@ -78,21 +104,26 @@ export const Dashboard: React.FC = () => {
     ? assets.filter(a => a.estado_actual === 'DEFECTUOSO' || a.estado_actual === 'DADO_DE_BAJA').length 
     : Math.max(0, totalAssets - enLineaCount - enMantenimientoCount);
 
+  // Porcentajes relativos calculados de forma segura contra división por cero
   const totalCalculated = (enLineaCount + enMantenimientoCount + fueraServicioCount) || totalAssets || 1;
   const enLineaPct = ((enLineaCount / totalCalculated) * 100).toFixed(1);
   const enMantenimientoPct = ((enMantenimientoCount / totalCalculated) * 100).toFixed(1);
   const fueraServicioPct = ((fueraServicioCount / totalCalculated) * 100).toFixed(1);
 
-  // SVG Donut calculation
+  // Trigonometría SVG para el Donut Chart:
+  // Con radio r=48, la circunferencia es: C = 2 * π * 48 ≈ 301.6px
+  // Cada arco define su longitud proporcional mediante strokeDasharray
   const circumference = 301.6;
   const dash1 = (enLineaCount / totalCalculated) * circumference;
   const dash2 = (enMantenimientoCount / totalCalculated) * circumference;
   const dash3 = (fueraServicioCount / totalCalculated) * circumference;
 
-  // Real Featured Location
-  const featuredLocation = locations.find(l => l.comuna?.toLowerCase().includes("condes") || l.nombre?.toLowerCase().includes("condes")) || locations[0] || null;
+  // Local destacado para la tarjeta inicial del mapa
+  const featuredLocation = locations.find(l => 
+    l.comuna?.toLowerCase().includes("condes") || l.nombre?.toLowerCase().includes("condes")
+  ) || locations[0] || null;
 
-  // Real Work Orders mapped with location names
+  // Asociación de nombres de clientes/locales a las órdenes de trabajo recientes
   const realWorkOrders = workOrders.slice(0, 6).map(wo => {
     const loc = locations.find(l => l.ubicacion_id === wo.ubicacion_id);
     return {

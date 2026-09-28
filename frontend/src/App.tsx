@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -11,6 +11,8 @@ import WorkOrders from "./pages/WorkOrders";
 import Users from "./pages/Users";
 import Quotations from "./pages/Quotations";
 
+import Portada from "./pages/Portada";
+
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -19,6 +21,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const getTitle = () => {
     switch (location.pathname) {
       case "/":
+      case "/dashboard":
         return "Panel Principal (Dashboard)";
       case "/agreements":
         return "Convenios de Clientes";
@@ -52,12 +55,14 @@ export const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
+        {/* Public Landing & Auth Routes */}
+        <Route path="/" element={<Portada />} />
+        <Route path="/portada" element={<Portada />} />
         <Route path="/login" element={<Login />} />
 
         {/* Private Protected Routes with Granular RBAC */}
         <Route 
-          path="/" 
+          path="/dashboard" 
           element={
             <ProtectedRoute>
               <Layout>
@@ -116,6 +121,8 @@ export const App: React.FC = () => {
             </ProtectedRoute>
           } 
         />
+        {/* Fallback Catch-all Route: Any unknown URL leads gracefully to Portada */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

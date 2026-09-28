@@ -62,7 +62,7 @@ export const Login: React.FC = () => {
         localStorage.setItem("marcom_user", JSON.stringify(userProfile));
 
         // 3. Redirect to dashboard
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (err: any) {
       setError(err?.message || "Credenciales incorrectas. Inténtalo de nuevo.");
@@ -86,7 +86,7 @@ export const Login: React.FC = () => {
         localStorage.setItem("marcom_token", authData.access_token);
         const userProfile = await authService.getMe();
         localStorage.setItem("marcom_user", JSON.stringify(userProfile));
-        navigate("/");
+        navigate("/dashboard");
       } else {
         setError("Error al validar la sesión.");
       }
@@ -575,6 +575,28 @@ export const Login: React.FC = () => {
             </button>
           </form>
         )}
+
+        {/* Enlace para volver a la Portada Corporativa */}
+        <div style={{ marginTop: "24px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "16px" }}>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#38bdf8",
+              fontSize: "0.85rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px"
+            }}
+          >
+            <ArrowLeft size={15} />
+            <span>Volver al Sitio Corporativo (Portada)</span>
+          </button>
+        </div>
       </div>
 
       <style>{`
