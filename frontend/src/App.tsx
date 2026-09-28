@@ -12,6 +12,7 @@ import Users from "./pages/Users";
 import Quotations from "./pages/Quotations";
 
 import Portada from "./pages/Portada";
+import Contacto from "./pages/Contacto";
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -58,6 +59,7 @@ export const App: React.FC = () => {
         {/* Public Landing & Auth Routes */}
         <Route path="/" element={<Portada />} />
         <Route path="/portada" element={<Portada />} />
+        <Route path="/contacto" element={<Contacto />} />
         <Route path="/login" element={<Login />} />
 
         {/* Private Protected Routes with Granular RBAC */}

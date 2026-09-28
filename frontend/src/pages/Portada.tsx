@@ -23,9 +23,9 @@ import {
   Layers,
   Activity,
   Cpu,
-  LogIn,
   LayoutDashboard,
-  Menu
+  Menu,
+  MessageSquare
 } from "lucide-react";
 import "./Portada.css";
 
@@ -226,24 +226,17 @@ export const Portada: React.FC = () => {
             <a href="#clientes" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("clientes"); }}>
               Convenios
             </a>
-            <a href="#contacto" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("contacto"); }}>
+            <a 
+              href="/contacto" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="portada-nav-link"
+            >
               Contacto
             </a>
           </nav>
 
           <div className="portada-nav-actions">
-            {userProfile ? (
-              <Link to="/dashboard" className="portada-btn-login">
-                <LayoutDashboard size={17} />
-                <span>Panel de Operaciones</span>
-              </Link>
-            ) : (
-              <Link to="/login" className="portada-btn-login">
-                <LogIn size={17} />
-                <span>Ingresar al Portal</span>
-              </Link>
-            )}
-
             <button 
               className="portada-mobile-toggle" 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -269,7 +262,15 @@ export const Portada: React.FC = () => {
             <a href="#trabajos" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("trabajos"); }}>Trabajos Realizados</a>
             <a href="#estrategia" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("estrategia"); }}>Misión & Visión</a>
             <a href="#clientes" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("clientes"); }}>Convenios y Clientes</a>
-            <a href="#contacto" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("contacto"); }}>Contacto</a>
+            <a 
+              href="/contacto" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="portada-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Contacto
+            </a>
           </div>
         )}
       </header>
@@ -793,52 +794,76 @@ export const Portada: React.FC = () => {
       </section>
 
       {/* ====================================================================
-          CONTACTO & ACCESO A PLATAFORMA
+          SECCIÓN DE CONTACTO: CALL-TO-ACTION A NUEVA VENTANA
           ==================================================================== */}
       <section id="contacto" className="portada-section">
         <div className="portada-section-inner" style={{ textAlign: "center" }}>
           <div style={{
-            background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(37, 99, 235, 0.15) 100%)",
+            background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(37, 99, 235, 0.16) 100%)",
             border: "1px solid rgba(56, 189, 248, 0.3)",
             borderRadius: "24px",
-            padding: "54px 32px",
+            padding: "54px 36px",
             maxWidth: "960px",
             margin: "0 auto",
             boxShadow: "0 20px 50px -15px rgba(0, 0, 0, 0.7)"
           }}>
-            <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.8rem)", fontWeight: 800, color: "#fff", marginBottom: "16px" }}>
-              ¿Listo para modernizar la gestión de tus activos en terreno?
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "5px 14px",
+              borderRadius: "9999px",
+              background: "rgba(14, 165, 233, 0.12)",
+              border: "1px solid rgba(56, 189, 248, 0.3)",
+              color: "#38bdf8",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.8px",
+              marginBottom: "16px"
+            }}>
+              <MessageSquare size={14} />
+              <span>Canal de Atención Directo & Soporte B2B</span>
+            </div>
+
+            <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.7rem)", fontWeight: 800, color: "#fff", marginBottom: "16px", lineHeight: 1.2 }}>
+              ¿Tienes un requerimiento o consulta técnica?
             </h2>
-            <p style={{ color: "#cbd5e1", fontSize: "1.1rem", maxWidth: "680px", margin: "0 auto 36px", lineHeight: 1.6 }}>
-              Si eres cliente en convenio o requieres cotizar servicios de despliegue de cartelería digital,
-              redes o mantenimiento especializado, ingresa al portal o contáctanos directamente.
+
+            <p style={{ color: "#cbd5e1", fontSize: "1.08rem", maxWidth: "680px", margin: "0 auto 36px", lineHeight: 1.6 }}>
+              Estamos a tu disposición para evaluar proyectos de cartelería digital, menú boards, equipamiento POS o soporte técnico en terreno.
             </p>
 
-            <div style={{ display: "flex", justifyContent: "center", gap: "18px", flexWrap: "wrap", marginBottom: "36px" }}>
-              {userProfile ? (
-                <Link to="/dashboard" className="portada-btn-hero-primary">
-                  <LayoutDashboard size={20} />
-                  <span>Acceder a mi Panel de Control</span>
-                </Link>
-              ) : (
-                <Link to="/login" className="portada-btn-hero-primary">
-                  <LogIn size={20} />
-                  <span>Ingresar a Plataforma Marcom</span>
-                </Link>
-              )}
-              <Link to="/quotations" className="portada-btn-hero-secondary">
-                <span>Solicitar Cotización Corporativa</span>
+            <div style={{ display: "flex", justifyContent: "center", gap: "16px", flexWrap: "wrap", marginBottom: "36px" }}>
+              <a 
+                href="/contacto" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="portada-btn-hero-primary"
+                style={{ fontSize: "1rem", padding: "14px 34px", textDecoration: "none" }}
+              >
+                <MessageSquare size={18} />
+                <span>Contáctanos</span>
+                <ArrowRight size={17} />
+              </a>
+
+              <Link 
+                to={userProfile ? "/dashboard" : "/login"} 
+                className="portada-btn-hero-secondary"
+                style={{ textDecoration: "none" }}
+              >
+                <span>{userProfile ? "Ir a mi Panel de Control" : "Acceso Portal Clientes"}</span>
               </Link>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "32px", flexWrap: "wrap", color: "#94a3b8", fontSize: "0.92rem" }}>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "32px", flexWrap: "wrap", color: "#94a3b8", fontSize: "0.92rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "24px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Mail size={16} color="#38bdf8" />
                 <span>contacto@marcom.cl</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Phone size={16} color="#38bdf8" />
-                <span>Mesa Operativa Central</span>
+                <span>+56 9 8450 1200 / Mesa de Ayuda</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <MapPin size={16} color="#38bdf8" />
