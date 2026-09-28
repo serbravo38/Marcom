@@ -1,15 +1,34 @@
 import React, { useState, useEffect } from "react";
-import { TrendingUp, RefreshCw, DollarSign, Landmark, Globe, Activity } from "lucide-react";
+import { 
+  TrendingUp, 
+  RefreshCw, 
+  DollarSign, 
+  Landmark, 
+  Globe, 
+  Activity,
+  Sun,
+  Moon,
+  Cloud,
+  CloudSun,
+  CloudRain,
+  CloudLightning
+} from "lucide-react";
 import { indicatorsService, type IndicadoresEconomicos } from "../services/indicators";
+import { weatherService, type WeatherData } from "../services/weather";
 
 export const EconomicBar: React.FC = () => {
   const [data, setData] = useState<IndicadoresEconomicos | null>(null);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadData = async () => {
     setLoading(true);
-    const result = await indicatorsService.getIndicators();
-    setData(result);
+    const [indResult, weatherResult] = await Promise.all([
+      indicatorsService.getIndicators(),
+      weatherService.getLocalWeather()
+    ]);
+    setData(indResult);
+    setWeather(weatherResult);
     setLoading(false);
   };
 
@@ -27,6 +46,25 @@ export const EconomicBar: React.FC = () => {
     }).format(val);
   };
 
+  const renderWeatherIcon = (type?: WeatherData["iconType"]) => {
+    switch (type) {
+      case "sun":
+        return <Sun size={15} style={{ color: "#facc15" }} />;
+      case "moon":
+        return <Moon size={15} style={{ color: "#38bdf8" }} />;
+      case "cloud-sun":
+        return <CloudSun size={15} style={{ color: "#38bdf8" }} />;
+      case "cloud":
+        return <Cloud size={15} style={{ color: "#94a3b8" }} />;
+      case "rain":
+        return <CloudRain size={15} style={{ color: "#60a5fa" }} />;
+      case "thunder":
+        return <CloudLightning size={15} style={{ color: "#f59e0b" }} />;
+      default:
+        return <Sun size={15} style={{ color: "#facc15" }} />;
+    }
+  };
+
   if (!data) return null;
 
   return (
@@ -34,7 +72,7 @@ export const EconomicBar: React.FC = () => {
       <div className="eco-header-badge">
         <span className="eco-live-dot"></span>
         <Activity size={14} style={{ color: "#38bdf8" }} />
-        <span>Indicadores Económicos</span>
+        <span>Indicadores en Vivo</span>
       </div>
 
       <div className="eco-tickers-container">
@@ -96,13 +134,31 @@ export const EconomicBar: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Clima Local Open-Meteo */}
+        {weather && (
+          <div 
+            className="eco-ticker-item weather" 
+            title={`Clima local en Santiago (Open-Meteo): ${weather.conditionText}, Sensación ${weather.apparentTemperature}°C, Humedad ${weather.humidity}%, Viento ${weather.windSpeed} km/h`}
+          >
+            <div className="eco-icon-box weather">
+              {renderWeatherIcon(weather.iconType)}
+            </div>
+            <div className="eco-info">
+              <span className="eco-label">Clima Stgo</span>
+              <span className="eco-value">
+                {weather.temperature}°C · {weather.conditionText}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <button 
         className="eco-refresh-btn" 
         onClick={loadData} 
         disabled={loading}
-        title="Actualizar valores oficiales desde mindicador.cl"
+        title="Actualizar valores oficiales de indicadores y clima"
       >
         <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
         <span>Actualizar</span>

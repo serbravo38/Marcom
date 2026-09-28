@@ -1901,6 +1901,93 @@ select option:hover {
   color: #34d399;
 }
 
+/* Leaflet Popup Weather Box */
+.popup-weather-box {
+  margin: 6px 0;
+  background: rgba(7, 13, 30, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 5px;
+  padding: 4px 6px;
+}
+
+.popup-weather-loading {
+  font-size: 0.65rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.popup-weather-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.popup-weather-temp {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.popup-weather-desc {
+  font-size: 0.68rem;
+  color: #e2e8f0;
+}
+
+.popup-weather-sub {
+  font-size: 0.62rem;
+  color: #94a3b8;
+}
+
+/* Live Station Weather mini box inside floating card */
+.station-weather-mini-box {
+  background: rgba(7, 13, 30, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.station-weather-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.station-weather-icon-temp {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.station-weather-temp {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.station-weather-condition {
+  font-size: 0.68rem;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.station-weather-sub-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.62rem;
+  color: #64748b;
+}
+
+.station-weather-sub-metrics span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .leaflet-control-zoom {
   border: 1px solid rgba(56, 189, 248, 0.3) !important;
   border-radius: 6px !important;
@@ -2279,6 +2366,12 @@ select option:hover {
 .eco-icon-box.blue { background: rgba(37, 99, 235, 0.16); color: #60a5fa; border: 1px solid rgba(37, 99, 235, 0.3); }
 .eco-icon-box.purple { background: rgba(168, 85, 247, 0.16); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
 .eco-icon-box.teal { background: rgba(20, 184, 166, 0.16); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
+.eco-icon-box.weather { background: rgba(56, 189, 248, 0.16); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+.eco-ticker-item.weather {
+  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.04);
+}
 
 .eco-info {
   display: flex;
@@ -2322,6 +2415,39 @@ select option:hover {
 }
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Location Weather Badge in Tables & Cards */
+.location-weather-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-top: 4px;
+  width: fit-content;
+}
+
+.location-weather-badge.loading {
+  color: #64748b;
+  border-color: rgba(255, 255, 255, 0.1);
+  padding: 1px 8px;
+}
+
+.location-weather-badge .loc-temp {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.location-weather-badge .loc-cond {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 400;
 }
 
 

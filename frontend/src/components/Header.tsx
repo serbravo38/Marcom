@@ -1,25 +1,14 @@
 import React, { useState } from "react";
 import { Search, Bell, ChevronDown, Building2 } from "lucide-react";
-import { ProfileModal } from "./ProfileModal";
 import { NotificationsDropdown } from "./NotificationsDropdown";
-import type { Usuario } from "../services/auth";
 
 interface HeaderProps {
   title: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({ title }) => {
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(3);
-  const [currentUser] = useState<Usuario | null>(() => {
-    const userJson = localStorage.getItem("marcom_user");
-    return userJson ? JSON.parse(userJson) : null;
-  });
-
-  const userName = currentUser ? `${currentUser.nombre} ${currentUser.apellido}` : "Sergio Bravo";
-  const userRole = currentUser?.rol || "ADMIN";
-  const initials = currentUser?.nombre ? `${currentUser.nombre[0]}${currentUser.apellido ? currentUser.apellido[0] : ""}` : "SB";
 
   return (
     <header className="top-app-header">
@@ -63,27 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
             onUnreadCountChange={setUnreadCount}
           />
         </div>
-
-        {/* User Profile Trigger */}
-        <button 
-          className="header-user-profile" 
-          onClick={() => setIsProfileOpen(true)}
-          title="Ver y editar perfil de usuario"
-        >
-          <div className="header-user-avatar">
-            {initials.toUpperCase()}
-          </div>
-          <div className="header-user-meta">
-            <div className="name">{userName}</div>
-            <div className="role">{userRole.replace("_", " ")}</div>
-          </div>
-        </button>
       </div>
-
-      <ProfileModal 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)}
-      />
     </header>
   );
 };

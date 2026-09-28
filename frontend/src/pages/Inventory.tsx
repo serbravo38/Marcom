@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { inventoryService } from "../services/inventory";
 import { authService, type Convenio } from "../services/auth";
+import { LocationWeatherBadge } from "../components/LocationWeatherBadge";
 
 const REGIONES_MAP_JS: Record<number, string> = {
   1: "Región de Tarapacá",
@@ -595,6 +596,11 @@ export const Inventory: React.FC = () => {
                                     {loc.provincia}
                                   </div>
                                 )}
+                                <LocationWeatherBadge
+                                  comuna={loc.comuna}
+                                  region={loc.region}
+                                  ubicacionId={loc.ubicacion_id}
+                                />
                               </div>
                             </td>
                             <td style={{ fontSize: "0.85rem" }}>{loc.region}</td>

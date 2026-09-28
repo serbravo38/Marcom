@@ -1,9 +1,23 @@
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Layers, Maximize2, Navigation, MapPin } from "lucide-react";
+import { 
+  Layers, 
+  Maximize2, 
+  Navigation, 
+  MapPin, 
+  Sun, 
+  Moon, 
+  Cloud, 
+  CloudSun, 
+  CloudRain, 
+  CloudLightning,
+  Droplets,
+  Wind
+} from "lucide-react";
 import { type Ubicacion } from "../services/inventory";
 import { getLocationCoordinates } from "../utils/coordinates";
+import { weatherService, type WeatherData } from "../services/weather";
 import { Link } from "react-router-dom";
 
 interface MonitoringMapProps {
@@ -21,6 +35,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const [activeStation, setActiveStation] = useState<Ubicacion | null>(null);
+  const [stationWeather, setStationWeather] = useState<WeatherData | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
 
   // Seleccionar la estación inicial o la provista por prop
@@ -28,7 +43,6 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     if (selectedStation) {
       setActiveStation(selectedStation);
     } else if (!activeStation && locations.length > 0) {
-      // Buscar una en Santiago o la primera
       const stgo = locations.find(
         (l) =>
           (l.comuna || "").toUpperCase().includes("SANTIAGO") ||
@@ -37,6 +51,19 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
       setActiveStation(stgo || locations[0]);
     }
   }, [locations, selectedStation]);
+
+  // Cargar el clima de la estación activa seleccionada en tiempo real
+  useEffect(() => {
+    if (!activeStation) return;
+    const coords = getLocationCoordinates(
+      activeStation.comuna,
+      activeStation.region,
+      activeStation.ubicacion_id || activeStation.codigo_local || ""
+    );
+    weatherService.getWeather(coords.lat, coords.lng).then((w) => {
+      setStationWeather(w);
+    });
+  }, [activeStation]);
 
   // Inicializar Leaflet Map con OpenStreetMap Oficial (100% abierto sin API Key ni marcas de agua)
   useEffect(() => {
@@ -57,7 +84,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     L.control
       .attribution({ position: "bottomleft", prefix: false })
       .addAttribution(
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
       )
       .addTo(map);
 
@@ -84,7 +111,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     };
   }, []);
 
-  // Renderizar y actualizar los marcadores de las estaciones
+  // Renderizar y actualizar los marcadores de las estaciones con clima dinámico
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
@@ -119,6 +146,12 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
           <div class="l-pop-title">${loc.nombre}</div>
           <div class="l-pop-address">📍 ${loc.direccion}</div>
           <div class="l-pop-comuna">${loc.comuna || ""}, ${loc.region || ""}</div>
+          
+          <!-- Clima en vivo en el local -->
+          <div id="popup-weather-${loc.ubicacion_id}" class="popup-weather-box">
+            <span class="popup-weather-loading">Consultando clima en ${loc.comuna || "local"}...</span>
+          </div>
+
           <div class="l-pop-footer">
             <span class="l-pop-screens">📺 ${loc.cantidad_pantallas || 3} Pantallas</span>
             <span class="l-pop-status">${loc.activo !== false ? "Operativo" : "Mantenimiento"}</span>
@@ -130,6 +163,21 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
         className: "marcom-leaflet-popup",
         closeButton: true,
         offset: [0, -10]
+      });
+
+      // Al abrir el popup, cargar el clima exacto de ese local desde Open-Meteo
+      marker.on("popupopen", async () => {
+        const weather = await weatherService.getWeather(coords.lat, coords.lng);
+        const container = document.getElementById(`popup-weather-${loc.ubicacion_id}`);
+        if (container) {
+          container.innerHTML = `
+            <div class="popup-weather-pill">
+              <span class="popup-weather-temp">🌡️ ${weather.temperature}°C</span>
+              <span class="popup-weather-desc">${weather.conditionText}</span>
+              <span class="popup-weather-sub">💧 ${weather.humidity}% · 💨 ${weather.windSpeed} km/h</span>
+            </div>
+          `;
+        }
       });
 
       marker.on("click", () => {
@@ -164,6 +212,25 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
     });
     const bounds = L.latLngBounds(latLngs);
     mapInstanceRef.current.fitBounds(bounds, { padding: [30, 30] });
+  };
+
+  const renderWeatherIcon = (type?: WeatherData["iconType"]) => {
+    switch (type) {
+      case "sun":
+        return <Sun size={15} style={{ color: "#facc15" }} />;
+      case "moon":
+        return <Moon size={15} style={{ color: "#38bdf8" }} />;
+      case "cloud-sun":
+        return <CloudSun size={15} style={{ color: "#38bdf8" }} />;
+      case "cloud":
+        return <Cloud size={15} style={{ color: "#94a3b8" }} />;
+      case "rain":
+        return <CloudRain size={15} style={{ color: "#60a5fa" }} />;
+      case "thunder":
+        return <CloudLightning size={15} style={{ color: "#f59e0b" }} />;
+      default:
+        return <Sun size={15} style={{ color: "#facc15" }} />;
+    }
   };
 
   return (
@@ -214,7 +281,7 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
         className={`leaflet-map-canvas ${isDarkMode ? "map-dark-tiles" : ""}`}
       />
 
-      {/* Tarjeta flotante interactiva con la estación seleccionada */}
+      {/* Tarjeta flotante interactiva con la estación seleccionada y su clima en vivo */}
       {activeStation && (
         <div className="map-floating-station-card interactive animate-fade-in">
           <div className="station-card-top">
@@ -243,6 +310,23 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
             <span>📺 Monitores: {activeStation.cantidad_pantallas || 3} activos</span>
             <span>📍 Comuna: {activeStation.comuna || "Santiago"}</span>
           </div>
+
+          {/* Clima en vivo en el punto geográfico del local */}
+          {stationWeather && (
+            <div className="station-weather-mini-box">
+              <div className="station-weather-top-row">
+                <div className="station-weather-icon-temp">
+                  {renderWeatherIcon(stationWeather.iconType)}
+                  <span className="station-weather-temp">{stationWeather.temperature}°C</span>
+                </div>
+                <span className="station-weather-condition">{stationWeather.conditionText}</span>
+              </div>
+              <div className="station-weather-sub-metrics">
+                <span title="Humedad relativa"><Droplets size={10} /> {stationWeather.humidity}%</span>
+                <span title="Velocidad del viento"><Wind size={10} /> {stationWeather.windSpeed} km/h</span>
+              </div>
+            </div>
+          )}
 
           <Link to="/inventory" className="station-link-btn">
             <span>Ver detalles en inventario</span>
