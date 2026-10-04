@@ -67,6 +67,14 @@ class CatalogoProductosBase(BaseModel):
 class CatalogoProductosCrear(CatalogoProductosBase):
     pass
 
+class CatalogoProductosActualizar(BaseModel):
+    sku: Optional[str] = Field(None, max_length=50)
+    nombre: Optional[str] = Field(None, max_length=150)
+    marca: Optional[str] = Field(None, max_length=100)
+    categoria: Optional[str] = Field(None, max_length=100)
+    pulgadas: Optional[float] = None
+    descripcion: Optional[str] = None
+
 class CatalogoProductosRespuesta(CatalogoProductosBase):
     producto_id: UUID
     creado_en: datetime
@@ -86,9 +94,11 @@ class ActivoCrear(ActivoBase):
     pass
 
 class ActivoActualizar(BaseModel):
+    producto_id: Optional[UUID] = None
+    numero_serie: Optional[str] = Field(None, max_length=100)
+    codigo_qr: Optional[str] = Field(None, max_length=255)
     estado_actual: Optional[EstadoActivoEnum] = None
     ubicacion_actual_id: Optional[UUID] = None
-    codigo_qr: Optional[str] = None
 
 class ActivoRespuesta(ActivoBase):
     activo_id: UUID

@@ -15,7 +15,10 @@ import {
   Download,
   CheckCircle2,
   FileText,
-  Trash2
+  Trash2,
+  Edit2,
+  AlertTriangle,
+  AlertCircle
 } from "lucide-react";
 import { inventoryService } from "../services/inventory";
 import { authService, type Convenio } from "../services/auth";
@@ -121,6 +124,22 @@ export const Inventory: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
+  // Edit & Delete States
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
+  const [deleteLocationLoading, setDeleteLocationLoading] = useState(false);
+  const [deleteLocationError, setDeleteLocationError] = useState<string | null>(null);
+
+  const [editingProduct, setEditingProduct] = useState<ProductCatalog | null>(null);
+  const [productToDelete, setProductToDelete] = useState<ProductCatalog | null>(null);
+  const [deleteProductLoading, setDeleteProductLoading] = useState(false);
+  const [deleteProductError, setDeleteProductError] = useState<string | null>(null);
+
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
+  const [deleteAssetLoading, setDeleteAssetLoading] = useState(false);
+  const [deleteAssetError, setDeleteAssetError] = useState<string | null>(null);
+
   // Form Fields
   // Location Form
   const [locCode, setLocCode] = useState("");
@@ -199,6 +218,9 @@ export const Inventory: React.FC = () => {
   const closeModals = () => {
     setModalOpen(null);
     setModalError(null);
+    setEditingLocation(null);
+    setEditingProduct(null);
+    setEditingAsset(null);
     // Clear forms
     setLocCode(""); setLocName(""); setLocAddress(""); setLocZona(""); setLocRegion(""); setLocProvincia(""); setLocComuna(""); 
     setLocPantallas(3); setLocAgreementId(""); setLocManagerName(""); setLocManagerPhone(""); setLocManagerEmail(""); 
@@ -238,12 +260,30 @@ export const Inventory: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleCreateLocation = async (e: React.FormEvent) => {
+  const handleEditLocation = (loc: Location) => {
+    setEditingLocation(loc);
+    setLocCode(loc.codigo_local || "");
+    setLocName(loc.nombre);
+    setLocAddress(loc.direccion);
+    setLocZona(loc.zona || "");
+    setLocRegion(loc.region);
+    setLocProvincia(loc.provincia || "");
+    setLocComuna(loc.comuna || "");
+    setLocPantallas(loc.cantidad_pantallas || 0);
+    setLocAgreementId(loc.convenio_id || "");
+    setLocManagerName(loc.nombre_encargado || "");
+    setLocManagerPhone(loc.telefono_encargado || "");
+    setLocManagerEmail(loc.correo_encargado || "");
+    setLocIsWarehouse(loc.es_bodega);
+    setModalOpen("location");
+  };
+
+  const handleSaveLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
     setModalError(null);
     try {
-      await inventoryService.createLocation({
+      const locData = {
         codigo_local: locCode || null,
         nombre: locName,
         direccion: locAddress,
@@ -258,13 +298,33 @@ export const Inventory: React.FC = () => {
         correo_encargado: locManagerEmail || null,
         es_bodega: locIsWarehouse,
         activo: true
-      });
+      };
+      if (editingLocation) {
+        await inventoryService.updateLocation(editingLocation.ubicacion_id, locData);
+      } else {
+        await inventoryService.createLocation(locData);
+      }
       closeModals();
       fetchData();
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo crear la ubicación.");
+      setModalError(err?.message || `No se pudo ${editingLocation ? "actualizar" : "crear"} la ubicación.`);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteLocation = async () => {
+    if (!locationToDelete) return;
+    setDeleteLocationLoading(true);
+    setDeleteLocationError(null);
+    try {
+      await inventoryService.deleteLocation(locationToDelete.ubicacion_id);
+      setLocationToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      setDeleteLocationError(err?.message || "No se pudo eliminar la ubicación.");
+    } finally {
+      setDeleteLocationLoading(false);
     }
   };
 
@@ -350,46 +410,107 @@ export const Inventory: React.FC = () => {
     }
   };
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  const handleEditProduct = (prod: ProductCatalog) => {
+    setEditingProduct(prod);
+    setProdSku(prod.sku);
+    setProdName(prod.nombre);
+    setProdBrand(prod.marca);
+    setProdCategory(prod.categoria);
+    setProdSize(prod.pulgadas || 0);
+    setProdDesc(prod.descripcion || "");
+    setModalOpen("product");
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
     setModalError(null);
     try {
-      await inventoryService.createProduct({
+      const prodData = {
         sku: prodSku,
         nombre: prodName,
         marca: prodBrand,
         categoria: prodCategory,
         pulgadas: prodSize ? Number(prodSize) : null,
         descripcion: prodDesc || null
-      });
+      };
+      if (editingProduct) {
+        await inventoryService.updateProduct(editingProduct.producto_id, prodData);
+      } else {
+        await inventoryService.createProduct(prodData);
+      }
       closeModals();
       fetchData();
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo registrar el producto.");
+      setModalError(err?.message || `No se pudo ${editingProduct ? "actualizar" : "registrar"} el producto.`);
     } finally {
       setModalLoading(false);
     }
   };
 
-  const handleCreateAsset = async (e: React.FormEvent) => {
+  const handleConfirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setDeleteProductLoading(true);
+    setDeleteProductError(null);
+    try {
+      await inventoryService.deleteProduct(productToDelete.producto_id);
+      setProductToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      setDeleteProductError(err?.message || "No se pudo eliminar el producto.");
+    } finally {
+      setDeleteProductLoading(false);
+    }
+  };
+
+  const handleEditAsset = (asset: Asset) => {
+    setEditingAsset(asset);
+    setAssetProductId(asset.producto_id);
+    setAssetSerial(asset.numero_serie);
+    setAssetQrCode(asset.codigo_qr || "");
+    setAssetStatus(asset.estado_actual);
+    setAssetLocationId(asset.ubicacion_actual_id);
+    setModalOpen("asset");
+  };
+
+  const handleSaveAsset = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
     setModalError(null);
     try {
-      await inventoryService.createAsset({
+      const assetData = {
         producto_id: assetProductId,
         numero_serie: assetSerial,
         codigo_qr: assetQrCode || null,
         estado_actual: assetStatus,
         ubicacion_actual_id: assetLocationId
-      });
+      };
+      if (editingAsset) {
+        await inventoryService.updateAsset(editingAsset.activo_id, assetData);
+      } else {
+        await inventoryService.createAsset(assetData);
+      }
       closeModals();
       fetchData();
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo registrar el activo.");
+      setModalError(err?.message || `No se pudo ${editingAsset ? "actualizar" : "registrar"} el activo.`);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteAsset = async () => {
+    if (!assetToDelete) return;
+    setDeleteAssetLoading(true);
+    setDeleteAssetError(null);
+    try {
+      await inventoryService.deleteAsset(assetToDelete.activo_id);
+      setAssetToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      setDeleteAssetError(err?.message || "No se pudo eliminar el activo.");
+    } finally {
+      setDeleteAssetLoading(false);
     }
   };
 
@@ -492,6 +613,7 @@ export const Inventory: React.FC = () => {
                         <th>Código QR</th>
                         <th>Ubicación Actual</th>
                         <th>Estado Físico</th>
+                        {!isClient && <th>Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -510,6 +632,34 @@ export const Inventory: React.FC = () => {
                               {asset.estado_actual}
                             </span>
                           </td>
+                          {!isClient && (
+                            <td>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                {(isAdminOrJefe || isTech) && (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "6px 8px" }}
+                                    title="Editar Activo"
+                                    onClick={() => handleEditAsset(asset)}
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                )}
+                                {isAdminOrJefe && (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "6px 8px", color: "#f87171" }}
+                                    title="Eliminar Activo"
+                                    onClick={() => setAssetToDelete(asset)}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -557,6 +707,7 @@ export const Inventory: React.FC = () => {
                         <th>Dirección</th>
                         <th>Encargado</th>
                         <th>Tipo</th>
+                        {!isClient && <th>Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -629,6 +780,34 @@ export const Inventory: React.FC = () => {
                                 {loc.es_bodega ? "Bodega" : "Punto de Venta / Local"}
                               </span>
                             </td>
+                            {!isClient && (
+                              <td>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  {isAdminOrJefe && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary"
+                                        style={{ padding: "6px 8px" }}
+                                        title="Editar Ubicación"
+                                        onClick={() => handleEditLocation(loc)}
+                                      >
+                                        <Edit2 size={14} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary"
+                                        style={{ padding: "6px 8px", color: "#f87171" }}
+                                        title="Eliminar Ubicación"
+                                        onClick={() => setLocationToDelete(loc)}
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -664,6 +843,7 @@ export const Inventory: React.FC = () => {
                         <th>Marca</th>
                         <th>Categoría</th>
                         <th>Tamaño (pulgadas)</th>
+                        {!isClient && <th>Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -674,6 +854,34 @@ export const Inventory: React.FC = () => {
                           <td>{prod.marca}</td>
                           <td>{prod.categoria}</td>
                           <td>{prod.pulgadas ? `${prod.pulgadas}"` : "N/A"}</td>
+                          {!isClient && (
+                            <td>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                {isAdminOrJefe && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      style={{ padding: "6px 8px" }}
+                                      title="Editar Producto"
+                                      onClick={() => handleEditProduct(prod)}
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      style={{ padding: "6px 8px", color: "#f87171" }}
+                                      title="Eliminar Producto"
+                                      onClick={() => setProductToDelete(prod)}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -783,7 +991,9 @@ export const Inventory: React.FC = () => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0 }} className="accent-text-gradient">
-                    {locIsWarehouse ? "Registrar Nueva Bodega Central" : "Registrar Local / Punto de Venta"}
+                    {editingLocation
+                      ? (locIsWarehouse ? "Editar Bodega Central" : "Editar Local / Punto de Venta")
+                      : (locIsWarehouse ? "Registrar Nueva Bodega Central" : "Registrar Local / Punto de Venta")}
                   </h3>
                   <p style={{ fontSize: "0.8rem", color: "hsl(var(--text-muted))", margin: "2px 0 0 0" }}>
                     {locIsWarehouse 
@@ -859,7 +1069,7 @@ export const Inventory: React.FC = () => {
             </div>
 
             {/* Formulario con Scroll Interno Suave si es necesario */}
-            <form onSubmit={handleCreateLocation} style={{ display: "flex", flexDirection: "column", flexGrow: 1, overflow: "hidden" }}>
+            <form onSubmit={handleSaveLocation} style={{ display: "flex", flexDirection: "column", flexGrow: 1, overflow: "hidden" }}>
               <div style={{ padding: "20px 28px", overflowY: "auto", flexGrow: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
                 
                 {modalError && (
@@ -1143,7 +1353,7 @@ export const Inventory: React.FC = () => {
                   ) : (
                     <>
                       <Plus size={16} />
-                      <span>{locIsWarehouse ? "Registrar Bodega" : "Registrar Local"}</span>
+                      <span>{editingLocation ? "Guardar Cambios" : (locIsWarehouse ? "Registrar Bodega" : "Registrar Local")}</span>
                     </>
                   )}
                 </button>
@@ -1412,9 +1622,11 @@ export const Inventory: React.FC = () => {
         <div className="modal-overlay">
           <div className="modal-content glass-panel" style={{ padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
-            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Producto en Catálogo</h3>
+            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">
+              {editingProduct ? "Editar Producto del Catálogo" : "Registrar Producto en Catálogo"}
+            </h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
-            <form onSubmit={handleCreateProduct}>
+            <form onSubmit={handleSaveProduct}>
               <div className="form-row">
                 <div className="form-group">
                   <label>Código SKU</label>
@@ -1445,7 +1657,16 @@ export const Inventory: React.FC = () => {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar</button>
+                <button type="submit" className="btn-primary" disabled={modalLoading}>
+                  {modalLoading ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{editingProduct ? "Guardar Cambios" : "Registrar"}</span>
+                  )}
+                </button>
               </div>
             </form>
           </div>
@@ -1458,9 +1679,11 @@ export const Inventory: React.FC = () => {
         <div className="modal-overlay">
           <div className="modal-content glass-panel" style={{ padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
-            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Activo Físico (Serie)</h3>
+            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">
+              {editingAsset ? "Editar Activo Físico (Serie)" : "Registrar Activo Físico (Serie)"}
+            </h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
-            <form onSubmit={handleCreateAsset}>
+            <form onSubmit={handleSaveAsset}>
               <div className="form-group">
                 <label>Producto en Catálogo</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetProductId} onChange={e=>setAssetProductId(e.target.value)} required>
@@ -1479,23 +1702,34 @@ export const Inventory: React.FC = () => {
                 </div>
               </div>
               <div className="form-group">
-                <label>Ubicación Inicial</label>
+                <label>{editingAsset ? "Ubicación Actual" : "Ubicación Inicial"}</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetLocationId} onChange={e=>setAssetLocationId(e.target.value)} required>
                   <option value="">Selecciona ubicación...</option>
                   {locations.map(l=><option key={l.ubicacion_id} value={l.ubicacion_id}>{l.nombre}</option>)}
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "25px" }}>
-                <label>Estado Inicial del Activo</label>
+                <label>Estado del Activo</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetStatus} onChange={e=>setAssetStatus(e.target.value)}>
                   <option value="NUEVO">NUEVO</option>
                   <option value="USADO_BUEN_ESTADO">USADO EN BUEN ESTADO</option>
                   <option value="DEFECTUOSO">DEFECTUOSO</option>
+                  <option value="EN_TRANSITO">EN TRÁNSITO</option>
+                  <option value="DADO_DE_BAJA">DADO DE BAJA</option>
                 </select>
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar</button>
+                <button type="submit" className="btn-primary" disabled={modalLoading}>
+                  {modalLoading ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{editingAsset ? "Guardar Cambios" : "Registrar"}</span>
+                  )}
+                </button>
               </div>
             </form>
           </div>
@@ -1534,6 +1768,301 @@ export const Inventory: React.FC = () => {
                 <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar Movimiento</button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Confirmación de Seguridad para Eliminar Activo */}
+      {assetToDelete && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "480px" }}>
+            <button className="modal-close" onClick={() => setAssetToDelete(null)}>
+              <X size={20} />
+            </button>
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                marginBottom: "16px"
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
+                Confirmación de Seguridad
+              </h3>
+              <p style={{
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                color: "#f87171",
+                marginBottom: "12px",
+                lineHeight: 1.4
+              }}>
+                ¿Estás seguro que deseas eliminar este activo?
+              </p>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}>
+                <div style={{ color: "#fff", fontWeight: 600 }}>
+                  {assetToDelete.producto?.nombre} ({assetToDelete.producto?.marca})
+                </div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem", marginTop: "4px" }}>
+                  N° Serie: <strong style={{ color: "#fff" }}>{assetToDelete.numero_serie}</strong>
+                </div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem" }}>
+                  Ubicación: {assetToDelete.ubicacion_actual?.nombre || "No asignada"}
+                </div>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: 0 }}>
+                Esta acción removerá permanentemente el activo del inventario y sus movimientos históricos.
+              </p>
+            </div>
+
+            {deleteAssetError && (
+              <div className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "20px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={16} />
+                <span>{deleteAssetError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setAssetToDelete(null)}
+                disabled={deleteAssetLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  background: "#dc2626",
+                  borderColor: "#b91c1c",
+                  color: "#fff"
+                }}
+                onClick={handleConfirmDeleteAsset}
+                disabled={deleteAssetLoading}
+              >
+                {deleteAssetLoading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, Eliminar Activo</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Confirmación de Seguridad para Eliminar Ubicación */}
+      {locationToDelete && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "480px" }}>
+            <button className="modal-close" onClick={() => setLocationToDelete(null)}>
+              <X size={20} />
+            </button>
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                marginBottom: "16px"
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
+                Confirmación de Seguridad
+              </h3>
+              <p style={{
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                color: "#f87171",
+                marginBottom: "12px",
+                lineHeight: 1.4
+              }}>
+                ¿Estás seguro que deseas eliminar esta ubicación?
+              </p>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}>
+                <div style={{ color: "#fff", fontWeight: 600 }}>{locationToDelete.nombre}</div>
+                {locationToDelete.codigo_local && (
+                  <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem" }}>
+                    Código: {locationToDelete.codigo_local}
+                  </div>
+                )}
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem", marginTop: "2px" }}>
+                  📍 {locationToDelete.direccion}
+                </div>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: 0 }}>
+                Esta acción removerá esta ubicación de la plataforma y reasignará sus activos vinculados.
+              </p>
+            </div>
+
+            {deleteLocationError && (
+              <div className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "20px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={16} />
+                <span>{deleteLocationError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setLocationToDelete(null)}
+                disabled={deleteLocationLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  background: "#dc2626",
+                  borderColor: "#b91c1c",
+                  color: "#fff"
+                }}
+                onClick={handleConfirmDeleteLocation}
+                disabled={deleteLocationLoading}
+              >
+                {deleteLocationLoading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, Eliminar Ubicación</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Confirmación de Seguridad para Eliminar Producto */}
+      {productToDelete && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "480px" }}>
+            <button className="modal-close" onClick={() => setProductToDelete(null)}>
+              <X size={20} />
+            </button>
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                marginBottom: "16px"
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
+                Confirmación de Seguridad
+              </h3>
+              <p style={{
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                color: "#f87171",
+                marginBottom: "12px",
+                lineHeight: 1.4
+              }}>
+                ¿Estás seguro que deseas eliminar este producto del catálogo?
+              </p>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}>
+                <div style={{ color: "#fff", fontWeight: 600 }}>{productToDelete.nombre}</div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem", marginTop: "2px" }}>
+                  SKU: <strong style={{ color: "#fff" }}>{productToDelete.sku}</strong>
+                </div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem" }}>
+                  {productToDelete.marca} — {productToDelete.categoria}
+                </div>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: 0 }}>
+                Esta acción removerá el producto del catálogo general.
+              </p>
+            </div>
+
+            {deleteProductError && (
+              <div className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "20px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={16} />
+                <span>{deleteProductError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setProductToDelete(null)}
+                disabled={deleteProductLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  background: "#dc2626",
+                  borderColor: "#b91c1c",
+                  color: "#fff"
+                }}
+                onClick={handleConfirmDeleteProduct}
+                disabled={deleteProductLoading}
+              >
+                {deleteProductLoading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, Eliminar Producto</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

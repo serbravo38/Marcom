@@ -60,6 +60,21 @@ def actualizar_ubicacion(db: Session, db_location: models.Ubicacion, location_up
     db.refresh(db_location)
     return db_location
 
+def eliminar_ubicacion(db: Session, db_location: models.Ubicacion):
+    # Desvincular movimientos de stock donde fue origen
+    db.query(models.MovimientoStock).filter(models.MovimientoStock.ubicacion_origen_id == db_location.ubicacion_id).update({models.MovimientoStock.ubicacion_origen_id: None})
+    # Eliminar movimientos de stock donde fue destino
+    db.query(models.MovimientoStock).filter(models.MovimientoStock.ubicacion_destino_id == db_location.ubicacion_id).delete()
+    # Reasignar activos si existen a otra bodega o ubicación disponible
+    bodega = db.query(models.Ubicacion).filter(models.Ubicacion.es_bodega == True, models.Ubicacion.ubicacion_id != db_location.ubicacion_id).first()
+    if not bodega:
+        bodega = db.query(models.Ubicacion).filter(models.Ubicacion.ubicacion_id != db_location.ubicacion_id).first()
+    if bodega:
+        db.query(models.Activo).filter(models.Activo.ubicacion_actual_id == db_location.ubicacion_id).update({models.Activo.ubicacion_actual_id: bodega.ubicacion_id})
+    db.delete(db_location)
+    db.commit()
+    return True
+
 def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear]):
     nuevos = []
     for loc in locales:
@@ -139,6 +154,22 @@ def crear_producto(db: Session, product_in: schemas.CatalogoProductosCrear):
     db.refresh(db_product)
     return db_product
 
+def actualizar_producto(db: Session, db_product: models.CatalogoProductos, product_update: schemas.CatalogoProductosActualizar):
+    update_data = product_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_product, key, value)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+def eliminar_producto(db: Session, db_product: models.CatalogoProductos):
+    activos_count = db.query(models.Activo).filter(models.Activo.producto_id == db_product.producto_id).count()
+    if activos_count > 0:
+        raise ValueError(f"No se puede eliminar el producto porque tiene {activos_count} activo(s) físico(s) en inventario.")
+    db.delete(db_product)
+    db.commit()
+    return True
+
 # --- ASSET CRUD ---
 def obtener_activo_por_id(db: Session, activo_id: UUID):
     return db.query(models.Activo).filter(models.Activo.activo_id == activo_id).first()
@@ -169,6 +200,13 @@ def actualizar_activo(db: Session, db_asset: models.Activo, asset_update: schema
     db.commit()
     db.refresh(db_asset)
     return db_asset
+
+def eliminar_activo(db: Session, db_asset: models.Activo):
+    # Eliminar cualquier movimiento de stock asociado a este activo
+    db.query(models.MovimientoStock).filter(models.MovimientoStock.activo_id == db_asset.activo_id).delete()
+    db.delete(db_asset)
+    db.commit()
+    return True
 
 # --- STOCK MOVEMENT CRUD ---
 def obtener_movimientos_por_activo(db: Session, activo_id: UUID):
