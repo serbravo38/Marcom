@@ -27,7 +27,7 @@ services:
     container_name: marcom_auth_service
     restart: always
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       PORT: 8001
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-supersecretkeyforauthservice_change_me_in_production}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
@@ -53,7 +53,7 @@ services:
     container_name: marcom_inventory_service
     restart: always
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       PORT: 8002
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-supersecretkeyforauthservice_change_me_in_production}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
@@ -72,7 +72,7 @@ services:
     container_name: marcom_work_order_service
     restart: always
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       PORT: 8003
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-supersecretkeyforauthservice_change_me_in_production}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
@@ -91,7 +91,7 @@ services:
     container_name: marcom_billing_service
     restart: always
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       PORT: 8004
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-supersecretkeyforauthservice_change_me_in_production}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}

@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Database
 } from "lucide-react";
+import { api } from "../services/api";
 import "./Contacto.css";
 
 export const Contacto: React.FC = () => {
@@ -64,16 +65,20 @@ export const Contacto: React.FC = () => {
       list.unshift(payload);
       localStorage.setItem("marcom_consultas_contacto", JSON.stringify(list));
 
-      // 2. Intento de persistencia hacia el API Gateway (si el microservicio está activo)
+      // 2. Persistencia y despacho del correo a través del API Gateway
       try {
-        await fetch("/api/v1/contacto", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+        await api.post("/contacto", payload);
       } catch (backendErr) {
-        // En caso de que el backend no tenga aún la ruta /contacto, el ticket queda resguardado localmente
-        console.warn("Aviso: Mensaje guardado en contingencia local:", backendErr);
+        console.warn("Aviso: Despachando por ruta directa:", backendErr);
+        try {
+          await fetch("http://localhost:8000/api/v1/contacto", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        } catch (fallbackErr) {
+          console.warn("Aviso: Mensaje guardado en contingencia local:", fallbackErr);
+        }
       }
 
       setTimeout(() => {

@@ -280,3 +280,15 @@ VALUES (
   'ADMIN'
 )
 ON CONFLICT (correo) DO NOTHING;
+
+INSERT INTO esquema_auth_clientes.usuarios (rut, correo, clave_hash, nombre, apellido, rol)
+VALUES (
+  '18123456-7',
+  'ser.brav@google.com',
+  '$2b$12$rVB4f4b.BA4k4TUGwdY4eu17FZWYhLf588Sxm3z.p7a17pjoqP9re',
+  'Sergio',
+  'Bravo',
+  'ADMIN'
+)
+ON CONFLICT (correo) DO NOTHING;
+
