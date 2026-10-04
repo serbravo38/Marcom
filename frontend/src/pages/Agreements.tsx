@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Plus, X, Loader2, CreditCard, AlertCircle } from "lucide-react";
+import { Plus, X, Loader2, CreditCard, AlertCircle, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { authService } from "../services/auth";
 
 type Agreement = {
@@ -25,13 +25,21 @@ export const Agreements: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
+  // Modal Crear / Editar
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
   const [companyName, setCompanyName] = useState("");
   const [rut, setRut] = useState("");
   const [creditLimit, setCreditLimit] = useState(0);
+  const [usedCredit, setUsedCredit] = useState(0);
+  const [isActive, setIsActive] = useState(true);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  // Modal Confirmación Eliminar (Seguridad)
+  const [agreementToDelete, setAgreementToDelete] = useState<Agreement | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchAgreements = async () => {
     try {
@@ -50,32 +58,77 @@ export const Agreements: React.FC = () => {
     fetchAgreements();
   }, []);
 
-  const handleCreateAgreement = async (e: React.FormEvent) => {
+  const handleOpenCreateModal = () => {
+    setEditingAgreement(null);
+    setCompanyName("");
+    setRut("");
+    setCreditLimit(0);
+    setUsedCredit(0);
+    setIsActive(true);
+    setModalError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (agreement: Agreement) => {
+    setEditingAgreement(agreement);
+    setCompanyName(agreement.nombre_empresa);
+    setRut(agreement.rut);
+    setCreditLimit(agreement.limite_credito);
+    setUsedCredit(agreement.credito_usado);
+    setIsActive(agreement.activo);
+    setModalError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveAgreement = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
     setModalError(null);
 
     try {
-      await authService.createAgreement({
-        nombre_empresa: companyName,
-        rut,
-        limite_credito: Number(creditLimit),
-        credito_usado: 0,
-        activo: true
-      });
-      
-      // Reset form and close modal
-      setCompanyName("");
-      setRut("");
-      setCreditLimit(0);
+      if (editingAgreement) {
+        // Modo Edición (Solo ADMIN)
+        await authService.updateAgreement(editingAgreement.convenio_id, {
+          nombre_empresa: companyName.trim(),
+          rut: rut.trim(),
+          limite_credito: Number(creditLimit),
+          credito_usado: Number(usedCredit),
+          activo: isActive
+        });
+      } else {
+        // Modo Creación
+        await authService.createAgreement({
+          nombre_empresa: companyName.trim(),
+          rut: rut.trim(),
+          limite_credito: Number(creditLimit),
+          credito_usado: 0,
+          activo: true
+        });
+      }
+
       setIsModalOpen(false);
-      
-      // Refresh list
+      setEditingAgreement(null);
       fetchAgreements();
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo registrar el convenio.");
+      setModalError(err?.message || (editingAgreement ? "No se pudo actualizar el convenio." : "No se pudo registrar el convenio."));
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!agreementToDelete) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+
+    try {
+      await authService.deleteAgreement(agreementToDelete.convenio_id);
+      setAgreementToDelete(null);
+      fetchAgreements();
+    } catch (err: any) {
+      setDeleteError(err?.message || "Ocurrió un error al intentar eliminar el convenio.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -119,7 +172,7 @@ export const Agreements: React.FC = () => {
         <div className="panel-title">
           <span>{isClientRole ? "Mi Contrato Corporativo" : "Convenios Corporativos Registrados"}</span>
           {isAdmin && (
-            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+            <button className="btn-primary" onClick={handleOpenCreateModal}>
               <Plus size={16} />
               <span>Crear Convenio</span>
             </button>
@@ -150,6 +203,7 @@ export const Agreements: React.FC = () => {
                   <th>Límite de Crédito</th>
                   <th>Crédito Utilizado</th>
                   <th>Estado</th>
+                  {isAdmin && <th style={{ textAlign: "right" }}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -164,6 +218,52 @@ export const Agreements: React.FC = () => {
                         {agreement.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
+                    {isAdmin && (
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: "8px", justifyContent: "flex-end" }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{
+                              padding: "6px 12px",
+                              fontSize: "0.82rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              cursor: "pointer"
+                            }}
+                            onClick={() => handleOpenEditModal(agreement)}
+                            title="Editar este convenio"
+                          >
+                            <Pencil size={14} />
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{
+                              padding: "6px 12px",
+                              fontSize: "0.82rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              cursor: "pointer",
+                              background: "rgba(239, 68, 68, 0.12)",
+                              color: "#f87171",
+                              borderColor: "rgba(239, 68, 68, 0.3)"
+                            }}
+                            onClick={() => {
+                              setAgreementToDelete(agreement);
+                              setDeleteError(null);
+                            }}
+                            title="Eliminar este convenio"
+                          >
+                            <Trash2 size={14} />
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -172,7 +272,7 @@ export const Agreements: React.FC = () => {
         </div>
       </div>
 
-      {/* Create Agreement Modal */}
+      {/* Modal Crear / Editar Convenio */}
       {isModalOpen && createPortal(
         <div className="modal-overlay">
           <div className="modal-content glass-panel">
@@ -180,8 +280,8 @@ export const Agreements: React.FC = () => {
               <X size={20} />
             </button>
             <h3 style={{ marginBottom: "25px", fontWeight: 600, display: "flex", alignItems: "center", gap: "10px" }} className="accent-text-gradient">
-              <CreditCard size={20} />
-              <span>Nuevo Convenio de Cliente</span>
+              {editingAgreement ? <Pencil size={20} /> : <CreditCard size={20} />}
+              <span>{editingAgreement ? "Editar Convenio Corporativo" : "Nuevo Convenio de Cliente"}</span>
             </h3>
 
             {modalError && (
@@ -191,7 +291,7 @@ export const Agreements: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleCreateAgreement}>
+            <form onSubmit={handleSaveAgreement}>
               <div className="form-group">
                 <label>Nombre de la Empresa</label>
                 <input
@@ -216,7 +316,7 @@ export const Agreements: React.FC = () => {
                 />
               </div>
 
-              <div className="form-group" style={{ marginBottom: "30px" }}>
+              <div className="form-group">
                 <label>Límite de Crédito ($)</label>
                 <input
                   type="number"
@@ -228,7 +328,35 @@ export const Agreements: React.FC = () => {
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              {editingAgreement && (
+                <>
+                  <div className="form-group">
+                    <label>Crédito Utilizado ($)</label>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      placeholder="0"
+                      value={usedCredit}
+                      onChange={(e) => setUsedCredit(Number(e.target.value))}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: "25px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        onChange={(e) => setIsActive(e.target.checked)}
+                        style={{ width: "18px", height: "18px", accentColor: "hsl(var(--primary))" }}
+                      />
+                      <span style={{ fontSize: "0.95rem", fontWeight: 500 }}>Convenio Activo para Operaciones</span>
+                    </label>
+                  </div>
+                </>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
                 <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>
                   Cancelar
                 </button>
@@ -239,11 +367,103 @@ export const Agreements: React.FC = () => {
                       <span>Guardando...</span>
                     </>
                   ) : (
-                    <span>Registrar</span>
+                    <span>{editingAgreement ? "Guardar Cambios" : "Registrar"}</span>
                   )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Confirmación de Seguridad para Eliminar */}
+      {agreementToDelete && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "480px" }}>
+            <button className="modal-close" onClick={() => setAgreementToDelete(null)}>
+              <X size={20} />
+            </button>
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                marginBottom: "16px"
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
+                Confirmación de Seguridad
+              </h3>
+              <p style={{
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                color: "#f87171",
+                marginBottom: "12px",
+                lineHeight: 1.4
+              }}>
+                ¿Estás seguro que deseas eliminar este convenio?
+              </p>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}>
+                <div style={{ color: "#fff", fontWeight: 600 }}>{agreementToDelete.nombre_empresa}</div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem" }}>RUT: {agreementToDelete.rut}</div>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: 0 }}>
+                Esta acción removerá el convenio de la plataforma y desvinculará sus registros asociados.
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "20px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={16} />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setAgreementToDelete(null)}
+                disabled={deleteLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  background: "#dc2626",
+                  borderColor: "#b91c1c",
+                  color: "#fff"
+                }}
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, Eliminar Convenio</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

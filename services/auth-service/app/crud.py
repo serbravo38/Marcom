@@ -254,6 +254,12 @@ def actualizar_convenio(db: Session, db_convenio: models.Convenio, convenio_upda
     db.refresh(db_convenio)
     return db_convenio
 
+def eliminar_convenio(db: Session, db_convenio: models.Convenio):
+    # Desvincular perfiles asociados para integridad referencial limpia
+    db.query(models.PerfilCliente).filter(models.PerfilCliente.convenio_id == db_convenio.convenio_id).update({models.PerfilCliente.convenio_id: None})
+    db.delete(db_convenio)
+    db.commit()
+
 # --- CRUD PERFILES ---
 def obtener_perfil_por_usuario_id(db: Session, usuario_id: UUID):
     return db.query(models.PerfilCliente).filter(models.PerfilCliente.usuario_id == usuario_id).first()

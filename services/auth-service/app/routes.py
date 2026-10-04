@@ -550,6 +550,7 @@ def get_agreement_by_id(
     return conv
 
 @router.patch("/convenios/{convenio_id}", response_model=schemas.ConvenioRespuesta)
+@router.put("/convenios/{convenio_id}", response_model=schemas.ConvenioRespuesta)
 def update_agreement(
     convenio_id: UUID,
     agreement_update: schemas.ConvenioActualizar,
@@ -559,7 +560,31 @@ def update_agreement(
     conv = crud.obtener_convenio_por_id(db, convenio_id=convenio_id)
     if not conv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
+    
+    if agreement_update.rut and agreement_update.rut != conv.rut:
+        existente = crud.obtener_convenio_por_rut(db, rut=agreement_update.rut)
+        if existente and existente.convenio_id != convenio_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Ya existe otro convenio registrado con este RUT."
+            )
+
     return crud.actualizar_convenio(db, db_convenio=conv, convenio_update=agreement_update)
+
+@router.delete("/convenios/{convenio_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_agreement(
+    convenio_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    conv = crud.obtener_convenio_por_id(db, convenio_id=convenio_id)
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
+    
+    crud.eliminar_convenio(db=db, db_convenio=conv)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 
 
 # --- CONTACTO Y FORMULARIO WEB ---

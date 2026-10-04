@@ -132,6 +132,14 @@ export const authService = {
     return api.post<Convenio>("/convenios", datosConvenio);
   },
 
+  updateAgreement: async (convenioId: string | number, datosConvenio: any): Promise<Convenio> => {
+    return api.patch<Convenio>(`/convenios/${convenioId}`, datosConvenio);
+  },
+
+  deleteAgreement: async (convenioId: string | number): Promise<any> => {
+    return api.delete(`/convenios/${convenioId}`);
+  },
+
   getAgreements: async (): Promise<Convenio[]> => {
     return api.get<Convenio[]>("/convenios");
   }
