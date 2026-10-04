@@ -14,7 +14,7 @@ class EstadoOTEnum(str, enum.Enum):
 
 class OrdenTrabajo(Base):
     __tablename__ = "ordenes_trabajo"
-    __table_args__ = {"schema": "ordenes_trabajo"}
+    __table_args__ = {"schema": "esquema_ordenes_trabajo"}
 
     orden_trabajo_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     numero_orden = Column(String(20), unique=True, nullable=False)
@@ -22,7 +22,7 @@ class OrdenTrabajo(Base):
     ubicacion_id = Column(UUID(as_uuid=True), nullable=False)
     tecnico_asignado_id = Column(UUID(as_uuid=True), nullable=True)
     estado = Column(
-        Enum(EstadoOTEnum, name="estado_ot_enum", schema="ordenes_trabajo"),
+        Enum(EstadoOTEnum, name="estado_ot_enum", schema="esquema_ordenes_trabajo"),
         nullable=False,
         default=EstadoOTEnum.PENDIENTE,
         server_default="PENDIENTE"
@@ -38,12 +38,12 @@ class OrdenTrabajo(Base):
 
 class ActivoOrdenTrabajo(Base):
     __tablename__ = "activos_orden_trabajo"
-    __table_args__ = {"schema": "ordenes_trabajo"}
+    __table_args__ = {"schema": "esquema_ordenes_trabajo"}
 
     activo_ot_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     orden_trabajo_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("ordenes_trabajo.ordenes_trabajo.orden_trabajo_id", ondelete="CASCADE"),
+        ForeignKey("esquema_ordenes_trabajo.ordenes_trabajo.orden_trabajo_id", ondelete="CASCADE"),
         nullable=False
     )
     activo_instalado_id = Column(UUID(as_uuid=True), nullable=True)
@@ -55,12 +55,12 @@ class ActivoOrdenTrabajo(Base):
 
 class EvidenciaTerreno(Base):
     __tablename__ = "evidencias_terreno"
-    __table_args__ = {"schema": "ordenes_trabajo"}
+    __table_args__ = {"schema": "esquema_ordenes_trabajo"}
 
     evidencia_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     orden_trabajo_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("ordenes_trabajo.ordenes_trabajo.orden_trabajo_id", ondelete="CASCADE"),
+        ForeignKey("esquema_ordenes_trabajo.ordenes_trabajo.orden_trabajo_id", ondelete="CASCADE"),
         nullable=False
     )
     url_imagen = Column(String, nullable=False)

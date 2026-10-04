@@ -14,7 +14,7 @@ class RolUsuario(str, enum.Enum):
 
 class Usuario(Base):
     __tablename__ = "usuarios"
-    __table_args__ = {"schema": "auth_clientes"}
+    __table_args__ = {"schema": "esquema_auth_clientes"}
 
     usuario_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     rut = Column(String(12), unique=True, nullable=False)
@@ -23,7 +23,7 @@ class Usuario(Base):
     nombre = Column(String(100), nullable=False)
     apellido = Column(String(100), nullable=False)
     rol = Column(
-        Enum(RolUsuario, name="rol_usuario", schema="auth_clientes"),
+        Enum(RolUsuario, name="rol_usuario", schema="esquema_auth_clientes"),
         nullable=False,
         default=RolUsuario.CLIENTE_ESTANDAR,
         server_default="CLIENTE_ESTANDAR"
@@ -42,7 +42,7 @@ class Usuario(Base):
 
 class Convenio(Base):
     __tablename__ = "convenios"
-    __table_args__ = {"schema": "auth_clientes"}
+    __table_args__ = {"schema": "esquema_auth_clientes"}
 
     convenio_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     nombre_empresa = Column(String(150), nullable=False)
@@ -57,18 +57,18 @@ class Convenio(Base):
 
 class PerfilCliente(Base):
     __tablename__ = "perfiles_clientes"
-    __table_args__ = {"schema": "auth_clientes"}
+    __table_args__ = {"schema": "esquema_auth_clientes"}
 
     perfil_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     usuario_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("auth_clientes.usuarios.usuario_id", ondelete="CASCADE"),
+        ForeignKey("esquema_auth_clientes.usuarios.usuario_id", ondelete="CASCADE"),
         unique=True,
         nullable=False
     )
     convenio_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("auth_clientes.convenios.convenio_id", ondelete="SET NULL"),
+        ForeignKey("esquema_auth_clientes.convenios.convenio_id", ondelete="SET NULL"),
         nullable=True
     )
     telefono = Column(String(20), nullable=True)

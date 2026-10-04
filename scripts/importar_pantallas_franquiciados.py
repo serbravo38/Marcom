@@ -183,7 +183,7 @@ def sincronizar_directo_db(locales):
         
         # 1. Asegurar columnas en tabla ubicaciones
         cur.execute("""
-            ALTER TABLE inventario.ubicaciones
+            ALTER TABLE esquema_inventario.ubicaciones
             ADD COLUMN IF NOT EXISTS zona VARCHAR(50),
             ADD COLUMN IF NOT EXISTS provincia VARCHAR(100),
             ADD COLUMN IF NOT EXISTS cantidad_pantallas INTEGER DEFAULT 0,
@@ -192,13 +192,13 @@ def sincronizar_directo_db(locales):
         """)
         
         # 2. Buscar o crear convenio Copec S.A.
-        cur.execute("SELECT convenio_id FROM auth_clientes.convenios WHERE LOWER(nombre_empresa) LIKE '%copec%' LIMIT 1;")
+        cur.execute("SELECT convenio_id FROM esquema_auth_clientes.convenios WHERE LOWER(nombre_empresa) LIKE '%copec%' LIMIT 1;")
         row = cur.fetchone()
         if row:
             convenio_id = row[0]
         else:
             cur.execute("""
-                INSERT INTO auth_clientes.convenios (nombre_empresa, rut, limite_credito, credito_usado, activo)
+                INSERT INTO esquema_auth_clientes.convenios (nombre_empresa, rut, limite_credito, credito_usado, activo)
                 VALUES ('Copec S.A.', '99.888.777-1', 1000000.0, 0.0, TRUE)
                 RETURNING convenio_id;
             """)
@@ -211,7 +211,7 @@ def sincronizar_directo_db(locales):
         
         for loc in locales:
             cur.execute("""
-                INSERT INTO inventario.ubicaciones (
+                INSERT INTO esquema_inventario.ubicaciones (
                     codigo_local, nombre, direccion, zona, region, provincia, comuna,
                     cantidad_pantallas, precio_instalacion_uf, precio_transporte_uf,
                     es_bodega, convenio_id, activo
@@ -227,7 +227,7 @@ def sincronizar_directo_db(locales):
                     cantidad_pantallas = EXCLUDED.cantidad_pantallas,
                     precio_instalacion_uf = EXCLUDED.precio_instalacion_uf,
                     precio_transporte_uf = EXCLUDED.precio_transporte_uf,
-                    convenio_id = COALESCE(inventario.ubicaciones.convenio_id, EXCLUDED.convenio_id),
+                    convenio_id = COALESCE(esquema_inventario.ubicaciones.convenio_id, EXCLUDED.convenio_id),
                     actualizado_en = CURRENT_TIMESTAMP;
             """, (
                 loc["codigo_local"], loc["nombre"], loc["direccion"], loc["zona"],

@@ -8,20 +8,20 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =============================================================================
 -- ESQUEMA 1: USUARIOS Y CLIENTES (Autenticación y Convenios)
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS auth_clientes;
+CREATE SCHEMA IF NOT EXISTS esquema_auth_clientes;
 
-CREATE TYPE auth_clientes.rol_usuario AS ENUM (
+CREATE TYPE esquema_auth_clientes.rol_usuario AS ENUM (
     'ADMIN', 'JEFE_BODEGA', 'TECNICO_TERRENO', 'CLIENTE_CONVENIO', 'CLIENTE_ESTANDAR'
 );
 
-CREATE TABLE auth_clientes.usuarios (
+CREATE TABLE esquema_auth_clientes.usuarios (
     usuario_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     rut VARCHAR(12) UNIQUE NOT NULL,
     correo VARCHAR(150) UNIQUE NOT NULL,
     clave_hash VARCHAR(255) NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
-    rol auth_clientes.rol_usuario NOT NULL DEFAULT 'CLIENTE_ESTANDAR',
+    rol esquema_auth_clientes.rol_usuario NOT NULL DEFAULT 'CLIENTE_ESTANDAR',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     intentos_fallidos INTEGER NOT NULL DEFAULT 0,
     bloqueado_hasta TIMESTAMP WITH TIME ZONE DEFAULT NULL,
@@ -32,9 +32,9 @@ CREATE TABLE auth_clientes.usuarios (
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE auth_clientes.convenios (
+CREATE TABLE esquema_auth_clientes.convenios (
     convenio_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre_empresa VARCHAR(150) NOT NULL, -- ej: Copec S.A., Arcoprime Ltda.
+    nombre_empresa VARCHAR(150) NOT NULL,
     rut VARCHAR(12) UNIQUE NOT NULL,
     limite_credito NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     credito_usado NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
@@ -42,10 +42,10 @@ CREATE TABLE auth_clientes.convenios (
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE auth_clientes.perfiles_clientes (
+CREATE TABLE esquema_auth_clientes.perfiles_clientes (
     perfil_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id UUID UNIQUE NOT NULL REFERENCES auth_clientes.usuarios(usuario_id) ON DELETE CASCADE,
-    convenio_id UUID REFERENCES auth_clientes.convenios(convenio_id) ON DELETE SET NULL,
+    usuario_id UUID UNIQUE NOT NULL REFERENCES esquema_auth_clientes.usuarios(usuario_id) ON DELETE CASCADE,
+    convenio_id UUID REFERENCES esquema_auth_clientes.convenios(convenio_id) ON DELETE SET NULL,
     telefono VARCHAR(20),
     direccion TEXT,
     region VARCHAR(100),
@@ -55,104 +55,99 @@ CREATE TABLE auth_clientes.perfiles_clientes (
 -- =============================================================================
 -- ESQUEMA 2: INVENTARIO, BODEGA Y LOCALES
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS inventario;
+CREATE SCHEMA IF NOT EXISTS esquema_inventario;
 
-CREATE TYPE inventario.estado_activo_enum AS ENUM (
+CREATE TYPE esquema_inventario.estado_activo_enum AS ENUM (
     'NUEVO', 'USADO_BUEN_ESTADO', 'DEFECTUOSO', 'EN_TRANSITO', 'DADO_DE_BAJA'
 );
 
-CREATE TABLE inventario.ubicaciones (
+CREATE TABLE esquema_inventario.ubicaciones (
     ubicacion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo_local VARCHAR(50) UNIQUE, -- Código de identificación del local / EDS (ej: '10097', 'COP-042', 'PRONTO-102')
-    nombre VARCHAR(150) NOT NULL,    -- ej: "EDS 10097 - ALTO HOSPICIO", "Tienda Pronto Copec Pudahuel"
+    codigo_local VARCHAR(50) UNIQUE,
+    nombre VARCHAR(150) NOT NULL,
     direccion TEXT NOT NULL,
-    zona VARCHAR(50),                -- ej: "OZN", "OZC", "OS", "OZS"
+    zona VARCHAR(50),
     region VARCHAR(100) NOT NULL,
-    provincia VARCHAR(100),          -- ej: "IQUIQUE", "ANTOFAGASTA", "SANTIAGO"
+    provincia VARCHAR(100),
     comuna VARCHAR(100),
     cantidad_pantallas INTEGER DEFAULT 0,
     precio_instalacion_uf NUMERIC(10, 2) DEFAULT 0.00,
     precio_transporte_uf NUMERIC(10, 2) DEFAULT 0.00,
     es_bodega BOOLEAN NOT NULL DEFAULT FALSE,
-    
-    -- Relación con cliente de convenio si corresponde
-    convenio_id UUID REFERENCES auth_clientes.convenios(convenio_id) ON DELETE SET NULL,
-    
-    -- Información del Encargado del Local
+    convenio_id UUID REFERENCES esquema_auth_clientes.convenios(convenio_id) ON DELETE SET NULL,
     nombre_encargado VARCHAR(150),
     telefono_encargado VARCHAR(20),
     correo_encargado VARCHAR(150),
-    
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE inventario.catalogo_productos (
+CREATE TABLE esquema_inventario.catalogo_productos (
     producto_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sku VARCHAR(50) UNIQUE NOT NULL,
-    nombre VARCHAR(150) NOT NULL, -- ej: "Monitor Profesional 65", "Monitor en Placa >100", "Impresora Comanda"
-    marca VARCHAR(100) NOT NULL, -- ej: "Samsung"
-    categoria VARCHAR(100) NOT NULL, -- ej: "Monitores", "POS", "Notebooks", "UPS"
-    pulgadas NUMERIC(5, 2), -- 10.00 a 65.00, >100.00
+    nombre VARCHAR(150) NOT NULL,
+    marca VARCHAR(100) NOT NULL,
+    categoria VARCHAR(100) NOT NULL,
+    pulgadas NUMERIC(5, 2),
     descripcion TEXT,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE inventario.activos (
+CREATE TABLE esquema_inventario.activos (
     activo_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    producto_id UUID NOT NULL REFERENCES inventario.catalogo_productos(producto_id),
+    producto_id UUID NOT NULL REFERENCES esquema_inventario.catalogo_productos(producto_id),
     numero_serie VARCHAR(100) UNIQUE NOT NULL,
     codigo_qr VARCHAR(255) UNIQUE,
-    estado_actual inventario.estado_activo_enum NOT NULL DEFAULT 'NUEVO',
-    ubicacion_actual_id UUID NOT NULL REFERENCES inventario.ubicaciones(ubicacion_id),
+    estado_actual esquema_inventario.estado_activo_enum NOT NULL DEFAULT 'NUEVO',
+    ubicacion_actual_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE inventario.movimientos_stock (
+CREATE TABLE esquema_inventario.movimientos_stock (
     movimiento_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    activo_id UUID NOT NULL REFERENCES inventario.activos(activo_id),
-    ubicacion_origen_id UUID REFERENCES inventario.ubicaciones(ubicacion_id),
-    ubicacion_destino_id UUID NOT NULL REFERENCES inventario.ubicaciones(ubicacion_id),
-    usuario_movimiento_id UUID NOT NULL REFERENCES auth_clientes.usuarios(usuario_id),
-    motivo TEXT NOT NULL, -- ej: "Instalación local nuevo", "Retiro por falla", "Despacho a región"
+    activo_id UUID NOT NULL REFERENCES esquema_inventario.activos(activo_id),
+    ubicacion_origen_id UUID REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
+    ubicacion_destino_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
+    usuario_movimiento_id UUID NOT NULL REFERENCES esquema_auth_clientes.usuarios(usuario_id),
+    motivo TEXT NOT NULL,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =============================================================================
 -- ESQUEMA 3: PROYECTOS Y ÓRDENES DE TRABAJO EN TERRENO (OT)
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS ordenes_trabajo;
+CREATE SCHEMA IF NOT EXISTS esquema_ordenes_trabajo;
 
-CREATE TYPE ordenes_trabajo.estado_ot_enum AS ENUM (
+CREATE TYPE esquema_ordenes_trabajo.estado_ot_enum AS ENUM (
     'PENDIENTE', 'ASIGNADA', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA'
 );
 
-CREATE TABLE ordenes_trabajo.ordenes_trabajo (
+CREATE TABLE esquema_ordenes_trabajo.ordenes_trabajo (
     orden_trabajo_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     numero_orden VARCHAR(20) UNIQUE NOT NULL,
-    convenio_cliente_id UUID REFERENCES auth_clientes.convenios(convenio_id),
-    ubicacion_id UUID NOT NULL REFERENCES inventario.ubicaciones(ubicacion_id),
-    tecnico_asignado_id UUID REFERENCES auth_clientes.usuarios(usuario_id),
-    estado ordenes_trabajo.estado_ot_enum NOT NULL DEFAULT 'PENDIENTE',
+    convenio_cliente_id UUID REFERENCES esquema_auth_clientes.convenios(convenio_id),
+    ubicacion_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
+    tecnico_asignado_id UUID REFERENCES esquema_auth_clientes.usuarios(usuario_id),
+    estado esquema_ordenes_trabajo.estado_ot_enum NOT NULL DEFAULT 'PENDIENTE',
     fecha_programada TIMESTAMP WITH TIME ZONE NOT NULL,
     fecha_termino TIMESTAMP WITH TIME ZONE,
     notas TEXT,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ordenes_trabajo.activos_orden_trabajo (
+CREATE TABLE esquema_ordenes_trabajo.activos_orden_trabajo (
     activo_ot_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    orden_trabajo_id UUID NOT NULL REFERENCES ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE CASCADE,
-    activo_instalado_id UUID REFERENCES inventario.activos(activo_id),
-    activo_retirado_id UUID REFERENCES inventario.activos(activo_id),
-    tipo_accion VARCHAR(50) NOT NULL -- ej: 'INSTALACION_NUEVA', 'REEMPLAZO_POR_FALLA', 'RETIRO'
+    orden_trabajo_id UUID NOT NULL REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE CASCADE,
+    activo_instalado_id UUID REFERENCES esquema_inventario.activos(activo_id),
+    activo_retirado_id UUID REFERENCES esquema_inventario.activos(activo_id),
+    tipo_accion VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE ordenes_trabajo.evidencias_terreno (
+CREATE TABLE esquema_ordenes_trabajo.evidencias_terreno (
     evidencia_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    orden_trabajo_id UUID NOT NULL REFERENCES ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE CASCADE,
+    orden_trabajo_id UUID NOT NULL REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE CASCADE,
     url_imagen TEXT NOT NULL,
     url_firma TEXT,
     comentarios TEXT,
@@ -162,58 +157,57 @@ CREATE TABLE ordenes_trabajo.evidencias_terreno (
 -- =============================================================================
 -- ESQUEMA 4: FACTURACIÓN Y PAGOS (Flow + Convenios + SII DTE)
 -- =============================================================================
-CREATE SCHEMA IF NOT EXISTS facturacion;
+CREATE SCHEMA IF NOT EXISTS esquema_facturacion;
 
-CREATE TYPE facturacion.metodo_pago_enum AS ENUM (
+CREATE TYPE esquema_facturacion.metodo_pago_enum AS ENUM (
     'PASARELA_FLOW', 'PASARELA_WEBPAY', 'CREDITO_CONVENIO'
 );
 
-CREATE TYPE facturacion.estado_pago_enum AS ENUM (
+CREATE TYPE esquema_facturacion.estado_pago_enum AS ENUM (
     'PENDIENTE', 'APROBADO', 'RECHAZADO', 'REEMBOLSADO'
 );
 
-CREATE TYPE facturacion.tipo_dte_enum AS ENUM (
+CREATE TYPE esquema_facturacion.tipo_dte_enum AS ENUM (
     'FACTURA_ELECTRONICA', 'GUIA_DESPACHO', 'BOLETA_ELECTRONICA'
 );
 
-CREATE TABLE facturacion.pedidos (
+CREATE TABLE esquema_facturacion.pedidos (
     pedido_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id UUID NOT NULL REFERENCES auth_clientes.usuarios(usuario_id),
+    usuario_id UUID NOT NULL REFERENCES esquema_auth_clientes.usuarios(usuario_id),
     monto_total NUMERIC(12, 2) NOT NULL,
-    metodo_pago facturacion.metodo_pago_enum NOT NULL,
-    estado_pago facturacion.estado_pago_enum NOT NULL DEFAULT 'PENDIENTE',
+    metodo_pago esquema_facturacion.metodo_pago_enum NOT NULL,
+    estado_pago esquema_facturacion.estado_pago_enum NOT NULL DEFAULT 'PENDIENTE',
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE facturacion.pagos (
+CREATE TABLE esquema_facturacion.pagos (
     pago_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    pedido_id UUID NOT NULL REFERENCES facturacion.pedidos(pedido_id),
-    transaccion_pasarela_id VARCHAR(100), -- Token o Order Flow
+    pedido_id UUID NOT NULL REFERENCES esquema_facturacion.pedidos(pedido_id),
+    transaccion_pasarela_id VARCHAR(100),
     monto NUMERIC(12, 2) NOT NULL,
-    estado facturacion.estado_pago_enum NOT NULL,
+    estado esquema_facturacion.estado_pago_enum NOT NULL,
     payload_respuesta JSONB,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE facturacion.documentos_dte (
+CREATE TABLE esquema_facturacion.documentos_dte (
     dte_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    pedido_id UUID NOT NULL REFERENCES facturacion.pedidos(pedido_id),
-    tipo_dte facturacion.tipo_dte_enum NOT NULL,
+    pedido_id UUID NOT NULL REFERENCES esquema_facturacion.pedidos(pedido_id),
+    tipo_dte esquema_facturacion.tipo_dte_enum NOT NULL,
     folio_sii INT,
     url_pdf TEXT,
     url_xml TEXT,
-    estado_sii VARCHAR(50) DEFAULT 'PENDIENTE', -- ej: 'ACEPTADO', 'RECHAZADO'
+    estado_sii VARCHAR(50) DEFAULT 'PENDIENTE',
     emitido_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE facturacion.cotizaciones (
+CREATE TABLE esquema_facturacion.cotizaciones (
     cotizacion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     numero_cotizacion VARCHAR(50) UNIQUE NOT NULL,
-    convenio_id UUID NOT NULL REFERENCES auth_clientes.convenios(convenio_id) ON DELETE CASCADE,
-    ubicacion_id UUID NOT NULL REFERENCES inventario.ubicaciones(ubicacion_id) ON DELETE RESTRICT,
-    usuario_solicitante_id UUID REFERENCES auth_clientes.usuarios(usuario_id) ON DELETE SET NULL,
-    
-    -- Parámetros y cálculos internos
+    convenio_id UUID NOT NULL REFERENCES esquema_auth_clientes.convenios(convenio_id) ON DELETE CASCADE,
+    ubicacion_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id) ON DELETE RESTRICT,
+    usuario_solicitante_id UUID REFERENCES esquema_auth_clientes.usuarios(usuario_id) ON DELETE SET NULL,
+
     tipo_soporte VARCHAR(100) NOT NULL DEFAULT 'ESTANDAR_CONVENIO',
     costo_soporte NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     distancia_km NUMERIC(8, 2) NOT NULL DEFAULT 0.00,
@@ -224,27 +218,25 @@ CREATE TABLE facturacion.cotizaciones (
     subtotal_neto NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     monto_iva NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     monto_total NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    
-    -- Solicitud de Aprobación y Orden de Compra
+
     fecha_solicitud_aprobacion TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE_APROBACION', -- 'BORRADOR', 'PENDIENTE_APROBACION', 'APROBADA', 'RECHAZADA'
+    estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE_APROBACION',
     orden_compra_numero VARCHAR(100),
     orden_compra_adjunto TEXT,
     fecha_aprobacion TIMESTAMP WITH TIME ZONE,
     notas TEXT,
-    
-    -- Vínculos generados tras aprobación
-    orden_trabajo_id UUID REFERENCES ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE SET NULL,
-    pedido_id UUID REFERENCES facturacion.pedidos(pedido_id) ON DELETE SET NULL,
-    
+
+    orden_trabajo_id UUID REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE SET NULL,
+    pedido_id UUID REFERENCES esquema_facturacion.pedidos(pedido_id) ON DELETE SET NULL,
+
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE facturacion.cotizaciones_items (
+CREATE TABLE esquema_facturacion.cotizaciones_items (
     item_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    cotizacion_id UUID NOT NULL REFERENCES facturacion.cotizaciones(cotizacion_id) ON DELETE CASCADE,
-    producto_id UUID NOT NULL REFERENCES inventario.catalogo_productos(producto_id) ON DELETE RESTRICT,
+    cotizacion_id UUID NOT NULL REFERENCES esquema_facturacion.cotizaciones(cotizacion_id) ON DELETE CASCADE,
+    producto_id UUID NOT NULL REFERENCES esquema_inventario.catalogo_productos(producto_id) ON DELETE RESTRICT,
     cantidad INTEGER NOT NULL DEFAULT 1,
     precio_unitario NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     subtotal NUMERIC(12, 2) NOT NULL DEFAULT 0.00
@@ -253,35 +245,36 @@ CREATE TABLE facturacion.cotizaciones_items (
 -- =============================================================================
 -- ÍNDICES PARA CONSULTAS, FILTROS Y RENDIMIENTO
 -- =============================================================================
-CREATE INDEX idx_ubicaciones_codigo ON inventario.ubicaciones(codigo_local);
-CREATE INDEX idx_ubicaciones_region ON inventario.ubicaciones(region);
-CREATE INDEX idx_ubicaciones_zona ON inventario.ubicaciones(zona);
-CREATE INDEX idx_ubicaciones_provincia ON inventario.ubicaciones(provincia);
-CREATE INDEX idx_ubicaciones_comuna ON inventario.ubicaciones(comuna);
-CREATE INDEX idx_ubicaciones_convenio ON inventario.ubicaciones(convenio_id);
+CREATE INDEX idx_ubicaciones_codigo ON esquema_inventario.ubicaciones(codigo_local);
+CREATE INDEX idx_ubicaciones_region ON esquema_inventario.ubicaciones(region);
+CREATE INDEX idx_ubicaciones_zona ON esquema_inventario.ubicaciones(zona);
+CREATE INDEX idx_ubicaciones_provincia ON esquema_inventario.ubicaciones(provincia);
+CREATE INDEX idx_ubicaciones_comuna ON esquema_inventario.ubicaciones(comuna);
+CREATE INDEX idx_ubicaciones_convenio ON esquema_inventario.ubicaciones(convenio_id);
 
-CREATE INDEX idx_activos_serie ON inventario.activos(numero_serie);
-CREATE INDEX idx_activos_ubicacion ON inventario.activos(ubicacion_actual_id);
-CREATE INDEX idx_activos_estado ON inventario.activos(estado_actual);
-CREATE INDEX idx_movimientos_activo ON inventario.movimientos_stock(activo_id);
+CREATE INDEX idx_activos_serie ON esquema_inventario.activos(numero_serie);
+CREATE INDEX idx_activos_ubicacion ON esquema_inventario.activos(ubicacion_actual_id);
+CREATE INDEX idx_activos_estado ON esquema_inventario.activos(estado_actual);
+CREATE INDEX idx_movimientos_activo ON esquema_inventario.movimientos_stock(activo_id);
 
-CREATE INDEX idx_ordenes_estado ON ordenes_trabajo.ordenes_trabajo(estado);
-CREATE INDEX idx_ordenes_tecnico ON ordenes_trabajo.ordenes_trabajo(tecnico_asignado_id);
-CREATE INDEX idx_ordenes_ubicacion ON ordenes_trabajo.ordenes_trabajo(ubicacion_id);
+CREATE INDEX idx_ordenes_estado ON esquema_ordenes_trabajo.ordenes_trabajo(estado);
+CREATE INDEX idx_ordenes_tecnico ON esquema_ordenes_trabajo.ordenes_trabajo(tecnico_asignado_id);
+CREATE INDEX idx_ordenes_ubicacion ON esquema_ordenes_trabajo.ordenes_trabajo(ubicacion_id);
 
-CREATE INDEX idx_dte_pedido ON facturacion.documentos_dte(pedido_id);
-CREATE INDEX idx_pagos_pedido ON facturacion.pagos(pedido_id);
-CREATE INDEX idx_cotizaciones_convenio ON facturacion.cotizaciones(convenio_id);
-CREATE INDEX idx_cotizaciones_ubicacion ON facturacion.cotizaciones(ubicacion_id);
-CREATE INDEX idx_cotizaciones_estado ON facturacion.cotizaciones(estado);
+CREATE INDEX idx_dte_pedido ON esquema_facturacion.documentos_dte(pedido_id);
+CREATE INDEX idx_pagos_pedido ON esquema_facturacion.pagos(pedido_id);
+CREATE INDEX idx_cotizaciones_convenio ON esquema_facturacion.cotizaciones(convenio_id);
+CREATE INDEX idx_cotizaciones_ubicacion ON esquema_facturacion.cotizaciones(ubicacion_id);
+CREATE INDEX idx_cotizaciones_estado ON esquema_facturacion.cotizaciones(estado);
+
 -- =============================================================================
 -- INSERCIÓN DE DATOS SEMILLA (Seed Data)
 -- =============================================================================
-INSERT INTO auth_clientes.usuarios (rut, correo, clave_hash, nombre, apellido, rol)
+INSERT INTO esquema_auth_clientes.usuarios (rut, correo, clave_hash, nombre, apellido, rol)
 VALUES (
   '12345678-9',
   'admin@marcom.cl',
-  '$2b$12$0kJpQwNGdXl.HYxg.JJAJOGGDUAPHPFf1TZiexXcHf840hB7icM/G', -- password: admin123
+  '$2b$12$0kJpQwNGdXl.HYxg.JJAJOGGDUAPHPFf1TZiexXcHf840hB7icM/G',
   'Admin',
   'Principal',
   'ADMIN'

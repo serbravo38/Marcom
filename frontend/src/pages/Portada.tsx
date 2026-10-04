@@ -859,7 +859,7 @@ export const Portada: React.FC = () => {
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "32px", flexWrap: "wrap", color: "#94a3b8", fontSize: "0.92rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "24px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Mail size={16} color="#38bdf8" />
-                <span>contacto@marcom.cl</span>
+                <span>contacto@marcomchile.cl</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Phone size={16} color="#38bdf8" />

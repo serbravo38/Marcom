@@ -146,3 +146,23 @@ class SolicitudDesactivarMFA(BaseModel):
     codigo_totp: str = Field(..., description="Código de 6 dígitos o código de respaldo")
 
 
+# --- CONTACTO Y CORREO SCHEMAS ---
+class SolicitudContacto(BaseModel):
+    ticket_id: Optional[str] = None
+    fecha: Optional[str] = None
+    nombre: str
+    empresa: Optional[str] = "Particular / No especificado"
+    correo: EmailStr
+    telefono: Optional[str] = "No especificado"
+    tipo_consulta: str
+    mensaje: str
+    destino_notificacion: Optional[str] = "contacto@marcomchile.cl"
+
+class RespuestaContacto(BaseModel):
+    status: str
+    ticket_id: str
+    mensaje: str
+    destino: str
+
+
+

@@ -23,17 +23,17 @@ class TipoDTEEnum(str, enum.Enum):
 
 class Pedido(Base):
     __tablename__ = "pedidos"
-    __table_args__ = {"schema": "facturacion"}
+    __table_args__ = {"schema": "esquema_facturacion"}
 
     pedido_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     usuario_id = Column(UUID(as_uuid=True), nullable=False)
     monto_total = Column(Numeric(12, 2), nullable=False)
     metodo_pago = Column(
-        Enum(MetodoPagoEnum, name="metodo_pago_enum", schema="facturacion"),
+        Enum(MetodoPagoEnum, name="metodo_pago_enum", schema="esquema_facturacion"),
         nullable=False
     )
     estado_pago = Column(
-        Enum(EstadoPagoEnum, name="estado_pago_enum", schema="facturacion"),
+        Enum(EstadoPagoEnum, name="estado_pago_enum", schema="esquema_facturacion"),
         nullable=False,
         default=EstadoPagoEnum.PENDIENTE,
         server_default="PENDIENTE"
@@ -46,18 +46,18 @@ class Pedido(Base):
 
 class Pago(Base):
     __tablename__ = "pagos"
-    __table_args__ = {"schema": "facturacion"}
+    __table_args__ = {"schema": "esquema_facturacion"}
 
     pago_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     pedido_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("facturacion.pedidos.pedido_id"),
+        ForeignKey("esquema_facturacion.pedidos.pedido_id"),
         nullable=False
     )
     transaccion_pasarela_id = Column(String(100), nullable=True)
     monto = Column(Numeric(12, 2), nullable=False)
     estado = Column(
-        Enum(EstadoPagoEnum, name="estado_pago_enum", schema="facturacion"),
+        Enum(EstadoPagoEnum, name="estado_pago_enum", schema="esquema_facturacion"),
         nullable=False
     )
     payload_respuesta = Column(JSONB, nullable=True)
@@ -68,16 +68,16 @@ class Pago(Base):
 
 class DocumentoDTE(Base):
     __tablename__ = "documentos_dte"
-    __table_args__ = {"schema": "facturacion"}
+    __table_args__ = {"schema": "esquema_facturacion"}
 
     dte_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     pedido_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("facturacion.pedidos.pedido_id"),
+        ForeignKey("esquema_facturacion.pedidos.pedido_id"),
         nullable=False
     )
     tipo_dte = Column(
-        Enum(TipoDTEEnum, name="tipo_dte_enum", schema="facturacion"),
+        Enum(TipoDTEEnum, name="tipo_dte_enum", schema="esquema_facturacion"),
         nullable=False
     )
     folio_sii = Column(Integer, nullable=True)
@@ -91,7 +91,7 @@ class DocumentoDTE(Base):
 
 class Cotizacion(Base):
     __tablename__ = "cotizaciones"
-    __table_args__ = {"schema": "facturacion"}
+    __table_args__ = {"schema": "esquema_facturacion"}
 
     cotizacion_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     numero_cotizacion = Column(String(50), unique=True, nullable=False)
@@ -123,7 +123,7 @@ class Cotizacion(Base):
     orden_trabajo_id = Column(UUID(as_uuid=True), nullable=True)
     pedido_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("facturacion.pedidos.pedido_id"),
+        ForeignKey("esquema_facturacion.pedidos.pedido_id"),
         nullable=True
     )
     
@@ -136,12 +136,12 @@ class Cotizacion(Base):
 
 class CotizacionItem(Base):
     __tablename__ = "cotizaciones_items"
-    __table_args__ = {"schema": "facturacion"}
+    __table_args__ = {"schema": "esquema_facturacion"}
 
     item_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     cotizacion_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("facturacion.cotizaciones.cotizacion_id", ondelete="CASCADE"),
+        ForeignKey("esquema_facturacion.cotizaciones.cotizacion_id", ondelete="CASCADE"),
         nullable=False
     )
     producto_id = Column(UUID(as_uuid=True), nullable=False)

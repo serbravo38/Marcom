@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+import random
 from app.db import get_db
 from app.config import settings
-from app import crud, schemas, auth, models
+from app import crud, schemas, auth, models, email_service
 
 router = APIRouter()
 
@@ -559,4 +560,32 @@ def update_agreement(
     if not conv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
     return crud.actualizar_convenio(db, db_convenio=conv, convenio_update=agreement_update)
+
+
+# --- CONTACTO Y FORMULARIO WEB ---
+
+@router.post("/contacto", response_model=schemas.RespuestaContacto, status_code=status.HTTP_200_OK)
+def handle_contact_form(
+    solicitud: schemas.SolicitudContacto,
+    background_tasks: BackgroundTasks
+):
+    """
+    Recibe la solicitud del formulario de contacto web, asigna un número de ticket si no existe,
+    y despacha en segundo plano las notificaciones por correo electrónico:
+    1. Notificación con detalle a la casilla oficial (contacto@marcomchile.cl).
+    2. Acuse de recibo y copia de respaldo al cliente.
+    """
+    ticket_id = solicitud.ticket_id or f"MC-{random.randint(1000, 9999)}"
+    
+    # Encolar envíos de correo en background para responder de inmediato al cliente (<100ms)
+    background_tasks.add_task(email_service.enviar_notificacion_contacto, solicitud, ticket_id)
+    background_tasks.add_task(email_service.enviar_confirmacion_cliente, solicitud, ticket_id)
+
+    return schemas.RespuestaContacto(
+        status="success",
+        ticket_id=ticket_id,
+        mensaje="Tu solicitud ha sido registrada y enviada a la mesa operativa exitosamente.",
+        destino=settings.SMTP_FROM
+    )
+
 

@@ -76,7 +76,7 @@ from sqlalchemy import text
 def _estimar_kilometros_internos(db: Session, ubicacion_id: UUID) -> float:
     """Calcula o estima internamente la distancia en kilómetros según la región/comuna del local"""
     try:
-        query = text("SELECT region, comuna FROM inventario.ubicaciones WHERE ubicacion_id = :uid")
+        query = text("SELECT region, comuna FROM esquema_inventario.ubicaciones WHERE ubicacion_id = :uid")
         result = db.execute(query, {"uid": ubicacion_id}).fetchone()
         if not result:
             return 25.0
@@ -114,7 +114,7 @@ def _estimar_kilometros_internos(db: Session, ubicacion_id: UUID) -> float:
 def _obtener_precio_producto_referencia(db: Session, producto_id: UUID) -> float:
     """Obtiene o estima precio de catálogo de monitor / equipo si no viene provisto"""
     try:
-        query = text("SELECT pulgadas, nombre FROM inventario.catalogo_productos WHERE producto_id = :pid")
+        query = text("SELECT pulgadas, nombre FROM esquema_inventario.catalogo_productos WHERE producto_id = :pid")
         result = db.execute(query, {"pid": producto_id}).fetchone()
         if result:
             pulgadas = float(result[0] or 55.0)
@@ -247,11 +247,11 @@ def aprobar_cotizacion_con_orden_compra(db: Session, cotizacion_id: UUID, aproba
     if aprobar_in.notas:
         db_cotizacion.notas = (db_cotizacion.notas or "") + "\n" + f"[Aprobación OC]: {aprobar_in.notas}"
     
-    # 2. Crear Pedido con cargo a Crédito de Convenio
+    # 2. Crear Pedido en esquema_facturacion con cargo a Crédito de Convenio
     usr_id = usuario_id or db_cotizacion.usuario_solicitante_id
     if not usr_id:
         # Fallback a un admin si no hay usuario
-        admin_res = db.execute(text("SELECT usuario_id FROM auth_clientes.usuarios LIMIT 1")).fetchone()
+        admin_res = db.execute(text("SELECT usuario_id FROM esquema_auth_clientes.usuarios LIMIT 1")).fetchone()
         usr_id = admin_res[0] if admin_res else None
 
     db_pedido = models.Pedido(
@@ -268,7 +268,7 @@ def aprobar_cotizacion_con_orden_compra(db: Session, cotizacion_id: UUID, aproba
     try:
         db.execute(
             text("""
-                UPDATE auth_clientes.convenios
+                UPDATE esquema_auth_clientes.convenios 
                 SET credito_usado = credito_usado + :monto 
                 WHERE convenio_id = :cid
             """),
@@ -277,13 +277,13 @@ def aprobar_cotizacion_con_orden_compra(db: Session, cotizacion_id: UUID, aproba
     except Exception as e:
         print(f"Advertencia al actualizar crédito convenio: {e}")
         
-    # 4. Generar Orden de Trabajo (OT) automáticamente
+    # 4. Generar Orden de Trabajo (OT) automáticamente en esquema_ordenes_trabajo
     try:
         numero_ot = f"OT-{int(time.time()) % 100000:05d}"
         notas_ot = f"Instalación de {len(db_cotizacion.items)} equipos generada desde Cotización {db_cotizacion.numero_cotizacion} (OC: {aprobar_in.orden_compra_numero})."
         ot_res = db.execute(
             text("""
-                INSERT INTO ordenes_trabajo.ordenes_trabajo (
+                INSERT INTO esquema_ordenes_trabajo.ordenes_trabajo (
                     numero_orden, convenio_cliente_id, ubicacion_id, estado, fecha_programada, notas
                 ) VALUES (
                     :num, :cid, :uid, 'PENDIENTE', CURRENT_TIMESTAMP + INTERVAL '3 days', :notas

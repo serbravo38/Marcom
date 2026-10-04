@@ -14,7 +14,7 @@ class EstadoActivoEnum(str, enum.Enum):
 
 class Ubicacion(Base):
     __tablename__ = "ubicaciones"
-    __table_args__ = {"schema": "inventario"}
+    __table_args__ = {"schema": "esquema_inventario"}
 
     ubicacion_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     codigo_local = Column(String(50), unique=True, nullable=True)
@@ -41,7 +41,7 @@ class Ubicacion(Base):
 
 class CatalogoProductos(Base):
     __tablename__ = "catalogo_productos"
-    __table_args__ = {"schema": "inventario"}
+    __table_args__ = {"schema": "esquema_inventario"}
 
     producto_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     sku = Column(String(50), unique=True, nullable=False)
@@ -57,25 +57,25 @@ class CatalogoProductos(Base):
 
 class Activo(Base):
     __tablename__ = "activos"
-    __table_args__ = {"schema": "inventario"}
+    __table_args__ = {"schema": "esquema_inventario"}
 
     activo_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     producto_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventario.catalogo_productos.producto_id"),
+        ForeignKey("esquema_inventario.catalogo_productos.producto_id"),
         nullable=False
     )
     numero_serie = Column(String(100), unique=True, nullable=False)
     codigo_qr = Column(String(255), unique=True, nullable=True)
     estado_actual = Column(
-        Enum(EstadoActivoEnum, name="estado_activo_enum", schema="inventario"),
+        Enum(EstadoActivoEnum, name="estado_activo_enum", schema="esquema_inventario"),
         nullable=False,
         default=EstadoActivoEnum.NUEVO,
         server_default="NUEVO"
     )
     ubicacion_actual_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventario.ubicaciones.ubicacion_id"),
+        ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
         nullable=False
     )
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
@@ -88,22 +88,22 @@ class Activo(Base):
 
 class MovimientoStock(Base):
     __tablename__ = "movimientos_stock"
-    __table_args__ = {"schema": "inventario"}
+    __table_args__ = {"schema": "esquema_inventario"}
 
     movimiento_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     activo_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventario.activos.activo_id"),
+        ForeignKey("esquema_inventario.activos.activo_id"),
         nullable=False
     )
     ubicacion_origen_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventario.ubicaciones.ubicacion_id"),
+        ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
         nullable=True
     )
     ubicacion_destino_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("inventario.ubicaciones.ubicacion_id"),
+        ForeignKey("esquema_inventario.ubicaciones.ubicacion_id"),
         nullable=False
     )
     usuario_movimiento_id = Column(UUID(as_uuid=True), nullable=False)

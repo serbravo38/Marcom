@@ -10,6 +10,14 @@ class Settings(BaseSettings):
     MAX_FAILED_LOGIN_ATTEMPTS: int = 5
     LOCKOUT_DURATION_MINUTES: int = 5
 
+    # Configuración de correo SMTP
+    SMTP_HOST: str = "sunfire.mxrouting.net"
+    SMTP_PORT: int = 465
+    SMTP_USER: str = "contacto@marcomchile.cl"
+    SMTP_PASSWORD: str = "Cont,99593#"
+    SMTP_FROM: str = "contacto@marcomchile.cl"
+    SMTP_USE_SSL: bool = True
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
         env_file_encoding="utf-8",

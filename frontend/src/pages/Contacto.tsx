@@ -54,7 +54,7 @@ export const Contacto: React.FC = () => {
       tipo_consulta: formData.tipoConsulta,
       mensaje: formData.mensaje.trim(),
       estado: "PENDIENTE_REVISION",
-      destino_notificacion: "contacto@marcom.cl"
+      destino_notificacion: "contacto@marcomchile.cl"
     };
 
     try {
@@ -164,7 +164,7 @@ export const Contacto: React.FC = () => {
                   </div>
                   <div>
                     <div className="contacto-channel-label">Casilla de Recepción</div>
-                    <div className="contacto-channel-value">contacto@marcom.cl</div>
+                    <div className="contacto-channel-value">contacto@marcomchile.cl</div>
                   </div>
                 </div>
 
