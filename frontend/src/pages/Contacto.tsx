@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { 
   ArrowLeft, 
   Send, 
@@ -11,20 +11,50 @@ import {
   RotateCcw,
   MessageSquare,
   AlertCircle,
-  Database
+  Database,
+  Wrench
 } from "lucide-react";
 import { api } from "../services/api";
 import "./Contacto.css";
 
 export const Contacto: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const paramModelo = searchParams.get("modelo");
+  const paramInstalacion = searchParams.get("instalacion");
+  const paramPulgadas = searchParams.get("pulgadas");
+
   const [formData, setFormData] = useState({
     nombre: "",
     empresa: "",
     correo: "",
     telefono: "",
-    tipoConsulta: "Cartelería Digital & Menús Dinámicos",
+    tipoConsulta: (paramInstalacion === "true" || paramModelo)
+      ? "Cotización de Monitor con Instalación en Terreno"
+      : "Cartelería Digital & Menús Dinámicos",
     mensaje: ""
   });
+
+  // Efecto para precargar mensaje si viene desde el catálogo solicitando monitor con instalación
+  useEffect(() => {
+    if (paramModelo) {
+      const template = `Estimado equipo técnico de Marcom:
+
+Solicito cotización formal para el suministro e instalación en terreno del monitor profesional:
+- Modelo: Samsung ${paramModelo}${paramPulgadas ? ` (${paramPulgadas})` : ""}
+- Requerimiento: Instalación y montaje en terreno (fijación en muro / estructura comercial, cableado y calibración).
+
+Favor incluir en la propuesta:
+1. Factibilidad técnica y tiempo estimado de ejecución.
+2. Costo de soporte y visita técnica en terreno.
+3. Disponibilidad de stock para entrega inmediata.`;
+
+      setFormData((prev) => ({
+        ...prev,
+        tipoConsulta: "Cotización de Monitor con Instalación en Terreno",
+        mensaje: prev.mensaje ? prev.mensaje : template
+      }));
+    }
+  }, [paramModelo, paramPulgadas]);
 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -326,6 +356,40 @@ export const Contacto: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Banner de Cotización de Monitor con Instalación (si proviene del Catálogo) */}
+                {paramModelo && (
+                  <div style={{
+                    background: "linear-gradient(135deg, rgba(2, 132, 199, 0.18) 0%, rgba(37, 99, 235, 0.12) 100%)",
+                    border: "1px solid rgba(56, 189, 248, 0.4)",
+                    borderRadius: "10px",
+                    padding: "12px 16px",
+                    marginBottom: "18px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px"
+                  }}>
+                    <div style={{
+                      background: "rgba(56, 189, 248, 0.2)",
+                      borderRadius: "8px",
+                      padding: "8px",
+                      color: "#38bdf8",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}>
+                      <Wrench size={20} />
+                    </div>
+                    <div>
+                      <div style={{ color: "#ffffff", fontWeight: 700, fontSize: "0.92rem" }}>
+                        Cotización Técnica con Instalación en Terreno
+                      </div>
+                      <div style={{ color: "#94a3b8", fontSize: "0.82rem" }}>
+                        Monitor seleccionado: <strong style={{ color: "#38bdf8" }}>Samsung {paramModelo}</strong> {paramPulgadas ? `(${paramPulgadas})` : ""}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="contacto-form-group">
                   <label className="contacto-form-label">Tipo de Servicio o Consulta *</label>
                   <select 
@@ -333,6 +397,7 @@ export const Contacto: React.FC = () => {
                     value={formData.tipoConsulta}
                     onChange={(e) => setFormData({ ...formData, tipoConsulta: e.target.value })}
                   >
+                    <option value="Cotización de Monitor con Instalación en Terreno">Cotización de Monitor con Instalación en Terreno</option>
                     <option value="Cartelería Digital & Menús Dinámicos">Cartelería Digital & Menús Dinámicos</option>
                     <option value="Sistemas POS & Hardware Comercial">Sistemas POS & Hardware Comercial</option>
                     <option value="Equipamiento de Red & Conectividad">Equipamiento de Red & Conectividad</option>

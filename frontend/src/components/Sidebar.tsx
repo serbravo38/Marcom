@@ -27,7 +27,10 @@ import {
   LogOut,
   User,
   Settings,
-  Globe
+  Globe,
+  Monitor,
+  TrendingUp,
+  Tv
 } from "lucide-react";
 import { ProfileModal } from "./ProfileModal";
 import type { Usuario } from "../services/auth";
@@ -155,11 +158,46 @@ export const Sidebar: React.FC = () => {
           </NavLink>
         )}
 
+        {/* Catálogo de Monitores Reacondicionados */}
+        <NavLink 
+          to="/catalogo" 
+          className="sidebar-link"
+          style={{ opacity: 0.95 }}
+          title="Ver catálogo de ventas de monitores reacondicionados"
+        >
+          <Monitor size={20} />
+          <span>Catálogo Monitores</span>
+        </NavLink>
+
+        {/* Gestión de Catálogo de Monitores - Exclusivo ADMIN */}
+        {currentUser && currentUser.rol === "ADMIN" && (
+          <NavLink 
+            to="/admin/monitores" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+            title="Administración CRUD de monitores del catálogo"
+          >
+            <Tv size={20} />
+            <span>Gestión Monitores</span>
+          </NavLink>
+        )}
+
+        {/* Control de Ventas de Monitores & Métricas Flow - Exclusivo ADMIN */}
+        {currentUser && currentUser.rol === "ADMIN" && (
+          <NavLink 
+            to="/ventas" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+            title="Control de ventas y métricas Flow"
+          >
+            <TrendingUp size={20} />
+            <span>Control de Ventas</span>
+          </NavLink>
+        )}
+
         {/* Portada Corporativa Pública */}
         <NavLink 
           to="/" 
           className="sidebar-link"
-          style={{ opacity: 0.85, marginTop: "8px" }}
+          style={{ opacity: 0.85, marginTop: "4px" }}
           title="Ver sitio web y presentación corporativa de Marcom"
         >
           <Globe size={20} />

@@ -61,7 +61,7 @@ const TRABAJOS_DATA: TrabajoItem[] = [
     title: "Instalación y Ajuste en Altura de Menú Boards",
     category: "Montaje Técnico Especializado",
     client: "Arcoprime Ltda. / Servicentro Copec",
-    description: "Técnico especialista de Marcom ejecutando instalación en altura de monitores comerciales para líneas de cafetería y comida rápida, garantizando ángulos de visión ergonómicos.",
+    description: "Técnico especialista de Marcom ejecutando instalación en altura de monitores profesionales para líneas de cafetería y comida rápida, garantizando ángulos de visión ergonómicos.",
     features: [
       "Protocolos certificados de trabajo seguro en altura",
       "Enrutamiento estético y seguro de líneas eléctricas y de datos",
@@ -75,7 +75,7 @@ const TRABAJOS_DATA: TrabajoItem[] = [
     title: "Displays Digitales de Promociones y Combos",
     category: "Pantallas de Placa & Retail",
     client: "Red de Servicentros y Tiendas Pronto",
-    description: "Integración de monitores comerciales de gran formato orientados a potenciar el ticket promedio con promociones dinámicas y visualización clara de precios.",
+    description: "Integración de monitores profesionales de gran formato orientados a potenciar el ticket promedio con promociones dinámicas y visualización clara de precios.",
     features: [
       "Operación continua bajo temperatura y brillo controlado",
       "Capacidad de reemplazo rápido bajo acuerdo de nivel de servicio (SLA)",
@@ -86,7 +86,7 @@ const TRABAJOS_DATA: TrabajoItem[] = [
   {
     id: 4,
     image: "/trabajos/16.jpeg",
-    title: "Monitores Comerciales Panorámicos en Pilar Estructural",
+    title: "Monitores Profesionales Panorámicos en Pilar Estructural",
     category: "Monitores Profesionales de Gran Formato",
     client: "Servicentro Copec",
     description: "Fijación y alineación de pantalla profesional en pilar arquitectónico central con soporte basculante para cobertura visual en zona de comensales y terraza.",
@@ -214,6 +214,9 @@ export const Portada: React.FC = () => {
             <a href="#hero" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("hero"); }}>
               Inicio
             </a>
+            <Link to="/catalogo" className="portada-nav-link" style={{ color: "#38bdf8", fontWeight: 700 }}>
+              Catálogo Monitores <span style={{ fontSize: "0.7rem", background: "rgba(56, 189, 248, 0.2)", padding: "2px 6px", borderRadius: "4px", marginLeft: "4px" }}>Venta</span>
+            </Link>
             <a href="#servicios" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("servicios"); }}>
               Servicios B2B
             </a>
@@ -258,6 +261,14 @@ export const Portada: React.FC = () => {
             gap: "14px"
           }}>
             <a href="#hero" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("hero"); }}>Inicio</a>
+            <Link 
+              to="/catalogo" 
+              className="portada-nav-link" 
+              style={{ color: "#38bdf8", fontWeight: 700 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Catálogo de Monitores Usados (Samsung)
+            </Link>
             <a href="#servicios" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("servicios"); }}>Servicios B2B</a>
             <a href="#trabajos" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("trabajos"); }}>Trabajos Realizados</a>
             <a href="#estrategia" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("estrategia"); }}>Misión & Visión</a>
@@ -295,8 +306,17 @@ export const Portada: React.FC = () => {
         </p>
 
         <div className="portada-hero-ctas">
+          <Link 
+            to="/catalogo" 
+            className="portada-btn-hero-primary"
+            style={{ background: "linear-gradient(135deg, #0284c7 0%, #2563eb 100%)", boxShadow: "0 6px 20px rgba(2, 132, 199, 0.4)" }}
+          >
+            <Monitor size={18} />
+            <span>Catálogo de Monitores (Venta)</span>
+          </Link>
+
           <button 
-            className="portada-btn-hero-primary" 
+            className="portada-btn-hero-secondary" 
             onClick={() => scrollToSection("trabajos")}
           >
             <span>Ver Trabajos Realizados</span>

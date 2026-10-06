@@ -210,3 +210,121 @@ def update_quotation_status(
     return cotizacion
 
 
+# --- PASARELA FLOW (CHILE) ---
+import hmac
+import hashlib
+import json
+import urllib.request
+import urllib.parse
+import os
+from typing import Optional
+from pydantic import BaseModel
+
+class FlowPaymentRequest(BaseModel):
+    amount: int
+    email: str
+    subject: str
+    commerceOrder: str
+    apiKey: Optional[str] = None
+    secretKey: Optional[str] = None
+    urlReturn: Optional[str] = None
+
+@router.post("/pagos/flow/crear-orden")
+def create_flow_order(req: FlowPaymentRequest):
+    """
+    Genera la orden de pago oficial con la pasarela Flow Sandbox.
+    Firma los parámetros criptográficamente con HMAC-SHA256 usando la Secret Key de Flow.
+    """
+    api_key = req.apiKey or os.getenv("FLOW_API_KEY", "35CFE2F1-DA44-4677-8733-7BCAF99LAA82")
+    secret_key = req.secretKey or os.getenv("FLOW_SECRET_KEY", "8de921c26f9ee93be9eef433ee11ede6ed43a67d")
+    
+    url_return = req.urlReturn or "http://localhost:5173/catalogo?status=exito"
+    url_confirm = "http://localhost:8000/api/v1/pagos/flow/confirmacion"
+    
+    params = {
+        "apiKey": api_key,
+        "commerceOrder": req.commerceOrder,
+        "subject": req.subject,
+        "currency": "CLP",
+        "amount": req.amount,
+        "email": req.email,
+        "urlConfirmation": url_confirm,
+        "urlReturn": url_return
+    }
+    
+    if not secret_key:
+        return {
+            "success": False,
+            "requiresSecretKey": True,
+            "apiKey": api_key,
+            "message": "Flow requiere la Secret Key para firmar criptográficamente la transacción y abrir la pasarela oficial."
+        }
+        
+    try:
+        # 1. Concatenar parámetros ordenados alfabéticamente
+        to_sign = ''.join(f"{k}{params[k]}" for k in sorted(params.keys()))
+        # 2. Generar firma HMAC-SHA256
+        signature = hmac.new(secret_key.strip().encode("utf-8"), to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+        params["s"] = signature
+        
+        # 3. Invocar API de Flow Sandbox
+        data = urllib.parse.urlencode(params).encode("utf-8")
+        flow_url = "https://sandbox.flow.cl/api/payment/create"
+        request_flow = urllib.request.Request(flow_url, data=data, method="POST")
+        
+        with urllib.request.urlopen(request_flow, timeout=15) as resp:
+            resp_data = json.loads(resp.read().decode())
+            redirect_url = f"{resp_data['url']}?token={resp_data['token']}"
+            return {
+                "success": True,
+                "url": resp_data.get("url"),
+                "token": resp_data.get("token"),
+                "redirectUrl": redirect_url,
+                "flowResponse": resp_data
+            }
+    except urllib.error.HTTPError as err:
+        err_msg = err.read().decode()
+        try:
+            err_json = json.loads(err_msg)
+            return {
+                "success": False,
+                "error": err_json.get("message"),
+                "code": err_json.get("code"),
+                "detail": "Error devuelto por la API de Flow Sandbox."
+            }
+        except:
+            return {"success": False, "error": err_msg, "code": err.code}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@router.post("/pagos/flow/confirmacion")
+def flow_confirmation_webhook():
+    return {"status": "ok"}
+
+from starlette.responses import RedirectResponse
+from fastapi import Request
+
+@router.api_route("/pagos/flow/retorno", methods=["GET", "POST"])
+async def flow_return_handler(request: Request):
+    """
+    Recibe el retorno del pagador desde Flow (POST con token).
+    Redirige al catálogo de frontend vía GET con HTTP 303 para evitar 404 en navegadores.
+    """
+    params = dict(request.query_params)
+    token = params.get("token", "")
+    order = params.get("order", "")
+    
+    try:
+        form_data = await request.form()
+        if "token" in form_data and not token:
+            token = form_data["token"]
+        if "commerceOrder" in form_data and not order:
+            order = form_data["commerceOrder"]
+    except Exception:
+        pass
+        
+    frontend_url = f"http://localhost:5173/catalogo?status=exito&order={order}&token={token}"
+    return RedirectResponse(url=frontend_url, status_code=303)
+
+
+

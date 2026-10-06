@@ -13,6 +13,9 @@ import Quotations from "./pages/Quotations";
 
 import Portada from "./pages/Portada";
 import Contacto from "./pages/Contacto";
+import Catalog from "./pages/Catalog";
+import AdminMonitores from "./pages/AdminMonitores";
+import SalesControl from "./pages/SalesControl";
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -34,6 +37,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         return "Gestión de Inventario y Bodegas";
       case "/work-orders":
         return "Órdenes de Trabajo y Evidencias";
+      case "/admin/monitores":
+        return "Gestión de Monitores a la Venta";
+      case "/ventas":
+        return "Control de Ventas";
       default:
         return "MARCOM";
     }
@@ -59,6 +66,8 @@ export const App: React.FC = () => {
         {/* Public Landing & Auth Routes */}
         <Route path="/" element={<Portada />} />
         <Route path="/portada" element={<Portada />} />
+        <Route path="/catalogo" element={<Catalog />} />
+        <Route path="/catalogo-monitores" element={<Catalog />} />
         <Route path="/contacto" element={<Contacto />} />
         <Route path="/login" element={<Login />} />
 
@@ -119,6 +128,28 @@ export const App: React.FC = () => {
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <Layout>
                 <Users />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        {/* Gestión de Catálogo de Monitores - Exclusivo ADMIN */}
+        <Route 
+          path="/admin/monitores" 
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Layout>
+                <AdminMonitores />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        {/* Control de Ventas de Monitores - Exclusivo ADMIN */}
+        <Route 
+          path="/ventas" 
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Layout>
+                <SalesControl />
               </Layout>
             </ProtectedRoute>
           } 
