@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Mail, Loader2, KeyRound, ArrowLeft, CheckCircle2, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
 import { authService } from "../services/auth";
+import { getDefaultRouteForRole } from "../utils/rbac";
 
 type AuthMode = "login" | "request_reset" | "reset_password" | "mfa_challenge";
 
@@ -61,8 +62,8 @@ export const Login: React.FC = () => {
         const userProfile = await authService.getMe();
         localStorage.setItem("marcom_user", JSON.stringify(userProfile));
 
-        // 3. Redirect to dashboard
-        navigate("/dashboard");
+        // 3. Redirect to role's authorized workspace
+        navigate(getDefaultRouteForRole(userProfile.rol));
       }
     } catch (err: any) {
       setError(err?.message || "Credenciales incorrectas. Inténtalo de nuevo.");
@@ -86,7 +87,7 @@ export const Login: React.FC = () => {
         localStorage.setItem("marcom_token", authData.access_token);
         const userProfile = await authService.getMe();
         localStorage.setItem("marcom_user", JSON.stringify(userProfile));
-        navigate("/dashboard");
+        navigate(getDefaultRouteForRole(userProfile.rol));
       } else {
         setError("Error al validar la sesión.");
       }

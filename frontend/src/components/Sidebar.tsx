@@ -75,35 +75,18 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Menú de Navegación con Filtrado RBAC */}
+      {/* Menú de Navegación con Filtrado RBAC Estricto */}
       <nav className="sidebar-menu">
-        {/* Dashboard / Portal Principal - Visible para todos los roles autenticados */}
-        <NavLink 
-          to="/dashboard" 
-          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-        >
-          <LayoutDashboard size={20} />
-          <span>
-            {currentUser?.rol === "CLIENTE_CONVENIO" || currentUser?.rol === "CLIENTE_ESTANDAR" 
-              ? "Mi Portal" 
-              : currentUser?.rol === "TECNICO_TERRENO"
-              ? "Panel Técnico"
-              : currentUser?.rol === "JEFE_BODEGA"
-              ? "Panel Bodega"
-              : "Dashboard"}
-          </span>
-        </NavLink>
-
-        {/* Portada Corporativa Pública */}
-        <NavLink 
-          to="/" 
-          className="sidebar-link"
-          style={{ opacity: 0.85 }}
-          title="Ver sitio web y presentación corporativa de Marcom"
-        >
-          <Globe size={20} />
-          <span>Sitio Corporativo</span>
-        </NavLink>
+        {/* Dashboard - Exclusivo para usuarios con privilegios de Administrador (ADMIN) */}
+        {currentUser?.rol === "ADMIN" && (
+          <NavLink 
+            to="/dashboard" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <LayoutDashboard size={20} />
+            <span>Dashboard</span>
+          </NavLink>
+        )}
 
         {/* Convenios - ADMIN, JEFE_BODEGA, CLIENTE_CONVENIO */}
         {currentUser && ["ADMIN", "JEFE_BODEGA", "CLIENTE_CONVENIO"].includes(currentUser.rol) && (
@@ -171,18 +154,31 @@ export const Sidebar: React.FC = () => {
             <span>Usuarios y Roles</span>
           </NavLink>
         )}
+
+        {/* Portada Corporativa Pública */}
+        <NavLink 
+          to="/" 
+          className="sidebar-link"
+          style={{ opacity: 0.85, marginTop: "8px" }}
+          title="Ver sitio web y presentación corporativa de Marcom"
+        >
+          <Globe size={20} />
+          <span>Sitio Corporativo</span>
+        </NavLink>
       </nav>
 
       {/* Pie de la Barra Lateral: Tarjeta Canónica de Usuario y Acciones */}
       <div className="sidebar-footer">
-        {/* Selector de Ámbito de Cliente */}
-        <div className="sidebar-client-dropdown" title="Cambiar filtro de cliente">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Boxes size={16} style={{ color: "#38bdf8" }} />
-            <span>Todos los Clientes</span>
+        {/* Selector de Ámbito de Cliente - Solo visible para Administradores y Jefatura */}
+        {currentUser && ["ADMIN", "JEFE_BODEGA"].includes(currentUser.rol) && (
+          <div className="sidebar-client-dropdown" title="Cambiar filtro de cliente">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Boxes size={16} style={{ color: "#38bdf8" }} />
+              <span>Todos los Clientes</span>
+            </div>
+            <span style={{ fontSize: "0.7rem", color: "#64748b" }}>▼</span>
           </div>
-          <span style={{ fontSize: "0.7rem", color: "#64748b" }}>▼</span>
-        </div>
+        )}
 
         {/* Tarjeta Canónica del Usuario Logeado (Única fuente de visualización en la UI) */}
         {currentUser && (

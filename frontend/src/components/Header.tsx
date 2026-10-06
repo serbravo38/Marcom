@@ -29,6 +29,15 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
   // Contador reactivo de notificaciones no leídas
   const [unreadCount, setUnreadCount] = useState<number>(3);
 
+  const currentUser = React.useMemo(() => {
+    try {
+      const u = localStorage.getItem("marcom_user");
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   return (
     <header className="top-app-header">
       {/* Título de la vista y bajada descriptiva */}
@@ -38,12 +47,14 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
       </div>
 
       <div className="header-controls-group">
-        {/* Selector de ámbito de cliente (Multi-tenant filter) */}
-        <button className="header-pill-btn" title="Filtrar por cliente o convenio">
-          <Building2 size={15} style={{ color: "#38bdf8" }} />
-          <span>Todos los Clientes</span>
-          <ChevronDown size={14} style={{ color: "#64748b" }} />
-        </button>
+        {/* Selector de ámbito de cliente (Multi-tenant filter, visible para administradores y jefatura) */}
+        {currentUser && ["ADMIN", "JEFE_BODEGA"].includes(currentUser.rol) && (
+          <button className="header-pill-btn" title="Filtrar por cliente o convenio">
+            <Building2 size={15} style={{ color: "#38bdf8" }} />
+            <span>Todos los Clientes</span>
+            <ChevronDown size={14} style={{ color: "#64748b" }} />
+          </button>
+        )}
 
         {/* Campo de búsqueda rápida global */}
         <div className="header-search-box">
