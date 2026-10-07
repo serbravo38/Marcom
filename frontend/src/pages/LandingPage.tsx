@@ -33,8 +33,18 @@ const slides = [
   }
 ];
 
+type DolarCotizacion = {
+  nombre: string;
+  venta: number;
+  fechaActualizacion: string;
+};
+
 export const LandingPage: React.FC = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isDolarOpen, setIsDolarOpen] = useState(false);
+  const [dolar, setDolar] = useState<DolarCotizacion | null>(null);
+  const [isDolarLoading, setIsDolarLoading] = useState(false);
+  const [dolarError, setDolarError] = useState("");
   const [registerSubmitted, setRegisterSubmitted] = useState(false);
   const [activeTab, setActiveTab] = useState('inicio');
   const [formData, setFormData] = useState({
@@ -61,6 +71,23 @@ export const LandingPage: React.FC = () => {
 
   const handlePrevSlide = () => {
     setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+  };
+
+  const handleShowDolar = async () => {
+    setIsDolarOpen(true);
+    setIsDolarLoading(true);
+    setDolarError("");
+
+    try {
+      const response = await fetch("https://cl.dolarapi.com/v1/cotizaciones/usd");
+      if (!response.ok) throw new Error("No se pudo obtener la cotización.");
+      const data: DolarCotizacion = await response.json();
+      setDolar(data);
+    } catch {
+      setDolarError("No fue posible cargar el valor del dólar. Intenta nuevamente.");
+    } finally {
+      setIsDolarLoading(false);
+    }
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
@@ -546,7 +573,11 @@ export const LandingPage: React.FC = () => {
           <div className="marcom-footer-column">
             <h3>LINK DE INTERÉS</h3>
             <ul>
-              <li>Valor Dolar</li>
+              <li>
+                <button type="button" className="dolar-footer-link" onMouseEnter={handleShowDolar}>
+                  Valor Dólar
+                </button>
+              </li>
               <li>Valor UF</li>
               <li>Clima en Santiago</li>
               <li>Clima en Peñaflor</li>
@@ -581,6 +612,40 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* ==================== Popup Dolar (FOOTER) ==================== */}
+      {isDolarOpen && (
+        <div
+          className="dolar-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dolar-modal-title"
+          onClick={() => setIsDolarOpen(false)}
+        >
+          <section className="dolar-modal" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setIsDolarOpen(false)}
+              className="registration-modal-close"
+              aria-label="Cerrar valor del dólar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h2 id="dolar-modal-title">Valor del dólar</h2>
+            {isDolarLoading && <p role="status">Consultando cotización...</p>}
+            {dolarError && <p role="alert">{dolarError}</p>}
+            {dolar && !isDolarLoading && !dolarError && (
+              <div className="dolar-modal-details">
+                <p className="dolar-modal-value">
+                  {new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(dolar.venta)}
+                </p>
+                <p>{dolar.nombre} · Precio de venta</p>
+                <p>Actualizado: {new Date(dolar.fechaActualizacion).toLocaleString("es-CL")}</p>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
 
     </div>
   );

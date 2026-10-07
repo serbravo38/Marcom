@@ -11,6 +11,8 @@ import WorkOrders from "./pages/WorkOrders";
 import Users from "./pages/Users";
 import Quotations from "./pages/Quotations";
 import { LandingPage } from './pages/LandingPage';
+import Usuarios from "./pages/Prueba";
+import Dolar from "./pages/Dolar";
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -56,6 +58,10 @@ export const App: React.FC = () => {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<LandingPage />} />
+
+        {/* Prueba de API */}
+        <Route path="/prueba" element={<Usuarios />} />
+        <Route path="/dolar" element={<Dolar />} />
 
         {/* Private Protected Routes */}
         <Route

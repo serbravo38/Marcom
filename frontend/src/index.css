@@ -1644,6 +1644,59 @@ html {
   transform: rotate(4deg);
 }
 
+.landing-page-wrapper .dolar-footer-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.landing-page-wrapper .dolar-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.76);
+  backdrop-filter: blur(6px);
+}
+
+.landing-page-wrapper .dolar-modal {
+  position: relative;
+  width: min(100%, 420px);
+  padding: 2.5rem 2rem 2rem;
+  border: 1px solid #dbe3ea;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.3);
+}
+
+.landing-page-wrapper .dolar-modal h2 {
+  margin: 0 2.5rem 1.5rem 0;
+  color: #172b3a;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.landing-page-wrapper .dolar-modal-details p {
+  margin: 0.5rem 0 0;
+  color: #52616b;
+}
+
+.landing-page-wrapper .dolar-modal-details .dolar-modal-value {
+  margin-top: 0;
+  color: #087e78;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
 .landing-page-wrapper .registration-modal-content {
   display: contents;
 }
