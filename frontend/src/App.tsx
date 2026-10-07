@@ -16,6 +16,7 @@ import Contacto from "./pages/Contacto";
 import Catalog from "./pages/Catalog";
 import AdminMonitores from "./pages/AdminMonitores";
 import SalesControl from "./pages/SalesControl";
+import Facturacion from "./pages/Facturacion";
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -41,6 +42,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         return "Gestión de Monitores a la Venta";
       case "/ventas":
         return "Control de Ventas";
+      case "/facturacion":
+        return "Control de Facturación";
       default:
         return "MARCOM";
     }
@@ -150,6 +153,17 @@ export const App: React.FC = () => {
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <Layout>
                 <SalesControl />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        {/* Control General de Facturación y Libro de Ventas CSV - Exclusivo ADMIN */}
+        <Route 
+          path="/facturacion" 
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Layout>
+                <Facturacion />
               </Layout>
             </ProtectedRoute>
           } 

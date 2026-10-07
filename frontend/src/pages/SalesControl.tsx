@@ -22,9 +22,18 @@ import {
   BarChart3, 
   FileText, 
   Calendar,
-  X
+  X,
+  Download,
+  FileSpreadsheet
 } from "lucide-react";
-import { getSalesOrders, getSalesMetrics, type SalesOrder, type SalesMetrics } from "../services/salesService";
+import { 
+  getSalesOrders, 
+  getSalesMetrics, 
+  getBillingSummary,
+  downloadBillingCSV,
+  type SalesOrder, 
+  type SalesMetrics 
+} from "../services/salesService";
 import { formatCLP } from "../data/monitoresCatalog";
 import "./Catalog.css";
 
@@ -33,6 +42,7 @@ export const SalesControl: React.FC = () => {
   const [metrics, setMetrics] = useState<SalesMetrics | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "APROBADO" | "PENDIENTE">("ALL");
+  const [documentFilter, setDocumentFilter] = useState<"ALL" | "FACTURA" | "BOLETA">("ALL");
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
 
   const reloadData = () => {
@@ -45,10 +55,16 @@ export const SalesControl: React.FC = () => {
     reloadData();
   }, []);
 
+  // Resumen contable consolidado para facturación
+  const billingSummary = useMemo(() => getBillingSummary(orders), [orders]);
+
   // Filtrado de órdenes
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
       if (statusFilter !== "ALL" && o.status !== statusFilter) {
+        return false;
+      }
+      if (documentFilter !== "ALL" && o.customer.tipoDocumento !== documentFilter) {
         return false;
       }
       if (searchTerm.trim()) {
@@ -57,23 +73,54 @@ export const SalesControl: React.FC = () => {
         const matchesName = o.customer.nombre.toLowerCase().includes(q);
         const matchesRut = o.customer.rut.toLowerCase().includes(q);
         const matchesEmail = o.customer.email.toLowerCase().includes(q);
-        if (!matchesOrder && !matchesName && !matchesRut && !matchesEmail) {
+        const matchesRazon = o.customer.razonSocial?.toLowerCase().includes(q);
+        const matchesRutEmp = o.customer.rutEmpresa?.toLowerCase().includes(q);
+        if (!matchesOrder && !matchesName && !matchesRut && !matchesEmail && !matchesRazon && !matchesRutEmp) {
           return false;
         }
       }
       return true;
     });
-  }, [orders, statusFilter, searchTerm]);
+  }, [orders, statusFilter, documentFilter, searchTerm]);
+
+  const handleExportCSV = () => {
+    downloadBillingCSV(filteredOrders);
+  };
 
   return (
     <div style={{ paddingBottom: "40px" }}>
       {/* BARRA SUPERIOR DE ACCIONES Y DESCRIPCIÓN */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
-        <p style={{ color: "#94a3b8", fontSize: "0.95rem", margin: 0, maxWidth: "700px" }}>
-          Supervisa en tiempo real las ventas de equipamiento, ingresos percibidos y rendimiento comercial por categoría.
+        <p style={{ color: "#94a3b8", fontSize: "0.95rem", margin: 0, maxWidth: "600px" }}>
+          Supervisa en tiempo real las ventas de equipamiento, ingresos percibidos y control general de facturación contable.
         </p>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            onClick={handleExportCSV}
+            className="catalog-btn-primary"
+            style={{
+              padding: "8px 16px",
+              fontSize: "0.85rem",
+              background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "7px",
+              border: "none",
+              cursor: "pointer"
+            }}
+            title="Descargar archivo CSV con el detalle de facturación para control contable"
+          >
+            <Download size={15} /> Exportar CSV Facturación
+          </button>
+          <Link
+            to="/facturacion"
+            className="catalog-btn-secondary"
+            style={{ padding: "8px 16px", fontSize: "0.85rem", borderColor: "rgba(16, 185, 129, 0.4)", color: "#34d399" }}
+            title="Ir al módulo exclusivo de control de facturación y libro de ventas"
+          >
+            <FileSpreadsheet size={15} /> Facturación (CSV)
+          </Link>
           <Link to="/admin/monitores" className="catalog-btn-secondary" style={{ padding: "8px 16px", fontSize: "0.85rem" }}>
             <Tv size={16} /> Gestión Catálogo
           </Link>
@@ -197,13 +244,69 @@ export const SalesControl: React.FC = () => {
           </div>
         )}
 
+        {/* CONTROL DE FACTURACIÓN Y LIBRO DE VENTAS (CSV) */}
+        <div style={{
+          background: "linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.7) 100%)",
+          border: "1px solid rgba(16, 185, 129, 0.3)",
+          borderRadius: "14px",
+          padding: "18px 22px",
+          marginBottom: "22px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "18px"
+        }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#34d399", fontWeight: 700, fontSize: "0.95rem", marginBottom: "4px" }}>
+              <FileSpreadsheet size={18} />
+              <span>Control de Facturación y Libro de Ventas (CSV)</span>
+            </div>
+            <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.85rem", maxWidth: "680px" }}>
+              Registro centralizado de facturación para control interno y carga al Portal Mipyme del SII. Descarga la base consolidada con desglose de montos netos, IVA 19% y folios emitidos.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>Monto Neto</div>
+              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#ffffff" }}>{formatCLP(billingSummary.totalNetoCLP)}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>IVA (19%)</div>
+              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#38bdf8" }}>{formatCLP(billingSummary.totalIvaCLP)}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>Total Facturado</div>
+              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#34d399" }}>{formatCLP(billingSummary.totalBrutoCLP)}</div>
+            </div>
+            <button
+              onClick={handleExportCSV}
+              className="catalog-btn-primary"
+              style={{
+                padding: "9px 18px",
+                fontSize: "0.85rem",
+                background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                border: "none",
+                cursor: "pointer"
+              }}
+              title="Descargar archivo CSV estructurado"
+            >
+              <Download size={15} /> Descargar CSV
+            </button>
+          </div>
+        </div>
+
         {/* BARRA DE HERRAMIENTAS: BÚSQUEDA Y FILTROS */}
         <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "16px", marginBottom: "20px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: "1 1 300px" }}>
+          <div style={{ position: "relative", flex: "1 1 260px" }}>
             <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
             <input
               type="text"
-              placeholder="Buscar por N° Orden (MC-ORD-...), Cliente o RUT..."
+              placeholder="Buscar por N° Orden, Cliente, RUT o Razón Social..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="contacto-form-input"
@@ -211,29 +314,56 @@ export const SalesControl: React.FC = () => {
             />
           </div>
 
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "0.82rem", color: "#94a3b8", fontWeight: 600 }}>Estado:</span>
-            <button
-              className={`catalog-pill ${statusFilter === "ALL" ? "active" : ""}`}
-              onClick={() => setStatusFilter("ALL")}
-              style={{ padding: "6px 12px", fontSize: "0.78rem" }}
-            >
-              Todas ({orders.length})
-            </button>
-            <button
-              className={`catalog-pill ${statusFilter === "APROBADO" ? "active" : ""}`}
-              onClick={() => setStatusFilter("APROBADO")}
-              style={{ padding: "6px 12px", fontSize: "0.78rem" }}
-            >
-              Aprobadas ({orders.filter((o) => o.status === "APROBADO").length})
-            </button>
-            <button
-              className={`catalog-pill ${statusFilter === "PENDIENTE" ? "active" : ""}`}
-              onClick={() => setStatusFilter("PENDIENTE")}
-              style={{ padding: "6px 12px", fontSize: "0.78rem" }}
-            >
-              Pendientes ({orders.filter((o) => o.status === "PENDIENTE").length})
-            </button>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <span style={{ fontSize: "0.82rem", color: "#94a3b8", fontWeight: 600 }}>Estado:</span>
+              <button
+                className={`catalog-pill ${statusFilter === "ALL" ? "active" : ""}`}
+                onClick={() => setStatusFilter("ALL")}
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+              >
+                Todas ({orders.length})
+              </button>
+              <button
+                className={`catalog-pill ${statusFilter === "APROBADO" ? "active" : ""}`}
+                onClick={() => setStatusFilter("APROBADO")}
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+              >
+                Aprobadas ({orders.filter((o) => o.status === "APROBADO").length})
+              </button>
+              <button
+                className={`catalog-pill ${statusFilter === "PENDIENTE" ? "active" : ""}`}
+                onClick={() => setStatusFilter("PENDIENTE")}
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+              >
+                Pendientes ({orders.filter((o) => o.status === "PENDIENTE").length})
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: "6px", alignItems: "center", borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: "12px" }}>
+              <span style={{ fontSize: "0.82rem", color: "#94a3b8", fontWeight: 600 }}>DTE:</span>
+              <button
+                className={`catalog-pill ${documentFilter === "ALL" ? "active" : ""}`}
+                onClick={() => setDocumentFilter("ALL")}
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+              >
+                Todos
+              </button>
+              <button
+                className={`catalog-pill ${documentFilter === "FACTURA" ? "active" : ""}`}
+                onClick={() => setDocumentFilter("FACTURA")}
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+              >
+                Facturas ({orders.filter((o) => o.customer.tipoDocumento === "FACTURA").length})
+              </button>
+              <button
+                className={`catalog-pill ${documentFilter === "BOLETA" ? "active" : ""}`}
+                onClick={() => setDocumentFilter("BOLETA")}
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+              >
+                Boletas ({orders.filter((o) => o.customer.tipoDocumento === "BOLETA").length})
+              </button>
+            </div>
           </div>
         </div>
 
@@ -245,10 +375,11 @@ export const SalesControl: React.FC = () => {
                 <tr style={{ background: "rgba(30, 41, 59, 0.7)", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1" }}>
                   <th style={{ padding: "14px 16px" }}>N° Orden</th>
                   <th style={{ padding: "14px 16px" }}>Fecha</th>
-                  <th style={{ padding: "14px 16px" }}>Cliente & RUT</th>
-                  <th style={{ padding: "14px 16px" }}>Equipos Comprados</th>
+                  <th style={{ padding: "14px 16px" }}>Tipo DTE & Folio</th>
+                  <th style={{ padding: "14px 16px" }}>Cliente & Receptor</th>
+                  <th style={{ padding: "14px 16px" }}>Equipos</th>
+                  <th style={{ padding: "14px 16px" }}>Neto / IVA</th>
                   <th style={{ padding: "14px 16px" }}>Total Pagado</th>
-                  <th style={{ padding: "14px 16px" }}>Pasarela</th>
                   <th style={{ padding: "14px 16px" }}>Estado</th>
                   <th style={{ padding: "14px 16px", textAlign: "right" }}>Comprobante</th>
                 </tr>
@@ -256,90 +387,107 @@ export const SalesControl: React.FC = () => {
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
+                    <td colSpan={9} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
                       No se encontraron órdenes registradas con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((ord) => (
-                    <tr key={ord.orderId} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s" }}>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{ fontWeight: 800, color: "#38bdf8", fontSize: "0.92rem" }}>
-                          {ord.orderId}
-                        </span>
-                        <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                          Folio #{ord.dteFolio}
-                        </div>
-                      </td>
-                      <td style={{ padding: "14px 16px", color: "#94a3b8", fontSize: "0.82rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Calendar size={13} /> {ord.dateFormatted}
-                        </div>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <strong style={{ color: "#ffffff", display: "block" }}>{ord.customer.nombre}</strong>
-                        <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
-                          RUT: {ord.customer.rut} • {ord.customer.tipoDocumento}
-                        </span>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                          {ord.items.map((it, idx) => (
-                            <span key={idx} style={{ color: "#cbd5e1", fontSize: "0.82rem" }}>
-                              • {it.quantity}x <strong>{it.model}</strong> ({it.inchesLabel})
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <strong style={{ color: "#34d399", fontSize: "1.02rem" }}>
-                          {formatCLP(ord.totalCLP)}
-                        </strong>
-                        <div style={{ color: "#64748b", fontSize: "0.72rem" }}>
-                          ~{ord.totalUF} UF
-                        </div>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{
-                          padding: "3px 8px",
-                          borderRadius: "6px",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                          background: "rgba(14, 165, 233, 0.15)",
-                          color: "#38bdf8",
-                          border: "1px solid rgba(14, 165, 233, 0.3)"
-                        }}>
-                          Flow
-                        </span>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{
-                          padding: "4px 10px",
-                          borderRadius: "20px",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          background: ord.status === "APROBADO" ? "rgba(16, 185, 129, 0.15)" : "rgba(251, 191, 36, 0.15)",
-                          color: ord.status === "APROBADO" ? "#34d399" : "#fbbf24",
-                          border: `1px solid ${ord.status === "APROBADO" ? "rgba(16, 185, 129, 0.3)" : "rgba(251, 191, 36, 0.3)"}`
-                        }}>
-                          {ord.status === "APROBADO" ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                          {ord.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                        <button
-                          onClick={() => setSelectedOrder(ord)}
-                          className="catalog-btn-secondary"
-                          style={{ padding: "6px 12px", fontSize: "0.8rem", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}
-                        >
-                          <Eye size={14} /> Ver Voucher
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredOrders.map((ord) => {
+                    const isFactura = ord.customer.tipoDocumento === "FACTURA";
+                    const neto = Math.round(ord.totalCLP / 1.19);
+                    const iva = ord.totalCLP - neto;
+
+                    return (
+                      <tr key={ord.orderId} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s" }}>
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{ fontWeight: 800, color: "#38bdf8", fontSize: "0.92rem" }}>
+                            {ord.orderId}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 16px", color: "#94a3b8", fontSize: "0.82rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <Calendar size={13} /> {ord.dateFormatted}
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            display: "inline-block",
+                            background: isFactura ? "rgba(56, 189, 248, 0.15)" : "rgba(168, 85, 247, 0.15)",
+                            color: isFactura ? "#38bdf8" : "#c084fc",
+                            border: `1px solid ${isFactura ? "rgba(56, 189, 248, 0.3)" : "rgba(168, 85, 247, 0.3)"}`
+                          }}>
+                            {isFactura ? "Factura Electrónica (33)" : "Boleta Electrónica (39)"}
+                          </span>
+                          <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
+                            Folio #{ord.dteFolio}
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <strong style={{ color: "#ffffff", display: "block" }}>
+                            {isFactura && ord.customer.razonSocial ? ord.customer.razonSocial : ord.customer.nombre}
+                          </strong>
+                          <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
+                            RUT: {isFactura && ord.customer.rutEmpresa ? ord.customer.rutEmpresa : ord.customer.rut}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            {ord.items.map((it, idx) => (
+                              <span key={idx} style={{ color: "#cbd5e1", fontSize: "0.82rem" }}>
+                                • {it.quantity}x <strong>{it.model}</strong> ({it.inchesLabel})
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <div style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                            Neto: {formatCLP(neto)}
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                            IVA: {formatCLP(iva)}
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <strong style={{ color: "#34d399", fontSize: "1.02rem" }}>
+                            {formatCLP(ord.totalCLP)}
+                          </strong>
+                          <div style={{ color: "#64748b", fontSize: "0.72rem" }}>
+                            ~{ord.totalUF} UF
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{
+                            padding: "4px 10px",
+                            borderRadius: "20px",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            background: ord.status === "APROBADO" ? "rgba(16, 185, 129, 0.15)" : "rgba(251, 191, 36, 0.15)",
+                            color: ord.status === "APROBADO" ? "#34d399" : "#fbbf24",
+                            border: `1px solid ${ord.status === "APROBADO" ? "rgba(16, 185, 129, 0.3)" : "rgba(251, 191, 36, 0.3)"}`
+                          }}>
+                            {ord.status === "APROBADO" ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                            {ord.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                          <button
+                            onClick={() => setSelectedOrder(ord)}
+                            className="catalog-btn-secondary"
+                            style={{ padding: "6px 12px", fontSize: "0.8rem", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}
+                          >
+                            <Eye size={14} /> Ver Voucher
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

@@ -30,7 +30,8 @@ import {
   Globe,
   Monitor,
   TrendingUp,
-  Tv
+  Tv,
+  FileSpreadsheet
 } from "lucide-react";
 import { ProfileModal } from "./ProfileModal";
 import type { Usuario } from "../services/auth";
@@ -181,15 +182,27 @@ export const Sidebar: React.FC = () => {
           </NavLink>
         )}
 
-        {/* Control de Ventas de Monitores & Métricas Flow - Exclusivo ADMIN */}
+        {/* Control de Ventas de Monitores - Exclusivo ADMIN */}
         {currentUser && currentUser.rol === "ADMIN" && (
           <NavLink 
             to="/ventas" 
             className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-            title="Control de ventas y métricas Flow"
+            title="Control de ventas y métricas comerciales"
           >
             <TrendingUp size={20} />
             <span>Control de Ventas</span>
+          </NavLink>
+        )}
+
+        {/* Control de Facturación y Libro de Ventas CSV - Exclusivo ADMIN */}
+        {currentUser && currentUser.rol === "ADMIN" && (
+          <NavLink 
+            to="/facturacion" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+            title="Control general de facturación y libro de ventas CSV"
+          >
+            <FileSpreadsheet size={20} />
+            <span>Facturación</span>
           </NavLink>
         )}
 

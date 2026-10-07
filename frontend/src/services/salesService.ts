@@ -345,3 +345,136 @@ export const getSalesMetrics = (): SalesMetrics => {
     recentDailySales
   };
 };
+
+/**
+ * Resumen contable consolidado para facturación
+ */
+export interface BillingSummary {
+  totalNetoCLP: number;
+  totalIvaCLP: number;
+  totalBrutoCLP: number;
+  facturasCount: number;
+  boletasCount: number;
+}
+
+export const getBillingSummary = (ordersList: SalesOrder[]): BillingSummary => {
+  const approved = ordersList.filter((o) => o.status === "APROBADO");
+  const totalBrutoCLP = approved.reduce((acc, o) => acc + o.totalCLP, 0);
+  const totalNetoCLP = Math.round(totalBrutoCLP / 1.19);
+  const totalIvaCLP = totalBrutoCLP - totalNetoCLP;
+
+  const facturasCount = approved.filter((o) => o.customer.tipoDocumento === "FACTURA").length;
+  const boletasCount = approved.filter((o) => o.customer.tipoDocumento === "BOLETA").length;
+
+  return {
+    totalNetoCLP,
+    totalIvaCLP,
+    totalBrutoCLP,
+    facturasCount,
+    boletasCount
+  };
+};
+
+/**
+ * Genera el archivo CSV estructurado para control de facturación y cruce contable.
+ * Incluye cabecera estándar chilena con codificación UTF-8 BOM para apertura directa en Excel.
+ */
+export const generateBillingCSV = (ordersList: SalesOrder[]): string => {
+  const headers = [
+    "Folio DTE",
+    "Tipo Documento",
+    "Codigo DTE SII",
+    "Fecha Emision",
+    "Nro Orden Marcom",
+    "RUT Receptor / Facturado",
+    "Razon Social / Nombre",
+    "Giro Comercial",
+    "Direccion",
+    "Comuna",
+    "Region",
+    "Email",
+    "Telefono",
+    "Detalle Equipamiento Adquirido",
+    "Monto Exento CLP",
+    "Monto Neto CLP",
+    "IVA 19% CLP",
+    "Monto Total CLP",
+    "Total UF Referencial",
+    "Medio de Pago",
+    "Cod Autorizacion Flow",
+    "Estado Venta",
+    "Estado Registro Contable"
+  ];
+
+  const escapeField = (val: any) => {
+    const text = String(val ?? "").replace(/"/g, '""');
+    return `"${text}"`;
+  };
+
+  const rows = ordersList.map((ord) => {
+    const isFactura = ord.customer.tipoDocumento === "FACTURA";
+    const tipoDocLabel = isFactura ? "Factura Electrónica" : "Boleta Electrónica";
+    const codigoSii = isFactura ? "33" : "39";
+    const rutFacturado = isFactura && ord.customer.rutEmpresa ? ord.customer.rutEmpresa : ord.customer.rut;
+    const razonSocial = isFactura && ord.customer.razonSocial ? ord.customer.razonSocial : ord.customer.nombre;
+    const giro = isFactura && ord.customer.giroEmpresa ? ord.customer.giroEmpresa : "Particular / Consumo Final";
+
+    const itemsSummary = ord.items
+      .map((it) => `${it.quantity}x ${it.model} (${it.inchesLabel}) + ${it.supportName}`)
+      .join(" | ");
+
+    const total = ord.totalCLP;
+    const neto = Math.round(total / 1.19);
+    const iva = total - neto;
+    const exento = 0;
+    const fecha = ord.dateFormatted ? ord.dateFormatted.split(" ")[0] : new Date().toLocaleDateString("es-CL");
+    const estadoContable = ord.status === "APROBADO" ? "REGISTRADO_FACTURABLE" : "PENDIENTE";
+
+    return [
+      escapeField(ord.dteFolio),
+      escapeField(tipoDocLabel),
+      escapeField(codigoSii),
+      escapeField(fecha),
+      escapeField(ord.orderId),
+      escapeField(rutFacturado),
+      escapeField(razonSocial),
+      escapeField(giro),
+      escapeField(ord.customer.direccion),
+      escapeField(ord.customer.comuna),
+      escapeField(ord.customer.region),
+      escapeField(ord.customer.email),
+      escapeField(ord.customer.telefono || ""),
+      escapeField(itemsSummary),
+      escapeField(exento),
+      escapeField(neto),
+      escapeField(iva),
+      escapeField(total),
+      escapeField(ord.totalUF),
+      escapeField(ord.paymentGateway || "Flow"),
+      escapeField(ord.authorizationCode || ""),
+      escapeField(ord.status),
+      escapeField(estadoContable)
+    ].join(";");
+  });
+
+  // Prefijo BOM \uFEFF para que Microsoft Excel en Windows abra correctamente acentos y caracteres especiales
+  return "\uFEFF" + [headers.join(";"), ...rows].join("\r\n");
+};
+
+/**
+ * Descarga directamente el archivo CSV de facturación al navegador.
+ */
+export const downloadBillingCSV = (ordersList: SalesOrder[], filename?: string): void => {
+  const csvContent = generateBillingCSV(ordersList);
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const dateStr = new Date().toISOString().slice(0, 10);
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename || `facturacion_marcom_${dateStr}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
