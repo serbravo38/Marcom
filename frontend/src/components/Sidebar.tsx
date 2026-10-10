@@ -17,14 +17,13 @@
  */
 
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { 
   LayoutDashboard, 
   FileText, 
   Boxes, 
   Briefcase, 
   Calculator,
-  LogOut,
   User,
   Settings,
   Globe,
@@ -37,7 +36,6 @@ import { ProfileModal } from "./ProfileModal";
 import type { Usuario } from "../services/auth";
 
 export const Sidebar: React.FC = () => {
-  const navigate = useNavigate();
   // Estado de visibilidad del modal de perfil de usuario
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   // Estado del usuario activo recuperado de la sesión local
@@ -45,15 +43,6 @@ export const Sidebar: React.FC = () => {
     const userJson = localStorage.getItem("marcom_user");
     return userJson ? JSON.parse(userJson) : null;
   });
-
-  /**
-   * Finaliza la sesión activa purgando las credenciales y redirigiendo a /login.
-   */
-  const handleLogout = () => {
-    localStorage.removeItem("marcom_token");
-    localStorage.removeItem("marcom_user");
-    navigate("/login");
-  };
 
   return (
     <aside className="sidebar glass-panel">
@@ -231,7 +220,7 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
 
-        {/* Tarjeta Canónica del Usuario Logeado (Única fuente de visualización en la UI) */}
+        {/* Tarjeta Canónica del Usuario Logeado (Acceso a Perfil y 2FA) */}
         {currentUser && (
           <div 
             className="user-badge" 
@@ -249,12 +238,6 @@ export const Sidebar: React.FC = () => {
             <Settings size={14} style={{ opacity: 0.6, color: "var(--accent-color, #38bdf8)" }} />
           </div>
         )}
-
-        {/* Botón de Cierre de Sesión Seguro */}
-        <button className="btn-logout" onClick={handleLogout} style={{ marginTop: "4px" }}>
-          <LogOut size={16} />
-          <span>Cerrar Sesión</span>
-        </button>
       </div>
 
       {/* Modal de Configuración de Perfil y Doble Factor (2FA) */}

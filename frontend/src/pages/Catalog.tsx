@@ -23,7 +23,8 @@ import {
   Check,
   TrendingUp,
   Tv,
-  AlertTriangle
+  AlertTriangle,
+  LogOut
 } from "lucide-react";
 import { type MonitorProduct, formatCLP, UF_CURRENT_VALUE } from "../data/monitoresCatalog";
 import { getMonitores } from "../services/monitoresService";
@@ -500,6 +501,23 @@ export const Catalog: React.FC = () => {
             <Link to="/" className="catalog-btn-secondary">
               <ArrowLeft size={16} /> Volver a Inicio
             </Link>
+
+            {/* Botón Cerrar Sesión si el usuario está autenticado */}
+            {currentUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem("marcom_token");
+                  localStorage.removeItem("marcom_user");
+                  navigate("/login");
+                }}
+                className="catalog-btn-secondary"
+                style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#f87171" }}
+                title={`Cerrar sesión activa (${currentUser.nombre})`}
+              >
+                <LogOut size={16} /> Cerrar Sesión
+              </button>
+            )}
 
             {/* Botón Carrito de Compras */}
             <button

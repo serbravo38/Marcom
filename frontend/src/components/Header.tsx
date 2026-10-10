@@ -15,7 +15,8 @@
  */
 
 import React, { useState } from "react";
-import { Search, Bell, ChevronDown, Building2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Bell, ChevronDown, Building2, LogOut } from "lucide-react";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 
 interface HeaderProps {
@@ -24,6 +25,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ title }) => {
+  const navigate = useNavigate();
   // Estado de apertura del panel flotante de notificaciones
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   // Contador reactivo de notificaciones no leídas
@@ -37,6 +39,12 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
       return null;
     }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("marcom_token");
+    localStorage.removeItem("marcom_user");
+    navigate("/login");
+  };
 
   return (
     <header className="top-app-header">
@@ -84,8 +92,75 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
             onUnreadCountChange={setUnreadCount}
           />
         </div>
+
+        {/* Identidad de Usuario y Botón Directo de Cerrar Sesión en Header */}
+        {currentUser && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", borderLeft: "1px solid rgba(255, 255, 255, 0.1)", paddingLeft: "12px" }}>
+            <div 
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              title={`Usuario: ${currentUser.nombre} ${currentUser.apellido} (${currentUser.rol})`}
+            >
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                boxShadow: "0 2px 8px rgba(56, 189, 248, 0.3)"
+              }}>
+                {currentUser.nombre ? currentUser.nombre.charAt(0).toUpperCase() : "U"}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", lineHeight: "1.2" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#f8fafc" }}>
+                  {currentUser.nombre}
+                </span>
+                <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>
+                  {currentUser.rol?.replace("_", " ")}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "rgba(239, 68, 68, 0.12)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                color: "#f87171",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.2s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(239, 68, 68, 0.22)";
+                e.currentTarget.style.color = "#ffffff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(239, 68, 68, 0.12)";
+                e.currentTarget.style.color = "#f87171";
+              }}
+              title="Cerrar Sesión de la Plataforma"
+              aria-label="Cerrar Sesión"
+            >
+              <LogOut size={14} />
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
+
   );
 };
 

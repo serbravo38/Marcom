@@ -25,7 +25,8 @@ import {
   Cpu,
   LayoutDashboard,
   Menu,
-  MessageSquare
+  MessageSquare,
+  LogOut
 } from "lucide-react";
 import "./Portada.css";
 
@@ -240,6 +241,73 @@ export const Portada: React.FC = () => {
           </nav>
 
           <div className="portada-nav-actions">
+            {userProfile ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Link 
+                  to="/dashboard"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "rgba(56, 189, 248, 0.12)",
+                    border: "1px solid rgba(56, 189, 248, 0.3)",
+                    color: "#38bdf8",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    textDecoration: "none"
+                  }}
+                  title="Ir al Panel Operacional de Marcom"
+                >
+                  <LayoutDashboard size={15} /> Panel
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem("marcom_token");
+                    localStorage.removeItem("marcom_user");
+                    setUserProfile(null);
+                    window.location.reload();
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "rgba(239, 68, 68, 0.12)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    color: "#f87171",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                  title="Cerrar Sesión"
+                >
+                  <LogOut size={15} /> Cerrar Sesión
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "linear-gradient(135deg, #2563eb, #0284c7)",
+                  color: "#ffffff",
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  textDecoration: "none"
+                }}
+              >
+                Iniciar Sesión
+              </Link>
+            )}
+
             <button 
               className="portada-mobile-toggle" 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -282,6 +350,33 @@ export const Portada: React.FC = () => {
             >
               Contacto
             </a>
+            {userProfile && (
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem("marcom_token");
+                  localStorage.removeItem("marcom_user");
+                  setUserProfile(null);
+                  setIsMobileMenuOpen(false);
+                  window.location.reload();
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  color: "#f87171",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+              >
+                <LogOut size={16} /> Cerrar Sesión ({userProfile.nombre})
+              </button>
+            )}
           </div>
         )}
       </header>
