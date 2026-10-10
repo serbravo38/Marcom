@@ -29,7 +29,6 @@ import {
 import { 
   getSalesOrders, 
   getSalesMetrics, 
-  getBillingSummary,
   downloadBillingCSV,
   type SalesOrder, 
   type SalesMetrics 
@@ -54,9 +53,6 @@ export const SalesControl: React.FC = () => {
   useEffect(() => {
     reloadData();
   }, []);
-
-  // Resumen contable consolidado para facturación
-  const billingSummary = useMemo(() => getBillingSummary(orders), [orders]);
 
   // Filtrado de órdenes
   const filteredOrders = useMemo(() => {
@@ -243,62 +239,6 @@ export const SalesControl: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* CONTROL DE FACTURACIÓN Y LIBRO DE VENTAS (CSV) */}
-        <div style={{
-          background: "linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.7) 100%)",
-          border: "1px solid rgba(16, 185, 129, 0.3)",
-          borderRadius: "14px",
-          padding: "18px 22px",
-          marginBottom: "22px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "18px"
-        }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#34d399", fontWeight: 700, fontSize: "0.95rem", marginBottom: "4px" }}>
-              <FileSpreadsheet size={18} />
-              <span>Control de Facturación y Libro de Ventas (CSV)</span>
-            </div>
-            <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.85rem", maxWidth: "680px" }}>
-              Registro centralizado de facturación para control interno y carga al Portal Mipyme del SII. Descarga la base consolidada con desglose de montos netos, IVA 19% y folios emitidos.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap" }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>Monto Neto</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#ffffff" }}>{formatCLP(billingSummary.totalNetoCLP)}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>IVA (19%)</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#38bdf8" }}>{formatCLP(billingSummary.totalIvaCLP)}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>Total Facturado</div>
-              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#34d399" }}>{formatCLP(billingSummary.totalBrutoCLP)}</div>
-            </div>
-            <button
-              onClick={handleExportCSV}
-              className="catalog-btn-primary"
-              style={{
-                padding: "9px 18px",
-                fontSize: "0.85rem",
-                background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                border: "none",
-                cursor: "pointer"
-              }}
-              title="Descargar archivo CSV estructurado"
-            >
-              <Download size={15} /> Descargar CSV
-            </button>
-          </div>
-        </div>
 
         {/* BARRA DE HERRAMIENTAS: BÚSQUEDA Y FILTROS */}
         <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "16px", marginBottom: "20px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>

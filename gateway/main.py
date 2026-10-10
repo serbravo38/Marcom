@@ -11,17 +11,47 @@ app = FastAPI(
     version="1.0.0"
 )
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000"
+]
+
 # CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
     allow_headers=["*"],
 )
 
 # Async HTTP client for forwarding requests
 client = httpx.AsyncClient()
+
+import time
+from collections import defaultdict
+
+# Rate Limiter en memoria: IP -> [timestamp1, timestamp2, ...]
+_request_history = defaultdict(list)
+RATE_LIMIT_WINDOW = 60  # segundos
+MAX_REQUESTS_PER_WINDOW = 300  # solicitudes por minuto por IP
+MAX_AUTH_REQUESTS_PER_WINDOW = 60  # solicitudes de autenticación por minuto por IP
+
+def _is_rate_limited(client_ip: str, path: str) -> bool:
+    now = time.time()
+    history = [t for t in _request_history[client_ip] if now - t < RATE_LIMIT_WINDOW]
+    _request_history[client_ip] = history
+    
+    limit = MAX_AUTH_REQUESTS_PER_WINDOW if "api/v1/auth" in path else MAX_REQUESTS_PER_WINDOW
+    if len(history) >= limit:
+        return True
+    
+    history.append(now)
+    return False
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -44,6 +74,18 @@ def health_check():
 # Wildcard router to proxy all requests to microservices
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def gateway_proxy(request: Request, path: str):
+    # Control de saturación (Rate Limiting) por IP
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    if request.method != "OPTIONS" and _is_rate_limited(client_ip, path):
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "error": "RateLimitExceeded",
+                "message": "Demasiadas solicitudes. Por favor espera un momento antes de reintentar."
+            },
+            headers={"Retry-After": "60"}
+        )
+
     # 1. Determine destination service based on route prefix
     target_service_url = None
     
@@ -89,13 +131,12 @@ async def gateway_proxy(request: Request, path: str):
             status_code=response.status_code,
             headers=dict(response.headers)
         )
-    except httpx.RequestError as exc:
+    except httpx.RequestError:
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={
                 "error": "BadGatewayError",
-                "message": f"Error al comunicarse con el microservicio correspondiente.",
-                "detail": str(exc)
+                "message": "Error al comunicarse con el microservicio correspondiente."
             }
         )
 

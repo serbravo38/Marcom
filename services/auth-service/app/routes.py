@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 import random
+import logging
 from app.db import get_db
 from app.config import settings
 from app import crud, schemas, auth, models, email_service
 
+logger = logging.getLogger("auth_audit")
 router = APIRouter()
 
 # --- AUTH ENDPOINTS ---
@@ -59,6 +61,7 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     if not crud.verificar_clave(user_login.clave, user.clave_hash):
         intentos, bloqueado_ahora, segs = crud.registrar_intento_fallido(db, user)
         if bloqueado_ahora:
+            logger.warning(f"[AUDIT_SEGURIDAD] Cuenta bloqueada por exceso de intentos fallidos: {user.correo}")
             minutos = max(1, (segs + 59) // 60)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -66,6 +69,7 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
                 headers={"Retry-After": str(segs)}
             )
         else:
+            logger.warning(f"[AUDIT_SEGURIDAD] Contraseña incorrecta para cuenta: {user.correo} (intentos: {intentos})")
             intentos_restantes = max(0, settings.MAX_FAILED_LOGIN_ATTEMPTS - intentos)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,6 +79,7 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
             
     # 3. Comprobar si el usuario está activo
     if not user.activo:
+        logger.warning(f"[AUDIT_SEGURIDAD] Intento de acceso a cuenta inactiva: {user.correo}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Usuario inactivo. Contacta al administrador."
@@ -82,6 +87,7 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     
     # 4. Login exitoso: Resetear contador de intentos fallidos
     crud.resetear_intentos_fallidos(db, user)
+    logger.info(f"[AUDIT_SEGURIDAD] Autenticación exitosa para: {user.correo} (rol: {user.rol})")
     
     # Extraer convenio_id si existe perfil
     convenio_id_val = None
@@ -109,23 +115,33 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     return {"access_token": access_token, "token_type": "bearer", "requiere_mfa": False}
 
 @router.post("/auth/solicitar-recuperacion", response_model=schemas.RespuestaRecuperacion)
-def request_password_reset(solicitud: schemas.SolicitudRecuperacionClave, db: Session = Depends(get_db)):
+def request_password_reset(
+    solicitud: schemas.SolicitudRecuperacionClave, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     user = crud.obtener_usuario_por_correo(db, correo=solicitud.correo)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No se encontró ningún usuario con el correo electrónico proporcionado."
-        )
-    if not user.activo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La cuenta se encuentra inactiva. Por favor contacta al administrador."
-        )
     
-    reset_token = auth.create_password_reset_token(usuario_id=str(user.usuario_id), correo=user.correo)
+    # Respuesta neutral y estándar para mitigar enumeración de cuentas
+    mensaje_estandar = (
+        "Si el correo electrónico se encuentra registrado en nuestro sistema, "
+        "recibirás un mensaje con las instrucciones y el código para restablecer tu contraseña."
+    )
+    
+    token_para_respuesta = None
+    
+    if user and user.activo:
+        reset_token = auth.create_password_reset_token(usuario_id=str(user.usuario_id), correo=user.correo)
+        # Envío seguro de token vía correo electrónico en segundo plano
+        background_tasks.add_task(email_service.enviar_correo_recuperacion_clave, user.correo, user.nombre, reset_token)
+        
+        # En entorno de desarrollo (o flag activo) se adjunta para pruebas automatizadas y sandbox local
+        if settings.ENVIRONMENT == "development" and settings.EXPOSE_RESET_TOKEN_IN_DEV:
+            token_para_respuesta = reset_token
+    
     return {
-        "mensaje": "Se ha generado el token para restablecer tu contraseña. Completa el formulario para actualizarla.",
-        "token_temporal": reset_token
+        "mensaje": mensaje_estandar,
+        "token_temporal": token_para_respuesta
     }
 
 @router.post("/auth/restablecer-clave", response_model=schemas.RespuestaRecuperacion)
@@ -146,6 +162,7 @@ def reset_password(datos: schemas.RestablecerClave, db: Session = Depends(get_db
         )
         
     crud.cambiar_clave_usuario(db=db, db_usuario=user, nueva_clave=datos.nueva_clave)
+    logger.info(f"[AUDIT_SEGURIDAD] Contraseña restablecida exitosamente para usuario_id: {usuario_id} ({user.correo})")
     return {
         "mensaje": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña."
     }

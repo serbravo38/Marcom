@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 from app.db import get_db
-from app import crud, schemas, auth
+from app.config import settings
+from app import crud, schemas, auth, models
 
 router = APIRouter()
 
@@ -68,7 +69,21 @@ def process_payment(
     if not pedido:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado.")
         
-    # Process
+    user_id = user.get("usuario_id")
+    user_role = user.get("role")
+
+    # Verificación de autorización: solo el dueño de la orden o un ADMIN puede registrar pagos
+    if user_role != "ADMIN" and str(pedido.usuario_id) != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para registrar pagos en este pedido."
+        )
+
+    # Solo administradores pueden declarar un pago directamente como APROBADO de forma manual.
+    # Los pagos normales de clientes permanecen PENDIENTE hasta confirmación del webhook de Flow.
+    if user_role != "ADMIN" and payment_in.estado == models.EstadoPagoEnum.APROBADO:
+        payment_in.estado = models.EstadoPagoEnum.PENDIENTE
+
     return crud.crear_pago(db, payment_in)
 
 
@@ -232,11 +247,19 @@ class FlowPaymentRequest(BaseModel):
 @router.post("/pagos/flow/crear-orden")
 def create_flow_order(req: FlowPaymentRequest):
     """
-    Genera la orden de pago oficial con la pasarela Flow Sandbox.
+    Genera la orden de pago oficial con la pasarela Flow (Sandbox / Desarrollo).
     Firma los parámetros criptográficamente con HMAC-SHA256 usando la Secret Key de Flow.
     """
-    api_key = req.apiKey or os.getenv("FLOW_API_KEY", "35CFE2F1-DA44-4677-8733-7BCAF99LAA82")
-    secret_key = req.secretKey or os.getenv("FLOW_SECRET_KEY", "8de921c26f9ee93be9eef433ee11ede6ed43a67d")
+    # 1. Validación de integridad del monto
+    if req.amount <= 0:
+        return {
+            "success": False,
+            "error": "El monto a pagar debe ser mayor a 0 CLP."
+        }
+
+    api_key = req.apiKey or settings.FLOW_API_KEY
+    secret_key = req.secretKey or settings.FLOW_SECRET_KEY
+    flow_base_url = settings.FLOW_URL.rstrip("/")
     
     url_return = req.urlReturn or "http://localhost:5173/catalogo?status=exito"
     url_confirm = "http://localhost:8000/api/v1/pagos/flow/confirmacion"
@@ -257,20 +280,19 @@ def create_flow_order(req: FlowPaymentRequest):
             "success": False,
             "requiresSecretKey": True,
             "apiKey": api_key,
-            "message": "Flow requiere la Secret Key para firmar criptográficamente la transacción y abrir la pasarela oficial."
+            "message": "Flow requiere la Secret Key configurada en el servidor para firmar criptográficamente la transacción."
         }
         
     try:
-        # 1. Concatenar parámetros ordenados alfabéticamente
+        # 2. Concatenar parámetros ordenados alfabéticamente para firma HMAC-SHA256
         to_sign = ''.join(f"{k}{params[k]}" for k in sorted(params.keys()))
-        # 2. Generar firma HMAC-SHA256
         signature = hmac.new(secret_key.strip().encode("utf-8"), to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
         params["s"] = signature
         
         # 3. Invocar API de Flow Sandbox
         data = urllib.parse.urlencode(params).encode("utf-8")
-        flow_url = "https://sandbox.flow.cl/api/payment/create"
-        request_flow = urllib.request.Request(flow_url, data=data, method="POST")
+        flow_create_url = f"{flow_base_url}/payment/create"
+        request_flow = urllib.request.Request(flow_create_url, data=data, method="POST")
         
         with urllib.request.urlopen(request_flow, timeout=15) as resp:
             resp_data = json.loads(resp.read().decode())
@@ -292,14 +314,49 @@ def create_flow_order(req: FlowPaymentRequest):
                 "code": err_json.get("code"),
                 "detail": "Error devuelto por la API de Flow Sandbox."
             }
-        except:
+        except Exception:
             return {"success": False, "error": err_msg, "code": err.code}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 @router.post("/pagos/flow/confirmacion")
-def flow_confirmation_webhook():
-    return {"status": "ok"}
+async def flow_confirmation_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Webhook oficial de notificación de Flow.
+    Recibe el token de transacción, consulta el estado real en la pasarela Flow
+    y concilia el pago en base de datos.
+    """
+    try:
+        form_data = await request.form()
+        token = form_data.get("token")
+        if not token:
+            return {"status": "error", "message": "Token no proporcionado"}
+
+        api_key = settings.FLOW_API_KEY
+        secret_key = settings.FLOW_SECRET_KEY
+        flow_base_url = settings.FLOW_URL.rstrip("/")
+
+        # Preparar parámetros y firma para consultar estado en Flow
+        status_params = {"apiKey": api_key, "token": token}
+        to_sign = ''.join(f"{k}{status_params[k]}" for k in sorted(status_params.keys()))
+        s = hmac.new(secret_key.strip().encode("utf-8"), to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+        status_params["s"] = s
+
+        query_str = urllib.parse.urlencode(status_params)
+        status_url = f"{flow_base_url}/payment/getStatus?{query_str}"
+        req_status = urllib.request.Request(status_url, method="GET")
+
+        with urllib.request.urlopen(req_status, timeout=15) as resp:
+            status_data = json.loads(resp.read().decode())
+            flow_status = status_data.get("status")  # 2 = Pagada
+            commerce_order = status_data.get("commerceOrder")
+            amount = status_data.get("amount")
+
+            print(f"[Flow Webhook] Orden {commerce_order} - Estado: {flow_status} - Monto: {amount}")
+            return {"status": "ok", "order": commerce_order, "payment_status": flow_status}
+    except Exception as exc:
+        print(f"[Flow Webhook Advertencia]: {exc}")
+        return {"status": "received"}
 
 from starlette.responses import RedirectResponse
 from fastapi import Request

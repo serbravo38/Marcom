@@ -55,6 +55,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = crud.obtener_usuario_por_id(db, usuario_id=token_data.usuario_id)
     if user is None:
         raise credentials_exception
+    if not user.activo:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="La cuenta se encuentra inactiva o deshabilitada.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 def require_role(roles: list[models.RolUsuario]):

@@ -46,6 +46,20 @@ import { weatherService, type WeatherData } from "../services/weather";
 import { Link } from "react-router-dom";
 
 /**
+ * Sanitiza valores de texto antes de inyectarlos en strings HTML de Leaflet
+ * para mitigar ataques de Stored Cross-Site Scripting (XSS).
+ */
+const escapeHtml = (unsafe?: string | number | null): string => {
+  if (unsafe === undefined || unsafe === null) return "";
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+/**
  * Propiedades de entrada del componente de mapa de monitoreo.
  */
 interface MonitoringMapProps {
@@ -181,21 +195,21 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
 
       const marker = L.marker([coords.lat, coords.lng], { icon: customIcon });
 
-      // Estructura HTML estilizada del popup con contenedor para inyección meteorológica
+      // Estructura HTML estilizada del popup con contenedor para inyección meteorológica (sanitizado contra XSS)
       const popupContent = `
         <div class="leaflet-custom-popup">
-          <div class="l-pop-badge">${loc.codigo_local || "LOCAL"}</div>
-          <div class="l-pop-title">${loc.nombre}</div>
-          <div class="l-pop-address">📍 ${loc.direccion}</div>
-          <div class="l-pop-comuna">${loc.comuna || ""}, ${loc.region || ""}</div>
+          <div class="l-pop-badge">${escapeHtml(loc.codigo_local || "LOCAL")}</div>
+          <div class="l-pop-title">${escapeHtml(loc.nombre)}</div>
+          <div class="l-pop-address">📍 ${escapeHtml(loc.direccion)}</div>
+          <div class="l-pop-comuna">${escapeHtml(loc.comuna || "")}, ${escapeHtml(loc.region || "")}</div>
           
           <!-- Contenedor dinámico del clima en vivo -->
-          <div id="popup-weather-${loc.ubicacion_id}" class="popup-weather-box">
-            <span class="popup-weather-loading">Consultando clima en ${loc.comuna || "local"}...</span>
+          <div id="popup-weather-${escapeHtml(loc.ubicacion_id)}" class="popup-weather-box">
+            <span class="popup-weather-loading">Consultando clima en ${escapeHtml(loc.comuna || "local")}...</span>
           </div>
 
           <div class="l-pop-footer">
-            <span class="l-pop-screens">📺 ${loc.cantidad_pantallas || 3} Pantallas</span>
+            <span class="l-pop-screens">📺 ${Number(loc.cantidad_pantallas) || 3} Pantallas</span>
             <span class="l-pop-status">${loc.activo !== false ? "Operativo" : "Mantenimiento"}</span>
           </div>
         </div>
@@ -214,9 +228,9 @@ export const MonitoringMap: React.FC<MonitoringMapProps> = ({
         if (container) {
           container.innerHTML = `
             <div class="popup-weather-pill">
-              <span class="popup-weather-temp">🌡️ ${weather.temperature}°C</span>
-              <span class="popup-weather-desc">${weather.conditionText}</span>
-              <span class="popup-weather-sub">💧 ${weather.humidity}% · 💨 ${weather.windSpeed} km/h</span>
+              <span class="popup-weather-temp">🌡️ ${escapeHtml(weather.temperature)}°C</span>
+              <span class="popup-weather-desc">${escapeHtml(weather.conditionText)}</span>
+              <span class="popup-weather-sub">💧 ${escapeHtml(weather.humidity)}% · 💨 ${escapeHtml(weather.windSpeed)} km/h</span>
             </div>
           `;
         }

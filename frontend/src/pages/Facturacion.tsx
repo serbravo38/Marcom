@@ -8,7 +8,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { 
-  FileSpreadsheet, 
   Download, 
   Search, 
   Calendar, 
@@ -173,48 +172,6 @@ export const Facturacion: React.FC = () => {
             <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{orders.length} comprobantes en libro</span>
           </div>
         </div>
-      </div>
-
-      {/* BANNER INFORMATIVO MODELO CSV / SII */}
-      <div style={{
-        background: "rgba(15, 23, 42, 0.7)",
-        border: "1px solid rgba(56, 189, 248, 0.2)",
-        borderRadius: "12px",
-        padding: "16px 20px",
-        marginBottom: "20px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "16px",
-        flexWrap: "wrap"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <FileSpreadsheet size={22} color="#38bdf8" style={{ flexShrink: 0 }} />
-          <div>
-            <strong style={{ color: "#ffffff", fontSize: "0.92rem", display: "block" }}>
-              Gestión de Facturación por Archivo CSV
-            </strong>
-            <span style={{ color: "#94a3b8", fontSize: "0.82rem" }}>
-              Los documentos de venta se registran con folios y montos netos/IVA para descarga en formato compatible con Excel y carga directa en el Portal Mipyme del SII.
-            </span>
-          </div>
-        </div>
-
-        <button
-          onClick={handleExportCSV}
-          className="catalog-btn-secondary"
-          style={{
-            padding: "7px 14px",
-            fontSize: "0.82rem",
-            color: "#34d399",
-            borderColor: "rgba(52, 211, 153, 0.3)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px"
-          }}
-        >
-          <Download size={14} /> Descargar Archivo CSV ({filteredOrders.length})
-        </button>
       </div>
 
       {/* BARRA DE HERRAMIENTAS Y FILTROS */}

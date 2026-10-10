@@ -1,8 +1,22 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 from app.models import RolUsuario
+
+COMMON_WEAK_PASSWORDS = {
+    "123456", "12345678", "123456789", "password", "password123", 
+    "admin123", "qwerty", "qwerty123", "marcom123", "marcom2026"
+}
+
+def validar_robustez_clave(v: str) -> str:
+    if not v:
+        raise ValueError("La contraseña no puede estar vacía.")
+    if len(v) < 8:
+        raise ValueError("La contraseña debe tener al menos 8 caracteres.")
+    if v.lower() in COMMON_WEAK_PASSWORDS:
+        raise ValueError("La contraseña elegida es demasiado común o vulnerable. Por favor elige una contraseña más segura.")
+    return v
 
 # --- PROFILE SCHEMAS ---
 class PerfilClienteBase(BaseModel):
@@ -35,7 +49,12 @@ class UsuarioBase(BaseModel):
     activo: bool = True
 
 class UsuarioCrear(UsuarioBase):
-    clave: str = Field(..., min_length=6, description="Contraseña en texto plano")
+    clave: str = Field(..., min_length=8, description="Contraseña en texto plano (mínimo 8 caracteres)")
+
+    @field_validator("clave")
+    @classmethod
+    def validar_clave(cls, v: str) -> str:
+        return validar_robustez_clave(v)
 
 class UsuarioActualizar(BaseModel):
     nombre: Optional[str] = None
@@ -53,11 +72,18 @@ class UsuarioActualizarMe(BaseModel):
     apellido: Optional[str] = None
     correo: Optional[EmailStr] = None
     clave_actual: Optional[str] = None
-    nueva_clave: Optional[str] = Field(None, min_length=6, description="Nueva contraseña (mínimo 6 caracteres)")
+    nueva_clave: Optional[str] = Field(None, min_length=8, description="Nueva contraseña (mínimo 8 caracteres)")
     telefono: Optional[str] = None
     direccion: Optional[str] = None
     region: Optional[str] = None
     comuna: Optional[str] = None
+
+    @field_validator("nueva_clave")
+    @classmethod
+    def validar_nueva_clave(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            return validar_robustez_clave(v)
+        return v
 
 class UsuarioRespuesta(UsuarioBase):
     usuario_id: UUID
@@ -117,7 +143,12 @@ class SolicitudRecuperacionClave(BaseModel):
 
 class RestablecerClave(BaseModel):
     token: str
-    nueva_clave: str = Field(..., min_length=6, description="Nueva contraseña (mínimo 6 caracteres)")
+    nueva_clave: str = Field(..., min_length=8, description="Nueva contraseña (mínimo 8 caracteres)")
+
+    @field_validator("nueva_clave")
+    @classmethod
+    def validar_nueva_clave(cls, v: str) -> str:
+        return validar_robustez_clave(v)
 
 class RespuestaRecuperacion(BaseModel):
     mensaje: str

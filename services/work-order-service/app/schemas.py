@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
@@ -25,6 +25,20 @@ class EvidenciaTerrenoBase(BaseModel):
     url_imagen: str
     url_firma: Optional[str] = None
     comentarios: Optional[str] = None
+
+    @field_validator("url_imagen")
+    @classmethod
+    def validar_url_imagen(cls, v: str) -> str:
+        if not v or not (v.startswith("http://") or v.startswith("https://") or v.startswith("data:image/") or v.startswith("/")):
+            raise ValueError("La URL de la imagen debe ser un recurso seguro (http, https, data:image o ruta local).")
+        return v
+
+    @field_validator("url_firma")
+    @classmethod
+    def validar_url_firma(cls, v: Optional[str]) -> Optional[str]:
+        if v and not (v.startswith("http://") or v.startswith("https://") or v.startswith("data:image/") or v.startswith("/")):
+            raise ValueError("El trazo de la firma digital debe ser un recurso seguro (data:image, http, https o ruta local).")
+        return v
 
 class EvidenciaTerrenoCrear(EvidenciaTerrenoBase):
     pass

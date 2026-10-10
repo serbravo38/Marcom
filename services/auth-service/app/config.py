@@ -14,9 +14,11 @@ class Settings(BaseSettings):
     SMTP_HOST: str = "sunfire.mxrouting.net"
     SMTP_PORT: int = 465
     SMTP_USER: str = "contacto@marcomchile.cl"
-    SMTP_PASSWORD: str = "Cont,99593#"
+    SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "contacto@marcomchile.cl"
-    SMTP_USE_SSL: bool = True
+    # Entorno y Modo de Recuperación Segura
+    ENVIRONMENT: str = "development"
+    EXPOSE_RESET_TOKEN_IN_DEV: bool = False  # En producción debe ser False; solo activable explícitamente vía .env en tests
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
