@@ -35,6 +35,14 @@ interface Agreement {
 }
 
 export const Quotations: React.FC = () => {
+  const [currentUser] = useState<any>(() => {
+    const userJson = localStorage.getItem("marcom_user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
+
+  const isClientRole = currentUser?.rol === "CLIENTE_CONVENIO";
+  const userConvenioId = currentUser?.perfil?.convenio_id || "";
+
   // Data State
   const [quotations, setQuotations] = useState<Cotizacion[]>([]);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
@@ -44,7 +52,7 @@ export const Quotations: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Filter State
-  const [filterAgreement, setFilterAgreement] = useState<string>("");
+  const [filterAgreement, setFilterAgreement] = useState<string>(isClientRole ? userConvenioId : "");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -55,7 +63,7 @@ export const Quotations: React.FC = () => {
   const [showInternalDetails, setShowInternalDetails] = useState<boolean>(false);
 
   // Form Fields (Client facing parameters)
-  const [selectedAgreementId, setSelectedAgreementId] = useState<string>("");
+  const [selectedAgreementId, setSelectedAgreementId] = useState<string>(isClientRole ? userConvenioId : "");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [approvalDate, setApprovalDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [supportType, setSupportType] = useState<string>("ESTANDAR_CONVENIO");
@@ -907,7 +915,14 @@ export const Quotations: React.FC = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #334155", paddingBottom: "20px", marginBottom: "20px", gap: "20px" }}>
                   {/* Emisor Oficial */}
                   <div style={{ flex: 1 }}>
-                    <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.5px", lineHeight: "1.4", margin: "0 0 8px 0" }}>
+                    <div style={{ marginBottom: "12px" }}>
+                      <img 
+                        src="/logo_marcom.png" 
+                        alt="MARCOM" 
+                        style={{ height: "45px", width: "auto", objectFit: "contain", filter: "brightness(1.15)" }} 
+                      />
+                    </div>
+                    <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.5px", lineHeight: "1.4", margin: "0 0 8px 0" }}>
                       SOCIEDAD DE INSTALACIONES MARCOM COMPANIA LIMITADA
                     </h2>
                     <p style={{ fontSize: "0.85rem", color: "#e2e8f0", margin: "4px 0", fontWeight: 600 }}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, User, Mail, Phone, MapPin, Lock, Loader2, CheckCircle2, AlertCircle, Shield, KeyRound } from "lucide-react";
+import { X, User, Mail, Phone, MapPin, Lock, Loader2, CheckCircle2, AlertCircle, Shield, KeyRound, Smartphone, Copy, Check, ShieldCheck, ShieldAlert } from "lucide-react";
 import { authService } from "../services/auth";
 import type { Usuario } from "../services/auth";
 
@@ -35,6 +35,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onP
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  // 2FA / MFA States
+  const [mfaHabilitado, setMfaHabilitado] = useState(false);
+  const [mfaConfigMode, setMfaConfigMode] = useState(false);
+  const [mfaDeactivateMode, setMfaDeactivateMode] = useState(false);
+  const [mfaSetupData, setMfaSetupData] = useState<{ secreto_manual: string; qr_codigo_base64: string; otpauth_url: string } | null>(null);
+  const [mfaVerifyCode, setMfaVerifyCode] = useState("");
+  const [mfaBackupCodes, setMfaBackupCodes] = useState<string[]>([]);
+  const [mfaDeactPassword, setMfaDeactPassword] = useState("");
+  const [mfaDeactCode, setMfaDeactCode] = useState("");
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaSuccess, setMfaSuccess] = useState<string | null>(null);
+  const [copiedCodes, setCopiedCodes] = useState(false);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -48,12 +62,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onP
         setNewPassword("");
         setConfirmPassword("");
 
+        // Reset MFA UI states
+        setMfaConfigMode(false);
+        setMfaDeactivateMode(false);
+        setMfaSetupData(null);
+        setMfaVerifyCode("");
+        setMfaBackupCodes([]);
+        setMfaError(null);
+        setMfaSuccess(null);
+
         const user = await authService.getMe();
         setNombre(user.nombre || "");
         setApellido(user.apellido || "");
         setCorreo(user.correo || "");
         setRut(user.rut || "");
         setRol(user.rol || "");
+        setMfaHabilitado(Boolean(user.mfa_habilitado));
 
         if (user.perfil) {
           setTelefono(user.perfil.telefono || "");
@@ -136,6 +160,82 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onP
       setError(err?.message || "Error al actualizar los datos.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartMfaSetup = async () => {
+    try {
+      setMfaLoading(true);
+      setMfaError(null);
+      setMfaSuccess(null);
+      const data = await authService.setupMfa();
+      setMfaSetupData(data);
+      setMfaConfigMode(true);
+      setMfaDeactivateMode(false);
+    } catch (err: any) {
+      setMfaError(err?.message || "Error al iniciar configuración 2FA.");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleConfirmMfaActivation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaVerifyCode.trim() || mfaVerifyCode.length !== 6) {
+      setMfaError("Por favor ingresa el código de 6 dígitos que muestra tu app.");
+      return;
+    }
+    try {
+      setMfaLoading(true);
+      setMfaError(null);
+      const res = await authService.activateMfa(mfaVerifyCode.trim());
+      setMfaHabilitado(true);
+      setMfaBackupCodes(res.codigos_respaldo);
+      setMfaConfigMode(false);
+      setMfaSuccess(res.mensaje);
+      
+      const user = await authService.getMe();
+      localStorage.setItem("marcom_user", JSON.stringify(user));
+      if (onProfileUpdated) onProfileUpdated(user);
+    } catch (err: any) {
+      setMfaError(err?.message || "Código incorrecto o expirado. Verifica la hora de tu teléfono.");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleDeactivateMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaDeactPassword || !mfaDeactCode) {
+      setMfaError("Debes ingresar tu contraseña y un código 2FA o de respaldo.");
+      return;
+    }
+    try {
+      setMfaLoading(true);
+      setMfaError(null);
+      const res = await authService.deactivateMfa(mfaDeactPassword, mfaDeactCode.trim());
+      setMfaHabilitado(false);
+      setMfaDeactivateMode(false);
+      setMfaBackupCodes([]);
+      setMfaDeactPassword("");
+      setMfaDeactCode("");
+      setMfaSuccess(res.mensaje);
+
+      const user = await authService.getMe();
+      localStorage.setItem("marcom_user", JSON.stringify(user));
+      if (onProfileUpdated) onProfileUpdated(user);
+    } catch (err: any) {
+      setMfaError(err?.message || "Error al desactivar 2FA. Verifica tus datos.");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleCopyBackupCodes = () => {
+    if (mfaBackupCodes.length > 0) {
+      navigator.clipboard.writeText(mfaBackupCodes.join("\n"));
+      setCopiedCodes(true);
+      setTimeout(() => setCopiedCodes(false), 2500);
     }
   };
 
@@ -472,6 +572,286 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onP
                         required={changePassword}
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 4: 2FA / MFA Security */}
+            <div style={{ borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "18px", marginBottom: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: (mfaConfigMode || mfaDeactivateMode || mfaBackupCodes.length > 0) ? "16px" : "0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <ShieldCheck size={18} style={{ color: mfaHabilitado ? "#34d399" : "#38bdf8" }} />
+                  <div>
+                    <span style={{ fontSize: "0.92rem", fontWeight: 600, display: "block" }}>
+                      Autenticación de Doble Factor (2FA / MFA)
+                    </span>
+                    <span style={{ fontSize: "0.78rem", color: "hsl(var(--text-muted))" }}>
+                      Protege tu cuenta con Google Authenticator o Microsoft Authenticator (RFC 6238)
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span 
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      background: mfaHabilitado ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.08)",
+                      color: mfaHabilitado ? "#34d399" : "#94a3b8",
+                      border: `1px solid ${mfaHabilitado ? "rgba(16, 185, 129, 0.4)" : "rgba(255, 255, 255, 0.12)"}`
+                    }}
+                  >
+                    {mfaHabilitado ? "PROTEGIDO" : "DESACTIVADO"}
+                  </span>
+
+                  {!mfaHabilitado && !mfaConfigMode && (
+                    <button
+                      type="button"
+                      onClick={handleStartMfaSetup}
+                      disabled={mfaLoading}
+                      style={{
+                        background: "rgba(56, 189, 248, 0.15)",
+                        border: "1px solid rgba(56, 189, 248, 0.3)",
+                        color: "#38bdf8",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      <Smartphone size={14} />
+                      <span>{mfaLoading ? "Iniciando..." : "Configurar 2FA"}</span>
+                    </button>
+                  )}
+
+                  {mfaHabilitado && !mfaDeactivateMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMfaDeactivateMode(true);
+                        setMfaError(null);
+                        setMfaSuccess(null);
+                      }}
+                      style={{
+                        background: "rgba(239, 68, 68, 0.15)",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        color: "#fca5a5",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        fontWeight: 500
+                      }}
+                    >
+                      Desactivar 2FA
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* MFA Messages */}
+              {mfaError && (
+                <div className="badge error" style={{ width: "100%", padding: "10px", margin: "12px 0", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px", boxSizing: "border-box" }}>
+                  <AlertCircle size={16} />
+                  <span>{mfaError}</span>
+                </div>
+              )}
+
+              {mfaSuccess && (
+                <div style={{ width: "100%", padding: "10px", margin: "12px 0", borderRadius: "8px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#34d399", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.86rem", boxSizing: "border-box" }}>
+                  <CheckCircle2 size={16} />
+                  <span>{mfaSuccess}</span>
+                </div>
+              )}
+
+              {/* Backup codes panel when activated */}
+              {mfaBackupCodes.length > 0 && (
+                <div style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", padding: "16px", borderRadius: "12px", margin: "14px 0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#34d399", fontWeight: 600, fontSize: "0.9rem" }}>
+                      <CheckCircle2 size={18} />
+                      <span>Códigos de Respaldo de Emergencia</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyBackupCodes}
+                      style={{
+                        background: copiedCodes ? "rgba(16, 185, 129, 0.3)" : "rgba(255, 255, 255, 0.1)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        color: "#fff",
+                        padding: "5px 10px",
+                        borderRadius: "6px",
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      {copiedCodes ? <Check size={14} /> : <Copy size={14} />}
+                      <span>{copiedCodes ? "¡Copiados!" : "Copiar todos"}</span>
+                    </button>
+                  </div>
+                  <p style={{ fontSize: "0.8rem", color: "rgba(255, 255, 255, 0.75)", margin: "0 0 10px 0" }}>
+                    Cada código es de un solo uso. Guárdalos en un lugar seguro para iniciar sesión si pierdes acceso a tu teléfono.
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+                    {mfaBackupCodes.map((code, idx) => (
+                      <div key={idx} style={{ background: "rgba(0, 0, 0, 0.3)", padding: "6px 8px", borderRadius: "6px", textAlign: "center", fontFamily: "monospace", fontSize: "0.85rem", color: "#f1f5f9", fontWeight: 600 }}>
+                        {code}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* MFA Setup Wizard */}
+              {mfaConfigMode && mfaSetupData && (
+                <div style={{ background: "rgba(0, 0, 0, 0.3)", padding: "20px", borderRadius: "14px", border: "1px solid rgba(56, 189, 248, 0.25)", marginTop: "14px" }}>
+                  <div style={{ textAlign: "center", marginBottom: "16px" }}>
+                    <h5 style={{ margin: "0 0 6px 0", fontSize: "1rem", color: "#38bdf8", fontWeight: 600 }}>
+                      Enrolar Dispositivo Autenticador
+                    </h5>
+                    <p style={{ margin: 0, fontSize: "0.82rem", color: "rgba(255, 255, 255, 0.75)" }}>
+                      1. Abre Google Authenticator, Microsoft Authenticator o Authy en tu teléfono y escanea este código QR:
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+                    <div style={{ background: "#fff", padding: "10px", borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+                      <img 
+                        src={mfaSetupData.qr_codigo_base64} 
+                        alt="Código QR 2FA" 
+                        style={{ width: "160px", height: "160px", display: "block" }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "center", marginBottom: "18px" }}>
+                    <span style={{ fontSize: "0.78rem", color: "hsl(var(--text-muted))", display: "block", marginBottom: "4px" }}>
+                      ¿No puedes escanear el código? Ingresa esta clave secreta manualmente:
+                    </span>
+                    <code style={{ background: "rgba(255, 255, 255, 0.08)", padding: "4px 10px", borderRadius: "6px", fontSize: "0.9rem", letterSpacing: "2px", color: "#38bdf8", fontWeight: 600 }}>
+                      {mfaSetupData.secreto_manual}
+                    </code>
+                  </div>
+
+                  <div style={{ borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "16px" }}>
+                    <p style={{ margin: "0 0 10px 0", fontSize: "0.82rem", color: "rgba(255, 255, 255, 0.8)", textAlign: "center" }}>
+                      2. Ingresa el código de <strong>6 dígitos</strong> generado en tu teléfono para confirmar la vinculación:
+                    </p>
+                    <div style={{ display: "flex", justifyContent: "center", gap: "10px", maxWidth: "340px", margin: "0 auto 14px auto" }}>
+                      <input
+                        type="text"
+                        className="glass-input"
+                        placeholder="000000"
+                        maxLength={6}
+                        value={mfaVerifyCode}
+                        onChange={(e) => setMfaVerifyCode(e.target.value.replace(/\D/g, ''))}
+                        style={{ textAlign: "center", fontSize: "1.2rem", letterSpacing: "3px", fontWeight: 700, width: "160px" }}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleConfirmMfaActivation}
+                        disabled={mfaLoading || mfaVerifyCode.length !== 6}
+                        className="btn-primary"
+                        style={{ padding: "8px 16px", whiteSpace: "nowrap" }}
+                      >
+                        {mfaLoading ? <Loader2 size={16} className="spin" /> : "Confirmar"}
+                      </button>
+                    </div>
+
+                    <div style={{ textAlign: "center" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMfaConfigMode(false);
+                          setMfaSetupData(null);
+                          setMfaVerifyCode("");
+                          setMfaError(null);
+                        }}
+                        style={{ background: "none", border: "none", color: "rgba(255, 255, 255, 0.5)", fontSize: "0.8rem", cursor: "pointer", textDecoration: "underline" }}
+                      >
+                        Cancelar configuración de 2FA
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MFA Deactivate Confirmation */}
+              {mfaDeactivateMode && (
+                <div style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.25)", padding: "16px", borderRadius: "12px", marginTop: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#fca5a5", marginBottom: "10px", fontWeight: 600, fontSize: "0.9rem" }}>
+                    <ShieldAlert size={18} />
+                    <span>Confirmar Desactivación de 2FA</span>
+                  </div>
+                  <p style={{ margin: "0 0 14px 0", fontSize: "0.82rem", color: "rgba(255, 255, 255, 0.75)" }}>
+                    Para desactivar el doble factor de autenticación, confirma tu contraseña actual y un código generado por tu app o de respaldo.
+                  </p>
+
+                  <div className="form-row" style={{ marginBottom: "12px" }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.78rem" }}>Contraseña Actual</label>
+                      <input
+                        type="password"
+                        className="glass-input"
+                        placeholder="••••••••"
+                        value={mfaDeactPassword}
+                        onChange={(e) => setMfaDeactPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.78rem" }}>Código 2FA / Respaldo</label>
+                      <input
+                        type="text"
+                        className="glass-input"
+                        placeholder="6 dígitos o código"
+                        value={mfaDeactCode}
+                        onChange={(e) => setMfaDeactCode(e.target.value.trim())}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setMfaDeactivateMode(false);
+                        setMfaDeactPassword("");
+                        setMfaDeactCode("");
+                        setMfaError(null);
+                      }}
+                      style={{ padding: "6px 14px", fontSize: "0.82rem" }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeactivateMfa}
+                      disabled={mfaLoading || !mfaDeactPassword || !mfaDeactCode}
+                      style={{
+                        background: "#ef4444",
+                        border: "none",
+                        color: "#fff",
+                        padding: "6px 16px",
+                        borderRadius: "6px",
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        fontWeight: 600
+                      }}
+                    >
+                      {mfaLoading ? "Desactivando..." : "Desactivar Permanentemente"}
+                    </button>
                   </div>
                 </div>
               )}

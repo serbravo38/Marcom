@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+import random
 from app.db import get_db
 from app.config import settings
-from app import crud, schemas, auth, models
+from app import crud, schemas, auth, models, email_service
 
 router = APIRouter()
 
@@ -82,14 +83,30 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     # 4. Login exitoso: Resetear contador de intentos fallidos
     crud.resetear_intentos_fallidos(db, user)
     
+    # Extraer convenio_id si existe perfil
+    convenio_id_val = None
+    if user.perfil and user.perfil.convenio_id:
+        convenio_id_val = str(user.perfil.convenio_id)
+    
+    # 5. Comprobar si el usuario tiene autenticación de dos factores (2FA / MFA) habilitada
+    if user.mfa_habilitado and user.mfa_secreto:
+        challenge_token = auth.create_mfa_challenge_token(str(user.usuario_id), user.correo)
+        return {
+            "access_token": None,
+            "token_type": "bearer",
+            "requiere_mfa": True,
+            "token_temporal_mfa": challenge_token
+        }
+    
     # Generate token
     token_data = {
         "usuario_id": str(user.usuario_id),
         "email": user.correo,
-        "role": user.rol.value
+        "role": user.rol.value,
+        "convenio_id": convenio_id_val
     }
     access_token = auth.create_access_token(data=token_data)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "requiere_mfa": False}
 
 @router.post("/auth/solicitar-recuperacion", response_model=schemas.RespuestaRecuperacion)
 def request_password_reset(solicitud: schemas.SolicitudRecuperacionClave, db: Session = Depends(get_db)):
@@ -132,6 +149,200 @@ def reset_password(datos: schemas.RestablecerClave, db: Session = Depends(get_db
     return {
         "mensaje": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña."
     }
+
+# --- 2FA / MFA ENDPOINTS ---
+
+@router.post("/auth/verificar-mfa", response_model=schemas.Token)
+def verify_mfa_login(datos: schemas.SolicitudVerificarMFA, db: Session = Depends(get_db)):
+    """
+    Verifica el código TOTP o código de respaldo tras haber ingresado correo y contraseña válidos.
+    Emite el token JWT definitivo para el usuario.
+    """
+    payload = auth.verify_mfa_challenge_token(datos.token_temporal)
+    usuario_id_str = payload.get("usuario_id")
+    
+    user = crud.obtener_usuario_por_id(db, usuario_id=UUID(usuario_id_str))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if not user.activo:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Usuario inactivo.")
+    if not (user.mfa_habilitado and user.mfa_secreto):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El usuario no tiene 2FA configurado.")
+    
+    # 1. Verificar si la cuenta está bloqueada temporalmente
+    esta_bloqueado, segundos_restantes = crud.esta_cuenta_bloqueada(user)
+    if esta_bloqueado:
+        minutos = max(1, (segundos_restantes + 59) // 60)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Cuenta bloqueada temporalmente por intentos fallidos. Inténtalo en {minutos} minuto(s).",
+            headers={"Retry-After": str(segundos_restantes)}
+        )
+    
+    # 2. Desencriptar secreto TOTP
+    try:
+        secreto_plano = auth.decrypt_mfa_secret(user.mfa_secreto)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error de descifrado en la clave 2FA."
+        )
+    
+    codigo = datos.codigo_totp.strip()
+    es_valido = False
+    
+    # 3. Validar código TOTP (6 dígitos)
+    if len(codigo) == 6 and codigo.isdigit():
+        es_valido = auth.verify_totp_code(secreto_plano, codigo)
+        
+    # 4. Si falló TOTP, intentar como código de respaldo (backup code)
+    if not es_valido and user.mfa_codigos_respaldo:
+        valido_backup, nuevos_codigos_json = auth.verify_and_consume_backup_code(user.mfa_codigos_respaldo, codigo)
+        if valido_backup and nuevos_codigos_json is not None:
+            crud.actualizar_codigos_respaldo(db, user, nuevos_codigos_json)
+            es_valido = True
+    
+    if not es_valido:
+        intentos, bloqueado_ahora, segs = crud.registrar_intento_fallido(db, user)
+        if bloqueado_ahora:
+            minutos = max(1, (segs + 59) // 60)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Demasiados intentos fallidos de 2FA. Tu cuenta ha sido bloqueada temporalmente por {minutos} minutos.",
+                headers={"Retry-After": str(segs)}
+            )
+        else:
+            intentos_restantes = max(0, settings.MAX_FAILED_LOGIN_ATTEMPTS - intentos)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Código de autenticación 2FA incorrecto o expirado. Intentos restantes: {intentos_restantes}.",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+            
+    # Login 2FA exitoso: resetear intentos fallidos
+    crud.resetear_intentos_fallidos(db, user)
+    
+    convenio_id_val = None
+    if user.perfil and user.perfil.convenio_id:
+        convenio_id_val = str(user.perfil.convenio_id)
+        
+    token_data = {
+        "usuario_id": str(user.usuario_id),
+        "email": user.correo,
+        "role": user.rol.value,
+        "convenio_id": convenio_id_val
+    }
+    access_token = auth.create_access_token(data=token_data)
+    return {"access_token": access_token, "token_type": "bearer", "requiere_mfa": False}
+
+
+@router.post("/auth/mfa/configurar", response_model=schemas.RespuestaConfigurarMFA)
+def setup_mfa(
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Genera un nuevo secreto TOTP y el código QR para enrolamiento en Google Authenticator / Authy.
+    El estado mfa_habilitado permanecerá en False hasta que el usuario confirme con un código válido.
+    """
+    secreto_plano = auth.generate_mfa_secret()
+    secreto_cifrado = auth.encrypt_mfa_secret(secreto_plano)
+    
+    crud.guardar_secreto_mfa(db, current_user, secreto_cifrado)
+    
+    uri = auth.generate_totp_uri(secreto_plano, email=current_user.correo)
+    qr_base64 = auth.generate_qr_base64(uri)
+    
+    return {
+        "secreto_manual": secreto_plano,
+        "qr_codigo_base64": qr_base64,
+        "otpauth_url": uri
+    }
+
+
+@router.post("/auth/mfa/activar", response_model=schemas.RespuestaActivarMFA)
+def activate_mfa(
+    datos: schemas.SolicitudActivarMFA,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Valida el primer código TOTP para confirmar que la app del usuario está sincronizada correctamente.
+    Activa permanentemente 2FA y genera 8 códigos de respaldo únicos.
+    """
+    if not current_user.mfa_secreto:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Primero debes solicitar la configuración del 2FA (/auth/mfa/configurar)."
+        )
+        
+    try:
+        secreto_plano = auth.decrypt_mfa_secret(current_user.mfa_secreto)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al descifrar la clave 2FA."
+        )
+        
+    codigo_valido = auth.verify_totp_code(secreto_plano, datos.codigo_totp)
+    if not codigo_valido:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El código de 6 dígitos ingresado es incorrecto o ha expirado. Verifica la hora de tu dispositivo e inténtalo nuevamente."
+        )
+        
+    codigos_respaldo_planos, codigos_respaldo_json = auth.generate_backup_codes(count=8)
+    crud.activar_mfa(db, current_user, codigos_respaldo_json)
+    
+    return {
+        "mensaje": "¡Autenticación de doble factor (2FA) activada exitosamente!",
+        "mfa_habilitado": True,
+        "codigos_respaldo": codigos_respaldo_planos
+    }
+
+
+@router.post("/auth/mfa/desactivar")
+def deactivate_mfa(
+    datos: schemas.SolicitudDesactivarMFA,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Permite desactivar 2FA confirmando contraseña actual y código TOTP / de respaldo vigente.
+    """
+    if not current_user.mfa_habilitado:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La autenticación de doble factor no se encuentra habilitada."
+        )
+        
+    # 1. Validar contraseña
+    if not crud.verificar_clave(datos.clave, current_user.clave_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña incorrecta."
+        )
+        
+    # 2. Validar código 2FA
+    secreto_plano = auth.decrypt_mfa_secret(current_user.mfa_secreto)
+    codigo = datos.codigo_totp.strip()
+    es_valido = False
+    
+    if len(codigo) == 6 and codigo.isdigit():
+        es_valido = auth.verify_totp_code(secreto_plano, codigo)
+    if not es_valido and current_user.mfa_codigos_respaldo:
+        valido_backup, _ = auth.verify_and_consume_backup_code(current_user.mfa_codigos_respaldo, codigo)
+        if valido_backup:
+            es_valido = True
+            
+    if not es_valido:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Código de verificación incorrecto o expirado."
+        )
+        
+    crud.desactivar_mfa(db, current_user)
+    return {"mensaje": "La autenticación de doble factor (2FA) ha sido desactivada correctamente."}
 
 
 # --- USER ENDPOINTS ---
@@ -284,7 +495,7 @@ def update_user_profile(
 def create_new_agreement(
     agreement_in: schemas.ConvenioCrear,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN, models.RolUsuario.JEFE_BODEGA]))
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
 ):
     db_agreement = crud.obtener_convenio_por_rut(db, rut=agreement_in.rut)
     if db_agreement:
@@ -301,5 +512,105 @@ def list_agreements(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(auth.get_current_user)
 ):
-    # Any authenticated user can list agreements (e.g. technicians or clients looking up references)
-    return crud.obtener_convenios(db, skip=skip, limit=limit)
+    # CLIENTE_CONVENIO solo puede ver su propio convenio asignado
+    if current_user.rol == models.RolUsuario.CLIENTE_CONVENIO:
+        if current_user.perfil and current_user.perfil.convenio_id:
+            conv = crud.obtener_convenio_por_id(db, convenio_id=current_user.perfil.convenio_id)
+            return [conv] if conv else []
+        return []
+    
+    # ADMIN y JEFE_BODEGA pueden consultar los convenios corporativos
+    if current_user.rol in [models.RolUsuario.ADMIN, models.RolUsuario.JEFE_BODEGA]:
+        return crud.obtener_convenios(db, skip=skip, limit=limit)
+        
+    return []
+
+@router.get("/convenios/{convenio_id}", response_model=schemas.ConvenioRespuesta)
+def get_agreement_by_id(
+    convenio_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.get_current_user)
+):
+    # Seguridad multi-tenant: Si es CLIENTE_CONVENIO solo puede acceder al suyo
+    if current_user.rol == models.RolUsuario.CLIENTE_CONVENIO:
+        if not (current_user.perfil and current_user.perfil.convenio_id == convenio_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para consultar la información de este convenio corporativo."
+            )
+    elif current_user.rol not in [models.RolUsuario.ADMIN, models.RolUsuario.JEFE_BODEGA]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para consultar convenios corporativos."
+        )
+
+    conv = crud.obtener_convenio_por_id(db, convenio_id=convenio_id)
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
+    return conv
+
+@router.patch("/convenios/{convenio_id}", response_model=schemas.ConvenioRespuesta)
+@router.put("/convenios/{convenio_id}", response_model=schemas.ConvenioRespuesta)
+def update_agreement(
+    convenio_id: UUID,
+    agreement_update: schemas.ConvenioActualizar,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    conv = crud.obtener_convenio_por_id(db, convenio_id=convenio_id)
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
+    
+    if agreement_update.rut and agreement_update.rut != conv.rut:
+        existente = crud.obtener_convenio_por_rut(db, rut=agreement_update.rut)
+        if existente and existente.convenio_id != convenio_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Ya existe otro convenio registrado con este RUT."
+            )
+
+    return crud.actualizar_convenio(db, db_convenio=conv, convenio_update=agreement_update)
+
+@router.delete("/convenios/{convenio_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_agreement(
+    convenio_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    conv = crud.obtener_convenio_por_id(db, convenio_id=convenio_id)
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convenio no encontrado.")
+    
+    crud.eliminar_convenio(db=db, db_convenio=conv)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+
+
+# --- CONTACTO Y FORMULARIO WEB ---
+
+@router.post("/contacto", response_model=schemas.RespuestaContacto, status_code=status.HTTP_200_OK)
+def handle_contact_form(
+    solicitud: schemas.SolicitudContacto,
+    background_tasks: BackgroundTasks
+):
+    """
+    Recibe la solicitud del formulario de contacto web, asigna un número de ticket si no existe,
+    y despacha en segundo plano las notificaciones por correo electrónico:
+    1. Notificación con detalle a la casilla oficial (contacto@marcomchile.cl).
+    2. Acuse de recibo y copia de respaldo al cliente.
+    """
+    ticket_id = solicitud.ticket_id or f"MC-{random.randint(1000, 9999)}"
+    
+    # Encolar envíos de correo en background para responder de inmediato al cliente (<100ms)
+    background_tasks.add_task(email_service.enviar_notificacion_contacto, solicitud, ticket_id)
+    background_tasks.add_task(email_service.enviar_confirmacion_cliente, solicitud, ticket_id)
+
+    return schemas.RespuestaContacto(
+        status="success",
+        ticket_id=ticket_id,
+        mensaje="Tu solicitud ha sido registrada y enviada a la mesa operativa exitosamente.",
+        destino=settings.SMTP_FROM
+    )
+
+

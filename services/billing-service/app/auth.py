@@ -24,9 +24,10 @@ def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
         usuario_id: str = payload.get("usuario_id")
         role: str = payload.get("role")
         email: str = payload.get("email")
+        convenio_id: str = payload.get("convenio_id")
         if usuario_id is None:
             raise credentials_exception
-        return {"usuario_id": usuario_id, "role": role, "email": email}
+        return {"usuario_id": usuario_id, "role": role, "email": email, "convenio_id": convenio_id}
     except JWTError:
         raise credentials_exception
 

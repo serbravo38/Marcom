@@ -254,6 +254,12 @@ def actualizar_convenio(db: Session, db_convenio: models.Convenio, convenio_upda
     db.refresh(db_convenio)
     return db_convenio
 
+def eliminar_convenio(db: Session, db_convenio: models.Convenio):
+    # Desvincular perfiles asociados para integridad referencial limpia
+    db.query(models.PerfilCliente).filter(models.PerfilCliente.convenio_id == db_convenio.convenio_id).update({models.PerfilCliente.convenio_id: None})
+    db.delete(db_convenio)
+    db.commit()
+
 # --- CRUD PERFILES ---
 def obtener_perfil_por_usuario_id(db: Session, usuario_id: UUID):
     return db.query(models.PerfilCliente).filter(models.PerfilCliente.usuario_id == usuario_id).first()
@@ -280,3 +286,32 @@ def crear_o_actualizar_perfil(db: Session, usuario_id: UUID, perfil_in: schemas.
     db.commit()
     db.refresh(db_perfil)
     return db_perfil
+
+# --- CRUD MFA / 2FA ---
+def guardar_secreto_mfa(db: Session, db_usuario: models.Usuario, secreto_cifrado: str) -> models.Usuario:
+    db_usuario.mfa_secreto = secreto_cifrado
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+def activar_mfa(db: Session, db_usuario: models.Usuario, codigos_respaldo_json: str) -> models.Usuario:
+    db_usuario.mfa_habilitado = True
+    db_usuario.mfa_codigos_respaldo = codigos_respaldo_json
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+def desactivar_mfa(db: Session, db_usuario: models.Usuario) -> models.Usuario:
+    db_usuario.mfa_habilitado = False
+    db_usuario.mfa_secreto = None
+    db_usuario.mfa_codigos_respaldo = None
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+def actualizar_codigos_respaldo(db: Session, db_usuario: models.Usuario, nuevos_codigos_json: str) -> models.Usuario:
+    db_usuario.mfa_codigos_respaldo = nuevos_codigos_json
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+

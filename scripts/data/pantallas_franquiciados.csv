@@ -1,0 +1,93 @@
+﻿codigo_local,nombre,direccion,zona,region,provincia,comuna,cantidad_pantallas,precio_instalacion_uf,precio_transporte_uf,es_bodega
+EDS-10097,EDS 10097 - Alto Hospicio,AV. TENIENTE ARTURO MERINO CORREA N° 3945,OZN,Región de Tarapacá,Iquique,Alto Hospicio,3,0.0,0.0,False
+EDS-10004,EDS 10004 - Antofagasta,AV. ANTONIO RENDIC N° 3855,OZN,Región de Antofagasta,Antofagasta,Antofagasta,3,0.0,0.0,False
+EDS-10006,EDS 10006 - Antofagasta,AV. PEDRO AGUIRRRE CERDA N°10980,OZN,Región de Antofagasta,Antofagasta,Antofagasta,3,0.0,0.0,False
+EDS-10401,EDS 10401 - Calama,AV. BALMACEDA N° 3012,OZN,Región de Antofagasta,El Loa,Calama,3,0.0,0.0,False
+EDS-10101,EDS 10101 - Calama,GRANADEROS N° 3524,OZN,Región de Antofagasta,El Loa,Calama,3,0.0,0.0,False
+EDS-10226,EDS 10226 - Antofagasta,AV. ANTONIO RENDIC ESQ. AV. PEDRO AGUIRRE CERDA,OZN,Región de Antofagasta,Antofagasta,Antofagasta,3,0.0,0.0,False
+EDS-40193,EDS 40193 - Chañaral,"MERINO JARPA, PANAMERICANA NORTE S/",OZC,Región de Atacama,Chañaral,Chañaral,3,0.0,0.0,False
+EDS-40100,EDS 40100 - Vallenar,BRASIL N° 1001,OZC,Región de Atacama,Huasco,Vallenar,3,0.0,0.0,False
+EDS-40403,EDS 40403 - Coquimbo,AV. LA CANTERA N° 1935,OZC,Región de Coquimbo,Elqui,Coquimbo,3,0.0,0.0,False
+EDS-40551,EDS 40551 - La Serena,NICARAGUA N° 1480,OZC,Región de Coquimbo,Elqui,La Serena,3,0.0,0.0,False
+EDS-40513,EDS 40513 - La Serena,EL ISLON N° 2561,OZC,Región de Coquimbo,Elqui,La Serena,3,0.0,0.0,False
+EDS-40516,EDS 40516 - La Serena,AV. 4 ESQUINAS N° 1550.,OZC,Región de Coquimbo,Elqui,La Serena,3,0.0,0.0,False
+EDS-40142,EDS 40142 - Papudo,IRARRAZAVAL N° 435,OZC,Región de Valparaíso,Petorca,Papudo,3,0.0,0.0,False
+EDS-40368,EDS 40368 - Nogales,JUAN RUSQUE N° 312,OZC,Región de Valparaíso,Quillota,Nogales,3,0.0,0.0,False
+EDS-40153,EDS 40153 - Viña Del Mar,"AV. ALESSANDRI, 21 NORTE",OZC,Región de Valparaíso,Valparaíso,Viña Del Mar,3,0.0,0.0,False
+EDS-40710,EDS 40710 - Quillota,"AV. JUAN BAUTISTA ALBERDI, ESQ. BUL",OZC,Región de Valparaíso,Quillota,Quillota,3,0.0,0.0,False
+EDS-40136,EDS 40136 - Valparaíso,AV. PLAYA ANCHA N° 697,OZC,Región de Valparaíso,Valparaíso,Valparaíso,3,0.0,0.0,False
+EDS-40061,EDS 40061 - Quilpué,MARGA MARGA N° 1628,OZC,Región de Valparaíso,Valparaíso,Quilpué,3,0.0,0.0,False
+EDS-40062,EDS 40062 - Santo Domingo,TENIENTE CRUZ MARTINEZ N° 70,OZC,Región de Valparaíso,San Antonio,Santo Domingo,3,0.0,0.0,False
+EDS-40091,EDS 40091 - Quilpué,"FREIRE, GOMEZ CARREÑO S/N",OZC,Región de Valparaíso,Valparaíso,Quilpué,3,0.0,0.0,False
+EDS-40161,EDS 40161 - Catemu,EL ARRAYAN S/N,OZC,Región de Valparaíso,San Felipe De Aconcagua,Catemu,3,0.0,0.0,False
+EDS-40514,EDS 40514 - San Esteban,AV. ALESSANDRI N° 1811,OZC,Región de Valparaíso,Los Andes,San Esteban,3,0.0,0.0,False
+EDS-40526,EDS 40526 - Viña Del Mar,CAMINO INTERNACIONAL N° 5001,OZC,Región de Valparaíso,Valparaíso,Viña Del Mar,3,0.0,0.0,False
+EDS-40371,EDS 40371 - Los Andes,"AV. ARGENTINA, ESQ. LAS JUNTAS",OZC,Región de Valparaíso,Los Andes,Los Andes,3,0.0,0.0,False
+EDS-60321,EDS 60321 - Doñihue,AV. CACHAPOAL N° 2,OS,Región del Libertador General Bernardo O'Higgins,Cachapoal,Doñihue,3,0.0,0.0,False
+EDS-60428,EDS 60428 - Pichilemu,AV. ORTUZAR N° 292,OS,Región del Libertador General Bernardo O'Higgins,Cardenal Caro,Pichilemu,3,0.0,0.0,False
+EDS-60266,EDS 60266 - Rancagua,CARRETERA EL COBRE N° 512,OS,Región del Libertador General Bernardo O'Higgins,Cachapoal,Rancagua,3,0.0,0.0,False
+EDS-60013,EDS 60013 - Santa Cruz,AV. ERRAZURIZ N° 1236,OS,Región del Libertador General Bernardo O'Higgins,Colchagua,Santa Cruz,3,0.0,0.0,False
+EDS-60348,EDS 60348 - Rancagua,LONGITUDINAL SUR KM 90,OS,Región del Libertador General Bernardo O'Higgins,Cachapoal,Rancagua,3,0.0,0.0,False
+EDS-60374,EDS 60374 - Rancagua,CACHAPOAL N° 1420,OS,Región del Libertador General Bernardo O'Higgins,Cachapoal,Rancagua,3,0.0,0.0,False
+EDS-60827,EDS 60827 - Rancagua,AV. RECREO N° 238,OS,Región del Libertador General Bernardo O'Higgins,Cachapoal,Rancagua,3,0.0,0.0,False
+EDS-60339,EDS 60339 - Curicó,"CARMEN Nº 890, C. HENRIQUEZ",OS,Región del Maule,Curicó,Curicó,3,0.0,0.0,False
+EDS-20212,EDS 20212 - Colbún,AVDA. BERNARDO O´HIGGINS ESQUINA LOS AROMOS S/N°,OZS,Región del Maule,Linares,Colbún,3,0.0,0.0,False
+EDS-20242,EDS 20242 - Constitución,"AV. MAC-IVER, ESQ. SANTA MARIA",OZS,Región del Maule,Talca,Constitución,3,0.0,0.0,False
+EDS-20431,EDS 20431 - Talca,2 NORTE N° 2310,OZS,Región del Maule,Talca,Talca,3,0.0,0.0,False
+EDS-20947,EDS 20947 - Villa Alegre,AV. ABATE MOLINA N° 700,OZS,Región del Maule,Linares,Villa Alegre,3,0.0,0.0,False
+EDS-20127,EDS 20127 - Linares,"KURT MOLLER, ESQ. CHACABUCO",OZS,Región del Maule,Linares,Linares,3,0.0,0.0,False
+EDS-20703,EDS 20703 - Laja,AV. LOS RIOS N° 745,OZS,Región del Biobío,Biobío,Laja,3,0.0,0.0,False
+EDS-20946,EDS 20946 - Los Angeles,"AV. ERCILLA, ESQ. GALVARINO",OZS,Región del Biobío,Biobío,Los Angeles,3,0.0,0.0,False
+EDS-20382,EDS 20382 - Concepción,"MANUEL RODRIGUEZ Nº 725, CHIGUAYANT",OZS,Región del Biobío,Concepción,Concepción,3,0.0,0.0,False
+EDS-20316,EDS 20316 - Quellón,"LADRILLEROS, ESQ. LA PAZ",OZS,Región del Biobío,Chiloe,Quellón,3,0.0,0.0,False
+EDS-20936,EDS 20936 - Concepción,MAIPU N° 895,OZS,Región del Biobío,Concepción,Concepción,3,0.0,0.0,False
+EDS-20072,EDS 20072 - Chiguayante,CALLE 8 ORIENTE N° 750,OZS,Región del Biobío,Concepción,Chiguayante,3,0.0,0.0,False
+EDS-20156,EDS 20156 - Pucón,"FRESIA 547, ESQ. BRASIL",OZS,Región de La Araucanía,Cautín,Pucón,3,0.0,0.0,False
+EDS-20449,EDS 20449 - Villarrica,"CAMINO A COÑARIPE N° 555, LICAN-RAY",OZS,Región de La Araucanía,Cautín,Villarrica,3,0.0,0.0,False
+EDS-20945,EDS 20945 - Temuco,"AV. SAN MARTIN, ESQ. URUGUAY",OZS,Región de La Araucanía,Cautín,Temuco,3,0.0,0.0,False
+EDS-20215,EDS 20215 - Ancud,LIBERTAD N° 547,OZS,Región de Los Lagos,Chiloé,Ancud,3,0.0,0.0,False
+EDS-20082,EDS 20082 - Puerto Montt,"AV. LOS NOTROS, ESQ. VOLCAN PUYEHUE",OZS,Región de Los Lagos,Llanquihue,Puerto Montt,3,0.0,0.0,False
+EDS-20604,EDS 20604 - Llanquihue,VICENTE PEREZ ROSALES N° 711,OZS,Región de Los Lagos,Llanquihue,Llanquihue,3,0.0,0.0,False
+EDS-20327,EDS 20327 - Osorno,"REPUBLICA, ESQ. VICTORIA",OZS,Región de Los Lagos,Osorno,Osorno,3,0.0,0.0,False
+EDS-20120,EDS 20120 - Castro,GALVARINO RIVEROS N° 1205,OZS,Región de Los Lagos,Chiloé,Castro,3,0.0,0.0,False
+EDS-20098,EDS 20098 - Futaleufú,"FUTALEUFU, CARRETERA AUSTRAL CAMINO E LLIMITE S/N",OZS,Región de Los Lagos,Palena,Futaleufú,3,0.0,0.0,False
+EDS-20099,EDS 20099 - O'Higgins,"RIO TRANQUILO S/N, CARRETERA AUSTRAL.",OZS,Región de Aysén,Capitán Prat,O'Higgins,3,0.0,0.0,False
+EDS-20830,EDS 20830 - Coyhaique,AV. OGANA N° 1157,OZS,Región de Aysén,Coyhaique,Coyhaique,3,0.0,0.0,False
+EDS-20825,EDS 20825 - Aysén,"EUSEBIO IBAR S/N, MANIHUALES",OZS,Región de Aysén,Aysén,Aysén,3,0.0,0.0,False
+EDS-20618,EDS 20618 - Natales,BULNES N° 239,OZS,Región de Magallanes y de la Antártica Chilena,Ultima Esperanza,Natales,3,0.0,0.0,False
+EDS-20647,EDS 20647 - Punta Arenas,"DIAGONAL DON BOSCO, ESQ. SARMIENTO",OZS,Región de Magallanes y de la Antártica Chilena,Magallanes,Punta Arenas,3,0.0,0.0,False
+EDS-60095,EDS 60095 - Puente Alto,CONCHA Y TORO N° 0316,OS,Región Metropolitana,Cordillera,Puente Alto,3,0.0,0.0,False
+EDS-60108,EDS 60108 - Providencia,LOTA N° 2864,OS,Región Metropolitana,Santiago,Providencia,3,0.0,0.0,False
+EDS-60517,EDS 60517 - Maipú,CAMINO LONQUEN N° 9521,OS,Región Metropolitana,Santiago,Maipú,3,0.0,0.0,False
+EDS-60088,EDS 60088 - San Bernardo,CAMINO NOS A LOS MORROS N°1275,OS,Región Metropolitana,Maipo,San Bernardo,3,0.0,0.0,False
+EDS-60424,EDS 60424 - Quinta Normal,ALBERTO EDWARDS N° 4229,OS,Región Metropolitana,Santiago,Quinta Normal,3,0.0,0.0,False
+EDS-60009,EDS 60009 - Isla De Maipo,ALCALDE LOPEZ N°50,OS,Región Metropolitana,Talagante,Isla De Maipo,3,0.0,0.0,False
+EDS-60046,EDS 60046 - Independencia,GENERAL PRIETO N° 1500,OS,Región Metropolitana,Santiago,Independencia,3,0.0,0.0,False
+EDS-60064,EDS 60064 - San Joaquín,"AV. SANTA ROSA N° 4180, ESQ. SALESIANO",OS,Región Metropolitana,Santiago,San Joaquín,3,0.0,0.0,False
+EDS-60068,EDS 60068 - Lampa,RUTA G16 SITIO 122 ESQ. ARCO IRIS,OS,Región Metropolitana,Chacabuco,Lampa,3,0.0,0.0,False
+EDS-60132,EDS 60132 - Ñuñoa,VICUÑA MACKENNA N° 654,OS,Región Metropolitana,Santiago,Ñuñoa,3,0.0,0.0,False
+EDS-60135,EDS 60135 - La Reina,"AV. OSSA N° 591, ESQ. SIMON BOLIVAR",OS,Región Metropolitana,Santiago,La Reina,3,0.0,0.0,False
+EDS-60166,EDS 60166 - Renca,"AV. AMERICO VESPUCIO N° 2001, ESQ.",OS,Región Metropolitana,Santiago,Renca,3,0.0,0.0,False
+EDS-60222,EDS 60222 - Puente Alto,AV. CONCHA Y TORO N° 865,OS,Región Metropolitana,Cordillera,Puente Alto,3,0.0,0.0,False
+EDS-60228,EDS 60228 - La Florida,LIA AGUIRRE N° 10,OS,Región Metropolitana,Santiago,La Florida,3,0.0,0.0,False
+EDS-60358,EDS 60358 - Ñuñoa,AV. BUSTAMANTE N° 648,OS,Región Metropolitana,Santiago,Ñuñoa,3,0.0,0.0,False
+EDS-60390,EDS 60390 - La Florida,VICUÑA MACKENNA N° 8257,OS,Región Metropolitana,Santiago,La Florida,3,0.0,0.0,False
+EDS-60395,EDS 60395 - Santiago,"CARMEN N° 185, N° 191",OS,Región Metropolitana,Santiago,Santiago,3,0.0,0.0,False
+EDS-60601,EDS 60601 - Huechuraba,AMERICO VESPUCIO Nº 1403,OS,Región Metropolitana,Santiago,Huechuraba,3,0.0,0.0,False
+EDS-60664,EDS 60664 - Santiago,BASCUÑAN GUERRERO N° 2445,OS,Región Metropolitana,Santiago,Santiago,3,0.0,0.0,False
+EDS-60823,EDS 60823 - La Florida,AV. AMERICO VESPUCIO N° 9150,OS,Región Metropolitana,Santiago,La Florida,3,0.0,0.0,False
+EDS-60968,EDS 60968 - La Granja,SANTA ROSA N° 9468,OS,Región Metropolitana,Santiago,La Granja,3,0.0,0.0,False
+EDS-60041,EDS 60041 - Colina,CARRETERA SAN MARTIN N° 401,OS,Región Metropolitana,Chacabuco,Colina,3,0.0,0.0,False
+EDS-60048,EDS 60048 - Buin,"BALMACEDA N° 901, ESQ. O'HIGGINS",OS,Región Metropolitana,Maipo,Buin,3,0.0,0.0,False
+EDS-60145,EDS 60145 - La Cisterna,"GRAN AVENIDA N° 9257, ESQ. LOS MORR",OS,Región Metropolitana,Santiago,La Cisterna,3,0.0,0.0,False
+EDS-60220,EDS 60220 - Maipú,ALBERTO LLONA N° 640,OS,Región Metropolitana,Santiago,Maipú,3,0.0,0.0,False
+EDS-60370,EDS 60370 - Providencia,"MANUEL MONTT N° 1118, ESQ. ALFEREZ",OS,Región Metropolitana,Santiago,Providencia,3,0.0,0.0,False
+EDS-60384,EDS 60384 - San Miguel,"DEPARTAMENTAL N° 1902, ESQ. OCHAGAV",OS,Región Metropolitana,Santiago,San Miguel,3,0.0,0.0,False
+EDS-60801,EDS 60801 - Puente Alto,"AV. MEXICO N° 3193, ESQ. EL PEÑON",OS,Región Metropolitana,Cordillera,Puente Alto,3,0.0,0.0,False
+EDS-60012,EDS 60012 - San Ramón,AV. AMERICO VESPUCIO N° 1316,OS,Región Metropolitana,Santiago,San Ramón,3,0.0,0.0,False
+EDS-60134,EDS 60134 - Ñuñoa,PEDRO DE VALDIVIA N° 4298,OS,Región Metropolitana,Santiago,Ñuñoa,3,0.0,0.0,False
+EDS-60355,EDS 60355 - Santiago,VIEL N° 1921,OS,Región Metropolitana,Santiago,Santiago,3,0.0,0.0,False
+EDS-60618,EDS 60618 - Quinta Normal,JOSE JOAQUIN PEREZ N° 5190,OS,Región Metropolitana,Santiago,Quinta Normal,3,0.0,0.0,False
+EDS-20235,EDS 20235 - Mariquina,JOSE PUCHI N° 1700,OZS,Región de Los Ríos,Valdivia,Mariquina,3,0.0,0.0,False
+EDS-20086,EDS 20086 - Valdivia,AV. PEDRO AGUIRRE CERDA N° 670,OZS,Región de Los Ríos,Valdivia,Valdivia,3,0.0,0.0,False
+EDS-20442,EDS 20442 - Valdivia,"PICARTE, ESQ. SIMPSON",OZS,Región de Los Ríos,Valdivia,Valdivia,3,0.0,0.0,False

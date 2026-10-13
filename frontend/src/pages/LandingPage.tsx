@@ -35,8 +35,44 @@ const slides = [
 
 type DolarCotizacion = {
   nombre: string;
-  venta: number;
-  fechaActualizacion: string;
+  valor: number;
+  fecha: string;
+};
+
+type DolarApiResponse = {
+  nombre: string;
+  serie: Array<{
+    valor: number;
+    fecha: string;
+  }>;
+};
+
+type EuroCotizacion = {
+  nombre: string;
+  valor: number;
+  fecha: string;
+};
+
+type EuroApiResponse = {
+  nombre: string;
+  serie: Array<{
+    valor: number;
+    fecha: string;
+  }>;
+};
+
+type UfCotizacion = {
+  nombre: string;
+  valor: number;
+  fecha: string;
+};
+
+type UfApiResponse = {
+  nombre: string;
+  serie: Array<{
+    valor: number;
+    fecha: string;
+  }>;
 };
 
 export const LandingPage: React.FC = () => {
@@ -45,6 +81,14 @@ export const LandingPage: React.FC = () => {
   const [dolar, setDolar] = useState<DolarCotizacion | null>(null);
   const [isDolarLoading, setIsDolarLoading] = useState(false);
   const [dolarError, setDolarError] = useState("");
+  const [isEuroOpen, setIsEuroOpen] = useState(false);
+  const [euro, setEuro] = useState<EuroCotizacion | null>(null);
+  const [isEuroLoading, setIsEuroLoading] = useState(false);
+  const [euroError, setEuroError] = useState("");
+  const [isUfOpen, setIsUfOpen] = useState(false);
+  const [uf, setUf] = useState<UfCotizacion | null>(null);
+  const [isUfLoading, setIsUfLoading] = useState(false);
+  const [ufError, setUfError] = useState("");
   const [registerSubmitted, setRegisterSubmitted] = useState(false);
   const [activeTab, setActiveTab] = useState('inicio');
   const [formData, setFormData] = useState({
@@ -79,14 +123,69 @@ export const LandingPage: React.FC = () => {
     setDolarError("");
 
     try {
-      const response = await fetch("https://cl.dolarapi.com/v1/cotizaciones/usd");
+      const response = await fetch("https://mindicador.cl/api/dolar");
       if (!response.ok) throw new Error("No se pudo obtener la cotización.");
-      const data: DolarCotizacion = await response.json();
-      setDolar(data);
+      const data: DolarApiResponse = await response.json();
+      const latestQuote = data.serie[0];
+      if (!latestQuote) throw new Error("La API no entregó cotizaciones.");
+
+      setDolar({
+        nombre: data.nombre,
+        valor: latestQuote.valor,
+        fecha: latestQuote.fecha
+      });
     } catch {
       setDolarError("No fue posible cargar el valor del dólar. Intenta nuevamente.");
     } finally {
       setIsDolarLoading(false);
+    }
+  };
+
+  const handleShowEuro = async () => {
+    setIsEuroOpen(true);
+    setIsEuroLoading(true);
+    setEuroError("");
+
+    try {
+      const response = await fetch("https://mindicador.cl/api/euro");
+      if (!response.ok) throw new Error("No se pudo obtener la cotización.");
+      const data: EuroApiResponse = await response.json();
+      const latestQuote = data.serie[0];
+      if (!latestQuote) throw new Error("La API no entregó cotizaciones.");
+
+      setEuro({
+        nombre: data.nombre,
+        valor: latestQuote.valor,
+        fecha: latestQuote.fecha
+      });
+    } catch {
+      setEuroError("No fue posible cargar el valor del euro. Intenta nuevamente.");
+    } finally {
+      setIsEuroLoading(false);
+    }
+  };
+
+  const handleShowUf = async () => {
+    setIsUfOpen(true);
+    setIsUfLoading(true);
+    setUfError("");
+
+    try {
+      const response = await fetch("https://mindicador.cl/api/uf");
+      if (!response.ok) throw new Error("No se pudo obtener la cotización.");
+      const data: UfApiResponse = await response.json();
+      const latestQuote = data.serie[0];
+      if (!latestQuote) throw new Error("La API no entregó cotizaciones.");
+
+      setUf({
+        nombre: data.nombre,
+        valor: latestQuote.valor,
+        fecha: latestQuote.fecha
+      });
+    } catch {
+      setUfError("No fue posible cargar el valor de la UF. Intenta nuevamente.");
+    } finally {
+      setIsUfLoading(false);
     }
   };
 
@@ -574,15 +673,18 @@ export const LandingPage: React.FC = () => {
             <h3>LINK DE INTERÉS</h3>
             <ul>
               <li>
-                <button type="button" className="dolar-footer-link" onMouseEnter={handleShowDolar}>
+                <button type="button" className="dolar-footer-link" onClick={handleShowDolar} style={{ textDecoration: "none" }}>
                   Valor Dólar
                 </button>
               </li>
-              <li>Valor UF</li>
+              <li><button type="button" className="dolar-footer-link" onClick={handleShowEuro} style={{ textDecoration: "none" }}>
+                  Valor Euro
+                </button></li>
+              <li><button type="button" className="dolar-footer-link" onClick={handleShowUf} style={{ textDecoration: "none" }}>
+                  Valor UF
+                </button></li>
               <li>Clima en Santiago</li>
-              <li>Clima en Peñaflor</li>
-              <li>Clima en Chile</li>
-              <li>Noticias</li>
+              <li>Clima en Peñaflor</li>              
             </ul>
           </div>
 
@@ -637,10 +739,78 @@ export const LandingPage: React.FC = () => {
             {dolar && !isDolarLoading && !dolarError && (
               <div className="dolar-modal-details">
                 <p className="dolar-modal-value">
-                  {new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(dolar.venta)}
+                  {new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(dolar.valor)}
                 </p>
                 <p>{dolar.nombre} · Precio de venta</p>
-                <p>Actualizado: {new Date(dolar.fechaActualizacion).toLocaleString("es-CL")}</p>
+                <p>Actualizado: {new Date(dolar.fecha).toLocaleString("es-CL")}</p>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* ==================== Popup Euro (FOOTER) ==================== */}
+      {isEuroOpen && (
+        <div
+          className="dolar-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dolar-modal-title"
+          onClick={() => setIsEuroOpen(false)}
+        >
+          <section className="dolar-modal" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setIsEuroOpen(false)}
+              className="registration-modal-close"
+              aria-label="Cerrar valor del euro"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h2 id="dolar-modal-title">Valor del euro</h2>
+            {isEuroLoading && <p role="status">Consultando cotización...</p>}
+            {euroError && <p role="alert">{euroError}</p>}
+            {euro && !isEuroLoading && !euroError && (
+              <div className="dolar-modal-details">
+                <p className="dolar-modal-value">
+                  {new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(euro.valor)}
+                </p>
+                <p>{euro.nombre} · Precio de venta</p>
+                <p>Actualizado: {new Date(euro.fecha).toLocaleString("es-CL")}</p>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* ==================== Popup UF (FOOTER) ==================== */}
+      {isUfOpen && (
+        <div
+          className="dolar-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dolar-modal-title"
+          onClick={() => setIsUfOpen(false)}
+        >
+          <section className="dolar-modal" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setIsUfOpen(false)}
+              className="registration-modal-close"
+              aria-label="Cerrar valor de la UF"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h2 id="dolar-modal-title">Valor de la UF</h2>
+            {isUfLoading && <p role="status">Consultando cotización...</p>}
+            {ufError && <p role="alert">{ufError}</p>}
+            {uf && !isUfLoading && !ufError && (
+              <div className="dolar-modal-details">
+                <p className="dolar-modal-value">
+                  {new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(uf.valor)}
+                </p>
+                <p>{uf.nombre} · Precio de venta</p>
+                <p>Actualizado: {new Date(uf.fecha).toLocaleString("es-CL")}</p>
               </div>
             )}
           </section>

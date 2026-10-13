@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -37,13 +37,29 @@ def bulk_create_locations(
 @router.get("/ubicaciones", response_model=List[schemas.UbicacionRespuesta])
 def get_locations(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
     convenio_id: Optional[UUID] = None,
     es_bodega: Optional[bool] = None,
     region: Optional[str] = None,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
+    user_role = user.get("role")
+    user_convenio = user.get("convenio_id")
+    
+    # Aislamiento multi-tenant: CLIENTE_CONVENIO sólo puede ver sus propios locales
+    if user_role == "CLIENTE_CONVENIO":
+        if not user_convenio:
+            return []
+        return crud.obtener_ubicaciones(
+            db, 
+            skip=skip, 
+            limit=limit, 
+            convenio_id=UUID(user_convenio), 
+            es_bodega=False, 
+            region=region
+        )
+        
     return crud.obtener_ubicaciones(db, skip=skip, limit=limit, convenio_id=convenio_id, es_bodega=es_bodega, region=region)
 
 @router.get("/ubicaciones/{ubicacion_id}", response_model=schemas.UbicacionRespuesta)
@@ -55,6 +71,17 @@ def get_location_details(
     location = crud.obtener_ubicacion_por_id(db, ubicacion_id=ubicacion_id)
     if not location:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
+        
+    user_role = user.get("role")
+    user_convenio = user.get("convenio_id")
+    
+    if user_role == "CLIENTE_CONVENIO":
+        if not user_convenio or str(location.convenio_id) != user_convenio:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para visualizar este local o instalación."
+            )
+            
     return location
 
 @router.patch("/ubicaciones/{ubicacion_id}", response_model=schemas.UbicacionRespuesta)
@@ -68,6 +95,18 @@ def update_location(
     if not location:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
     return crud.actualizar_ubicacion(db, location, location_update)
+
+@router.delete("/ubicaciones/{ubicacion_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_location(
+    ubicacion_id: UUID,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
+):
+    location = crud.obtener_ubicacion_por_id(db, ubicacion_id=ubicacion_id)
+    if not location:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
+    crud.eliminar_ubicacion(db, location)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- CATALOGO PRODUCTOS ---
@@ -94,6 +133,48 @@ def get_products(
     user: dict = Depends(auth.verify_token)
 ):
     return crud.obtener_productos(db, skip, limit)
+
+@router.get("/productos/{producto_id}", response_model=schemas.CatalogoProductosRespuesta)
+def get_product_details(
+    producto_id: UUID,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.verify_token)
+):
+    product = crud.obtener_producto_por_id(db, producto_id=producto_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado.")
+    return product
+
+@router.patch("/productos/{producto_id}", response_model=schemas.CatalogoProductosRespuesta)
+def update_product(
+    producto_id: UUID,
+    product_update: schemas.CatalogoProductosActualizar,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
+):
+    product = crud.obtener_producto_por_id(db, producto_id=producto_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado.")
+    if product_update.sku and product_update.sku != product.sku:
+        existing = crud.obtener_producto_por_sku(db, sku=product_update.sku)
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe otro producto con este SKU.")
+    return crud.actualizar_producto(db, product, product_update)
+
+@router.delete("/productos/{producto_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(
+    producto_id: UUID,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
+):
+    product = crud.obtener_producto_por_id(db, producto_id=producto_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado.")
+    try:
+        crud.eliminar_producto(db, product)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- ACTIVOS ---
@@ -127,7 +208,7 @@ def create_asset(
 @router.get("/activos", response_model=List[schemas.ActivoRespuesta])
 def get_assets(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
     db: Session = Depends(get_db),
     user: dict = Depends(auth.verify_token)
 ):
@@ -159,8 +240,30 @@ def update_asset(
         location = crud.obtener_ubicacion_por_id(db, ubicacion_id=asset_update.ubicacion_actual_id)
         if not location:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ubicación no encontrada.")
+
+    if asset_update.producto_id:
+        product = crud.obtener_producto_por_id(db, producto_id=asset_update.producto_id)
+        if not product:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado en catálogo.")
+
+    if asset_update.numero_serie and asset_update.numero_serie != asset.numero_serie:
+        existing = crud.obtener_activo_por_serie(db, numero_serie=asset_update.numero_serie)
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe otro activo con este número de serie.")
             
     return crud.actualizar_activo(db, asset, asset_update)
+
+@router.delete("/activos/{activo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_asset(
+    activo_id: UUID,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth.require_role(["ADMIN", "JEFE_BODEGA"]))
+):
+    asset = crud.obtener_activo_por_id(db, activo_id=activo_id)
+    if not asset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activo no encontrado.")
+    crud.eliminar_activo(db, asset)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- MOVIMIENTOS STOCK ---

@@ -14,7 +14,7 @@ def obtener_ubicacion_por_codigo(db: Session, codigo_local: str):
 def obtener_ubicaciones(
     db: Session,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
     convenio_id: Optional[UUID] = None,
     es_bodega: Optional[bool] = None,
     region: Optional[str] = None
@@ -33,8 +33,13 @@ def crear_ubicacion(db: Session, location_in: schemas.UbicacionCrear):
         codigo_local=location_in.codigo_local,
         nombre=location_in.nombre,
         direccion=location_in.direccion,
+        zona=location_in.zona,
         region=location_in.region,
+        provincia=location_in.provincia,
         comuna=location_in.comuna,
+        cantidad_pantallas=location_in.cantidad_pantallas,
+        precio_instalacion_uf=location_in.precio_instalacion_uf,
+        precio_transporte_uf=location_in.precio_transporte_uf,
         es_bodega=location_in.es_bodega,
         convenio_id=location_in.convenio_id,
         nombre_encargado=location_in.nombre_encargado,
@@ -55,6 +60,21 @@ def actualizar_ubicacion(db: Session, db_location: models.Ubicacion, location_up
     db.refresh(db_location)
     return db_location
 
+def eliminar_ubicacion(db: Session, db_location: models.Ubicacion):
+    # Desvincular movimientos de stock donde fue origen
+    db.query(models.MovimientoStock).filter(models.MovimientoStock.ubicacion_origen_id == db_location.ubicacion_id).update({models.MovimientoStock.ubicacion_origen_id: None})
+    # Eliminar movimientos de stock donde fue destino
+    db.query(models.MovimientoStock).filter(models.MovimientoStock.ubicacion_destino_id == db_location.ubicacion_id).delete()
+    # Reasignar activos si existen a otra bodega o ubicación disponible
+    bodega = db.query(models.Ubicacion).filter(models.Ubicacion.es_bodega == True, models.Ubicacion.ubicacion_id != db_location.ubicacion_id).first()
+    if not bodega:
+        bodega = db.query(models.Ubicacion).filter(models.Ubicacion.ubicacion_id != db_location.ubicacion_id).first()
+    if bodega:
+        db.query(models.Activo).filter(models.Activo.ubicacion_actual_id == db_location.ubicacion_id).update({models.Activo.ubicacion_actual_id: bodega.ubicacion_id})
+    db.delete(db_location)
+    db.commit()
+    return True
+
 def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear]):
     nuevos = []
     for loc in locales:
@@ -64,10 +84,19 @@ def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear])
             if existente:
                 existente.nombre = loc.nombre
                 existente.direccion = loc.direccion
+                existente.zona = loc.zona
                 existente.region = loc.region
+                existente.provincia = loc.provincia
                 existente.comuna = loc.comuna
+                if loc.cantidad_pantallas is not None:
+                    existente.cantidad_pantallas = loc.cantidad_pantallas
+                if loc.precio_instalacion_uf is not None:
+                    existente.precio_instalacion_uf = loc.precio_instalacion_uf
+                if loc.precio_transporte_uf is not None:
+                    existente.precio_transporte_uf = loc.precio_transporte_uf
                 existente.es_bodega = loc.es_bodega
-                existente.convenio_id = loc.convenio_id
+                if loc.convenio_id is not None:
+                    existente.convenio_id = loc.convenio_id
                 existente.nombre_encargado = loc.nombre_encargado
                 existente.telefono_encargado = loc.telefono_encargado
                 existente.correo_encargado = loc.correo_encargado
@@ -79,8 +108,13 @@ def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear])
             codigo_local=loc.codigo_local,
             nombre=loc.nombre,
             direccion=loc.direccion,
+            zona=loc.zona,
             region=loc.region,
+            provincia=loc.provincia,
             comuna=loc.comuna,
+            cantidad_pantallas=loc.cantidad_pantallas,
+            precio_instalacion_uf=loc.precio_instalacion_uf,
+            precio_transporte_uf=loc.precio_transporte_uf,
             es_bodega=loc.es_bodega,
             convenio_id=loc.convenio_id,
             nombre_encargado=loc.nombre_encargado,
@@ -92,8 +126,8 @@ def crear_ubicaciones_masivo(db: Session, locales: List[schemas.UbicacionCrear])
         nuevos.append(db_loc)
     
     db.commit()
-    for db_loc in nuevos:
-        db.refresh(db_loc)
+    for n in nuevos:
+        db.refresh(n)
     return nuevos
 
 # --- PRODUCT CATALOG CRUD ---
@@ -119,6 +153,22 @@ def crear_producto(db: Session, product_in: schemas.CatalogoProductosCrear):
     db.commit()
     db.refresh(db_product)
     return db_product
+
+def actualizar_producto(db: Session, db_product: models.CatalogoProductos, product_update: schemas.CatalogoProductosActualizar):
+    update_data = product_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_product, key, value)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+def eliminar_producto(db: Session, db_product: models.CatalogoProductos):
+    activos_count = db.query(models.Activo).filter(models.Activo.producto_id == db_product.producto_id).count()
+    if activos_count > 0:
+        raise ValueError(f"No se puede eliminar el producto porque tiene {activos_count} activo(s) físico(s) en inventario.")
+    db.delete(db_product)
+    db.commit()
+    return True
 
 # --- ASSET CRUD ---
 def obtener_activo_por_id(db: Session, activo_id: UUID):
@@ -150,6 +200,13 @@ def actualizar_activo(db: Session, db_asset: models.Activo, asset_update: schema
     db.commit()
     db.refresh(db_asset)
     return db_asset
+
+def eliminar_activo(db: Session, db_asset: models.Activo):
+    # Eliminar cualquier movimiento de stock asociado a este activo
+    db.query(models.MovimientoStock).filter(models.MovimientoStock.activo_id == db_asset.activo_id).delete()
+    db.delete(db_asset)
+    db.commit()
+    return True
 
 # --- STOCK MOVEMENT CRUD ---
 def obtener_movimientos_por_activo(db: Session, activo_id: UUID):

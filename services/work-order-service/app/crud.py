@@ -9,8 +9,22 @@ def obtener_orden_trabajo_por_id(db: Session, orden_trabajo_id: UUID):
 def obtener_orden_trabajo_por_numero(db: Session, numero_orden: str):
     return db.query(models.OrdenTrabajo).filter(models.OrdenTrabajo.numero_orden == numero_orden).first()
 
-def obtener_ordenes_trabajo(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.OrdenTrabajo).offset(skip).limit(limit).all()
+def obtener_ordenes_trabajo(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100,
+    tecnico_id: UUID = None,
+    convenio_id: UUID = None,
+    estado: str = None
+):
+    query = db.query(models.OrdenTrabajo)
+    if tecnico_id:
+        query = query.filter(models.OrdenTrabajo.tecnico_asignado_id == tecnico_id)
+    if convenio_id:
+        query = query.filter(models.OrdenTrabajo.convenio_cliente_id == convenio_id)
+    if estado:
+        query = query.filter(models.OrdenTrabajo.estado == estado)
+    return query.order_by(models.OrdenTrabajo.fecha_programada.desc()).offset(skip).limit(limit).all()
 
 def crear_orden_trabajo(db: Session, work_order_in: schemas.OrdenTrabajoCrear):
     db_wo = models.OrdenTrabajo(

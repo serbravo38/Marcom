@@ -25,13 +25,16 @@ CREATE TABLE esquema_auth_clientes.usuarios (
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     intentos_fallidos INTEGER NOT NULL DEFAULT 0,
     bloqueado_hasta TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    mfa_habilitado BOOLEAN NOT NULL DEFAULT FALSE,
+    mfa_secreto VARCHAR(500) DEFAULT NULL,
+    mfa_codigos_respaldo TEXT DEFAULT NULL,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE esquema_auth_clientes.convenios (
     convenio_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre_empresa VARCHAR(150) NOT NULL, -- ej: Copec S.A., Arcoprime Ltda.
+    nombre_empresa VARCHAR(150) NOT NULL,
     rut VARCHAR(12) UNIQUE NOT NULL,
     limite_credito NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     credito_usado NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
@@ -60,21 +63,21 @@ CREATE TYPE esquema_inventario.estado_activo_enum AS ENUM (
 
 CREATE TABLE esquema_inventario.ubicaciones (
     ubicacion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo_local VARCHAR(50) UNIQUE, -- Código de identificación del local (ej: 'COP-042', 'PRONTO-102')
-    nombre VARCHAR(150) NOT NULL,    -- ej: "Bodega M3storage - Enea", "Tienda Pronto Copec Pudahuel"
+    codigo_local VARCHAR(50) UNIQUE,
+    nombre VARCHAR(150) NOT NULL,
     direccion TEXT NOT NULL,
+    zona VARCHAR(50),
     region VARCHAR(100) NOT NULL,
+    provincia VARCHAR(100),
     comuna VARCHAR(100),
+    cantidad_pantallas INTEGER DEFAULT 0,
+    precio_instalacion_uf NUMERIC(10, 2) DEFAULT 0.00,
+    precio_transporte_uf NUMERIC(10, 2) DEFAULT 0.00,
     es_bodega BOOLEAN NOT NULL DEFAULT FALSE,
-    
-    -- Relación con cliente de convenio si corresponde
     convenio_id UUID REFERENCES esquema_auth_clientes.convenios(convenio_id) ON DELETE SET NULL,
-    
-    -- Información del Encargado del Local
     nombre_encargado VARCHAR(150),
     telefono_encargado VARCHAR(20),
     correo_encargado VARCHAR(150),
-    
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -83,10 +86,10 @@ CREATE TABLE esquema_inventario.ubicaciones (
 CREATE TABLE esquema_inventario.catalogo_productos (
     producto_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sku VARCHAR(50) UNIQUE NOT NULL,
-    nombre VARCHAR(150) NOT NULL, -- ej: "Monitor Profesional 65", "Monitor en Placa >100", "Impresora Comanda"
-    marca VARCHAR(100) NOT NULL, -- ej: "Samsung"
-    categoria VARCHAR(100) NOT NULL, -- ej: "Monitores", "POS", "Notebooks", "UPS"
-    pulgadas NUMERIC(5, 2), -- 10.00 a 65.00, >100.00
+    nombre VARCHAR(150) NOT NULL,
+    marca VARCHAR(100) NOT NULL,
+    categoria VARCHAR(100) NOT NULL,
+    pulgadas NUMERIC(5, 2),
     descripcion TEXT,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -108,7 +111,7 @@ CREATE TABLE esquema_inventario.movimientos_stock (
     ubicacion_origen_id UUID REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
     ubicacion_destino_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id),
     usuario_movimiento_id UUID NOT NULL REFERENCES esquema_auth_clientes.usuarios(usuario_id),
-    motivo TEXT NOT NULL, -- ej: "Instalación local nuevo", "Retiro por falla", "Despacho a región"
+    motivo TEXT NOT NULL,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -139,7 +142,7 @@ CREATE TABLE esquema_ordenes_trabajo.activos_orden_trabajo (
     orden_trabajo_id UUID NOT NULL REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE CASCADE,
     activo_instalado_id UUID REFERENCES esquema_inventario.activos(activo_id),
     activo_retirado_id UUID REFERENCES esquema_inventario.activos(activo_id),
-    tipo_accion VARCHAR(50) NOT NULL -- ej: 'INSTALACION_NUEVA', 'REEMPLAZO_POR_FALLA', 'RETIRO'
+    tipo_accion VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE esquema_ordenes_trabajo.evidencias_terreno (
@@ -180,7 +183,7 @@ CREATE TABLE esquema_facturacion.pedidos (
 CREATE TABLE esquema_facturacion.pagos (
     pago_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     pedido_id UUID NOT NULL REFERENCES esquema_facturacion.pedidos(pedido_id),
-    transaccion_pasarela_id VARCHAR(100), -- Token o Order Flow
+    transaccion_pasarela_id VARCHAR(100),
     monto NUMERIC(12, 2) NOT NULL,
     estado esquema_facturacion.estado_pago_enum NOT NULL,
     payload_respuesta JSONB,
@@ -194,7 +197,7 @@ CREATE TABLE esquema_facturacion.documentos_dte (
     folio_sii INT,
     url_pdf TEXT,
     url_xml TEXT,
-    estado_sii VARCHAR(50) DEFAULT 'PENDIENTE', -- ej: 'ACEPTADO', 'RECHAZADO'
+    estado_sii VARCHAR(50) DEFAULT 'PENDIENTE',
     emitido_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -204,8 +207,7 @@ CREATE TABLE esquema_facturacion.cotizaciones (
     convenio_id UUID NOT NULL REFERENCES esquema_auth_clientes.convenios(convenio_id) ON DELETE CASCADE,
     ubicacion_id UUID NOT NULL REFERENCES esquema_inventario.ubicaciones(ubicacion_id) ON DELETE RESTRICT,
     usuario_solicitante_id UUID REFERENCES esquema_auth_clientes.usuarios(usuario_id) ON DELETE SET NULL,
-    
-    -- Parámetros y cálculos internos
+
     tipo_soporte VARCHAR(100) NOT NULL DEFAULT 'ESTANDAR_CONVENIO',
     costo_soporte NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     distancia_km NUMERIC(8, 2) NOT NULL DEFAULT 0.00,
@@ -216,19 +218,17 @@ CREATE TABLE esquema_facturacion.cotizaciones (
     subtotal_neto NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     monto_iva NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     monto_total NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    
-    -- Solicitud de Aprobación y Orden de Compra
+
     fecha_solicitud_aprobacion TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE_APROBACION', -- 'BORRADOR', 'PENDIENTE_APROBACION', 'APROBADA', 'RECHAZADA'
+    estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE_APROBACION',
     orden_compra_numero VARCHAR(100),
     orden_compra_adjunto TEXT,
     fecha_aprobacion TIMESTAMP WITH TIME ZONE,
     notas TEXT,
-    
-    -- Vínculos generados tras aprobación
+
     orden_trabajo_id UUID REFERENCES esquema_ordenes_trabajo.ordenes_trabajo(orden_trabajo_id) ON DELETE SET NULL,
     pedido_id UUID REFERENCES esquema_facturacion.pedidos(pedido_id) ON DELETE SET NULL,
-    
+
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -247,6 +247,9 @@ CREATE TABLE esquema_facturacion.cotizaciones_items (
 -- =============================================================================
 CREATE INDEX idx_ubicaciones_codigo ON esquema_inventario.ubicaciones(codigo_local);
 CREATE INDEX idx_ubicaciones_region ON esquema_inventario.ubicaciones(region);
+CREATE INDEX idx_ubicaciones_zona ON esquema_inventario.ubicaciones(zona);
+CREATE INDEX idx_ubicaciones_provincia ON esquema_inventario.ubicaciones(provincia);
+CREATE INDEX idx_ubicaciones_comuna ON esquema_inventario.ubicaciones(comuna);
 CREATE INDEX idx_ubicaciones_convenio ON esquema_inventario.ubicaciones(convenio_id);
 
 CREATE INDEX idx_activos_serie ON esquema_inventario.activos(numero_serie);
@@ -263,6 +266,7 @@ CREATE INDEX idx_pagos_pedido ON esquema_facturacion.pagos(pedido_id);
 CREATE INDEX idx_cotizaciones_convenio ON esquema_facturacion.cotizaciones(convenio_id);
 CREATE INDEX idx_cotizaciones_ubicacion ON esquema_facturacion.cotizaciones(ubicacion_id);
 CREATE INDEX idx_cotizaciones_estado ON esquema_facturacion.cotizaciones(estado);
+
 -- =============================================================================
 -- INSERCIÓN DE DATOS SEMILLA (Seed Data)
 -- =============================================================================
@@ -276,3 +280,15 @@ VALUES (
   'ADMIN'
 )
 ON CONFLICT (correo) DO NOTHING;
+
+INSERT INTO esquema_auth_clientes.usuarios (rut, correo, clave_hash, nombre, apellido, rol)
+VALUES (
+  '18123456-7',
+  'ser.brav@google.com',
+  '$2b$12$rVB4f4b.BA4k4TUGwdY4eu17FZWYhLf588Sxm3z.p7a17pjoqP9re',
+  'Sergio',
+  'Bravo',
+  'ADMIN'
+)
+ON CONFLICT (correo) DO NOTHING;
+

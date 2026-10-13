@@ -27,6 +27,7 @@ export interface OrdenTrabajo {
   fecha_programada: string;
   fecha_termino?: string;
   notes?: string;
+  notas?: string;
   creado_en: string;
   activos?: ActivoOrdenTrabajo[];
   evidencias?: EvidenciaTerreno[];

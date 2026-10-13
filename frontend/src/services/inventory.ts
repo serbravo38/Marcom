@@ -5,8 +5,13 @@ export interface Ubicacion {
   codigo_local?: string | null;
   nombre: string;
   direccion: string;
+  zona?: string | null;
   region: string;
+  provincia?: string | null;
   comuna?: string | null;
+  cantidad_pantallas?: number;
+  precio_instalacion_uf?: number;
+  precio_transporte_uf?: number;
   es_bodega: boolean;
   convenio_id?: string | null;
   nombre_encargado?: string | null;
@@ -78,6 +83,9 @@ export const inventoryService = {
   updateLocation: async (ubicacionId: string, data: any): Promise<Ubicacion> => {
     return api.patch<Ubicacion>(`/ubicaciones/${ubicacionId}`, data);
   },
+  deleteLocation: async (ubicacionId: string): Promise<void> => {
+    return api.delete(`/ubicaciones/${ubicacionId}`);
+  },
 
   // Catálogo de Productos
   getProducts: async (): Promise<CatalogoProductos[]> => {
@@ -85,6 +93,12 @@ export const inventoryService = {
   },
   createProduct: async (data: any): Promise<CatalogoProductos> => {
     return api.post<CatalogoProductos>("/productos", data);
+  },
+  updateProduct: async (productoId: string, data: any): Promise<CatalogoProductos> => {
+    return api.patch<CatalogoProductos>(`/productos/${productoId}`, data);
+  },
+  deleteProduct: async (productoId: string): Promise<void> => {
+    return api.delete(`/productos/${productoId}`);
   },
 
   // Activos
@@ -99,6 +113,9 @@ export const inventoryService = {
   },
   updateAsset: async (activoId: string, data: any): Promise<Activo> => {
     return api.patch<Activo>(`/activos/${activoId}`, data);
+  },
+  deleteAsset: async (activoId: string): Promise<void> => {
+    return api.delete(`/activos/${activoId}`);
   },
 
   // Movimientos de Stock

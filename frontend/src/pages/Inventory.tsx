@@ -10,18 +10,51 @@ import {
   Warehouse, 
   MapPin, 
   User, 
-  Briefcase 
+  Briefcase,
+  FileSpreadsheet,
+  Download,
+  CheckCircle2,
+  FileText,
+  Trash2,
+  Edit2,
+  AlertTriangle,
+  AlertCircle
 } from "lucide-react";
 import { inventoryService } from "../services/inventory";
 import { authService, type Convenio } from "../services/auth";
+import { LocationWeatherBadge } from "../components/LocationWeatherBadge";
+
+const REGIONES_MAP_JS: Record<number, string> = {
+  1: "Región de Tarapacá",
+  2: "Región de Antofagasta",
+  3: "Región de Atacama",
+  4: "Región de Coquimbo",
+  5: "Región de Valparaíso",
+  6: "Región del Libertador General Bernardo O'Higgins",
+  7: "Región del Maule",
+  8: "Región del Biobío",
+  9: "Región de La Araucanía",
+  10: "Región de Los Lagos",
+  11: "Región de Aysén",
+  12: "Región de Magallanes y de la Antártica Chilena",
+  13: "Región Metropolitana",
+  14: "Región de Los Ríos",
+  15: "Región de Arica y Parinacota",
+  16: "Región de Ñuble"
+};
 
 type Location = {
   ubicacion_id: string;
   codigo_local?: string | null;
   nombre: string;
   direccion: string;
+  zona?: string | null;
   region: string;
+  provincia?: string | null;
   comuna?: string | null;
+  cantidad_pantallas?: number;
+  precio_instalacion_uf?: number;
+  precio_transporte_uf?: number;
   es_bodega: boolean;
   convenio_id?: string | null;
   nombre_encargado?: string | null;
@@ -62,7 +95,19 @@ type StockMovement = {
 };
 
 export const Inventory: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"locations" | "products" | "assets" | "movements">("assets");
+  const [currentUser] = useState<any>(() => {
+    const userJson = localStorage.getItem("marcom_user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
+
+  const userRole = currentUser?.rol || "CLIENTE_ESTANDAR";
+  const isClient = userRole === "CLIENTE_CONVENIO" || userRole === "CLIENTE_ESTANDAR";
+  const isTech = userRole === "TECNICO_TERRENO";
+  const isAdminOrJefe = userRole === "ADMIN" || userRole === "JEFE_BODEGA";
+
+  const [activeTab, setActiveTab] = useState<"locations" | "products" | "assets" | "movements">(
+    isClient ? "locations" : "assets"
+  );
 
   // Data States
   const [locations, setLocations] = useState<Location[]>([]);
@@ -79,13 +124,32 @@ export const Inventory: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
+  // Edit & Delete States
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
+  const [deleteLocationLoading, setDeleteLocationLoading] = useState(false);
+  const [deleteLocationError, setDeleteLocationError] = useState<string | null>(null);
+
+  const [editingProduct, setEditingProduct] = useState<ProductCatalog | null>(null);
+  const [productToDelete, setProductToDelete] = useState<ProductCatalog | null>(null);
+  const [deleteProductLoading, setDeleteProductLoading] = useState(false);
+  const [deleteProductError, setDeleteProductError] = useState<string | null>(null);
+
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
+  const [deleteAssetLoading, setDeleteAssetLoading] = useState(false);
+  const [deleteAssetError, setDeleteAssetError] = useState<string | null>(null);
+
   // Form Fields
   // Location Form
   const [locCode, setLocCode] = useState("");
   const [locName, setLocName] = useState("");
   const [locAddress, setLocAddress] = useState("");
+  const [locZona, setLocZona] = useState("");
   const [locRegion, setLocRegion] = useState("");
+  const [locProvincia, setLocProvincia] = useState("");
   const [locComuna, setLocComuna] = useState("");
+  const [locPantallas, setLocPantallas] = useState<number>(3);
   const [locAgreementId, setLocAgreementId] = useState("");
   const [locManagerName, setLocManagerName] = useState("");
   const [locManagerPhone, setLocManagerPhone] = useState("");
@@ -94,6 +158,10 @@ export const Inventory: React.FC = () => {
 
   // Bulk Locations Form
   const [bulkLocJson, setBulkLocJson] = useState("");
+  const [bulkAgreementId, setBulkAgreementId] = useState("");
+  const [bulkFileName, setBulkFileName] = useState("");
+  const [bulkRowCount, setBulkRowCount] = useState<number | null>(null);
+  const [bulkMode, setBulkMode] = useState<"file" | "text">("file");
 
   // Product Form
   const [prodSku, setProdSku] = useState("");
@@ -150,39 +218,113 @@ export const Inventory: React.FC = () => {
   const closeModals = () => {
     setModalOpen(null);
     setModalError(null);
+    setEditingLocation(null);
+    setEditingProduct(null);
+    setEditingAsset(null);
     // Clear forms
-    setLocCode(""); setLocName(""); setLocAddress(""); setLocRegion(""); setLocComuna(""); 
-    setLocAgreementId(""); setLocManagerName(""); setLocManagerPhone(""); setLocManagerEmail(""); 
-    setLocIsWarehouse(false); setBulkLocJson("");
+    setLocCode(""); setLocName(""); setLocAddress(""); setLocZona(""); setLocRegion(""); setLocProvincia(""); setLocComuna(""); 
+    setLocPantallas(3); setLocAgreementId(""); setLocManagerName(""); setLocManagerPhone(""); setLocManagerEmail(""); 
+    setLocIsWarehouse(false); 
+    setBulkLocJson(""); setBulkAgreementId(""); setBulkFileName(""); setBulkRowCount(null); setBulkMode("file");
     setProdSku(""); setProdName(""); setProdBrand(""); setProdCategory(""); setProdSize(0); setProdDesc("");
     setAssetProductId(""); setAssetSerial(""); setAssetQrCode(""); setAssetStatus("NUEVO"); setAssetLocationId("");
     setMoveAssetId(""); setMoveDestId(""); setMoveReason("");
   };
 
-  const handleCreateLocation = async (e: React.FormEvent) => {
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFileName(file.name);
+    setModalError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = (event.target?.result as string) || "";
+      setBulkLocJson(content);
+      const lines = content.split(/\r?\n/).filter(l => l.trim().length > 0);
+      setBulkRowCount(Math.max(0, lines.length - 1));
+    };
+    reader.onerror = () => {
+      setModalError("No se pudo leer el archivo CSV seleccionado.");
+    };
+    reader.readAsText(file, "UTF-8");
+  };
+
+  const handleDownloadTemplate = () => {
+    const template = `codigo_local,nombre,direccion,zona,region,provincia,comuna,cantidad_pantallas,precio_instalacion_uf,precio_transporte_uf\nEDS-10097,EDS 10097 - Alto Hospicio,AV. TENIENTE ARTURO MERINO CORREA N° 3945,OZN,Región de Tarapacá,Iquique,Alto Hospicio,3,0.0,0.0\nEDS-10004,EDS 10004 - Antofagasta,AV. ANTONIO RENDIC N° 3855,OZN,Región de Antofagasta,Antofagasta,Antofagasta,3,0.0,0.0\nEDS-60321,EDS 60321 - Doñihue,AV. CACHAPOAL N° 2,OS,Región del Libertador General Bernardo O'Higgins,Cachapoal,Doñihue,3,0.0,0.0`;
+    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plantilla_locales_marcom.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleEditLocation = (loc: Location) => {
+    setEditingLocation(loc);
+    setLocCode(loc.codigo_local || "");
+    setLocName(loc.nombre);
+    setLocAddress(loc.direccion);
+    setLocZona(loc.zona || "");
+    setLocRegion(loc.region);
+    setLocProvincia(loc.provincia || "");
+    setLocComuna(loc.comuna || "");
+    setLocPantallas(loc.cantidad_pantallas || 0);
+    setLocAgreementId(loc.convenio_id || "");
+    setLocManagerName(loc.nombre_encargado || "");
+    setLocManagerPhone(loc.telefono_encargado || "");
+    setLocManagerEmail(loc.correo_encargado || "");
+    setLocIsWarehouse(loc.es_bodega);
+    setModalOpen("location");
+  };
+
+  const handleSaveLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
     setModalError(null);
     try {
-      await inventoryService.createLocation({
+      const locData = {
         codigo_local: locCode || null,
         nombre: locName,
         direccion: locAddress,
+        zona: locZona || null,
         region: locRegion,
+        provincia: locProvincia || null,
         comuna: locComuna || null,
+        cantidad_pantallas: locPantallas ? Number(locPantallas) : 0,
         convenio_id: locAgreementId || null,
         nombre_encargado: locManagerName || null,
         telefono_encargado: locManagerPhone || null,
         correo_encargado: locManagerEmail || null,
         es_bodega: locIsWarehouse,
         activo: true
-      });
+      };
+      if (editingLocation) {
+        await inventoryService.updateLocation(editingLocation.ubicacion_id, locData);
+      } else {
+        await inventoryService.createLocation(locData);
+      }
       closeModals();
       fetchData();
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo crear la ubicación.");
+      setModalError(err?.message || `No se pudo ${editingLocation ? "actualizar" : "crear"} la ubicación.`);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteLocation = async () => {
+    if (!locationToDelete) return;
+    setDeleteLocationLoading(true);
+    setDeleteLocationError(null);
+    try {
+      await inventoryService.deleteLocation(locationToDelete.ubicacion_id);
+      setLocationToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      setDeleteLocationError(err?.message || "No se pudo eliminar la ubicación.");
+    } finally {
+      setDeleteLocationLoading(false);
     }
   };
 
@@ -191,14 +333,71 @@ export const Inventory: React.FC = () => {
     setModalLoading(true);
     setModalError(null);
     try {
-      let parsedData: any[];
-      try {
-        parsedData = JSON.parse(bulkLocJson);
-        if (!Array.isArray(parsedData)) {
-          throw new Error("El JSON debe ser un arreglo de objetos de locales.");
+      let parsedData: any[] = [];
+      const trimmed = bulkLocJson.trim();
+      if (!trimmed) {
+        throw new Error("Por favor selecciona un archivo CSV o ingresa los datos a importar.");
+      }
+      
+      if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+        try {
+          const json = JSON.parse(trimmed);
+          parsedData = Array.isArray(json) ? json : [json];
+          // Asignar convenio seleccionado si no tiene
+          parsedData = parsedData.map(item => ({
+            ...item,
+            convenio_id: item.convenio_id || (bulkAgreementId || null)
+          }));
+        } catch (parseErr: any) {
+          throw new Error("Formato JSON inválido: " + parseErr.message);
         }
-      } catch (parseErr: any) {
-        throw new Error("Formato JSON inválido: " + parseErr.message);
+      } else {
+        // Soporte de importación directa de CSV
+        const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) {
+          throw new Error("El archivo CSV debe contener cabecera y filas de datos.");
+        }
+        const delimiter = lines[0].includes(";") ? ";" : ",";
+        const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ""));
+        
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ""));
+          const rowObj: any = {};
+          headers.forEach((h, idx) => {
+            rowObj[h] = cols[idx] !== undefined ? cols[idx] : "";
+          });
+          
+          const rawEds = rowObj.codigo_local || rowObj.EDS || rowObj.eds;
+          if (!rawEds || String(rawEds).toLowerCase().includes("total")) continue;
+          const codigo = String(rawEds).startsWith("EDS-") ? String(rawEds) : `EDS-${rawEds}`;
+          const comunaVal = rowObj.comuna || rowObj.Comuna || "";
+          
+          // Mapeo inteligente de región
+          let regVal = rowObj.region || rowObj["Región"] || rowObj.Region || "Región Metropolitana";
+          const numReg = Number(regVal);
+          if (!isNaN(numReg) && REGIONES_MAP_JS[numReg]) {
+            regVal = REGIONES_MAP_JS[numReg];
+          }
+          
+          parsedData.push({
+            codigo_local: codigo,
+            nombre: rowObj.nombre || `EDS ${codigo.replace("EDS-", "")} - ${comunaVal || "Copec"}`,
+            direccion: rowObj.direccion || rowObj["Dirección"] || rowObj.Direccion || "Sin dirección",
+            zona: rowObj.zona || rowObj.Zona || null,
+            region: regVal,
+            provincia: rowObj.provincia || rowObj.Provincia || null,
+            comuna: comunaVal || null,
+            cantidad_pantallas: Number(rowObj.cantidad_pantallas || rowObj["#Pantallas"] || 3) || 3,
+            precio_instalacion_uf: Number(rowObj.precio_instalacion_uf || rowObj["Precio Instalación [UF]"] || 0) || 0,
+            precio_transporte_uf: Number(rowObj.precio_transporte_uf || rowObj["Precio Transporte [UF]"] || 0) || 0,
+            convenio_id: rowObj.convenio_id || (bulkAgreementId || null),
+            es_bodega: false
+          });
+        }
+      }
+
+      if (parsedData.length === 0) {
+        throw new Error("No se detectaron registros válidos para importar en el archivo.");
       }
 
       await inventoryService.bulkCreateLocations(parsedData);
@@ -211,46 +410,107 @@ export const Inventory: React.FC = () => {
     }
   };
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  const handleEditProduct = (prod: ProductCatalog) => {
+    setEditingProduct(prod);
+    setProdSku(prod.sku);
+    setProdName(prod.nombre);
+    setProdBrand(prod.marca);
+    setProdCategory(prod.categoria);
+    setProdSize(prod.pulgadas || 0);
+    setProdDesc(prod.descripcion || "");
+    setModalOpen("product");
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
     setModalError(null);
     try {
-      await inventoryService.createProduct({
+      const prodData = {
         sku: prodSku,
         nombre: prodName,
         marca: prodBrand,
         categoria: prodCategory,
         pulgadas: prodSize ? Number(prodSize) : null,
         descripcion: prodDesc || null
-      });
+      };
+      if (editingProduct) {
+        await inventoryService.updateProduct(editingProduct.producto_id, prodData);
+      } else {
+        await inventoryService.createProduct(prodData);
+      }
       closeModals();
       fetchData();
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo registrar el producto.");
+      setModalError(err?.message || `No se pudo ${editingProduct ? "actualizar" : "registrar"} el producto.`);
     } finally {
       setModalLoading(false);
     }
   };
 
-  const handleCreateAsset = async (e: React.FormEvent) => {
+  const handleConfirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setDeleteProductLoading(true);
+    setDeleteProductError(null);
+    try {
+      await inventoryService.deleteProduct(productToDelete.producto_id);
+      setProductToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      setDeleteProductError(err?.message || "No se pudo eliminar el producto.");
+    } finally {
+      setDeleteProductLoading(false);
+    }
+  };
+
+  const handleEditAsset = (asset: Asset) => {
+    setEditingAsset(asset);
+    setAssetProductId(asset.producto_id);
+    setAssetSerial(asset.numero_serie);
+    setAssetQrCode(asset.codigo_qr || "");
+    setAssetStatus(asset.estado_actual);
+    setAssetLocationId(asset.ubicacion_actual_id);
+    setModalOpen("asset");
+  };
+
+  const handleSaveAsset = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
     setModalError(null);
     try {
-      await inventoryService.createAsset({
+      const assetData = {
         producto_id: assetProductId,
         numero_serie: assetSerial,
         codigo_qr: assetQrCode || null,
         estado_actual: assetStatus,
         ubicacion_actual_id: assetLocationId
-      });
+      };
+      if (editingAsset) {
+        await inventoryService.updateAsset(editingAsset.activo_id, assetData);
+      } else {
+        await inventoryService.createAsset(assetData);
+      }
       closeModals();
       fetchData();
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo registrar el activo.");
+      setModalError(err?.message || `No se pudo ${editingAsset ? "actualizar" : "registrar"} el activo.`);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteAsset = async () => {
+    if (!assetToDelete) return;
+    setDeleteAssetLoading(true);
+    setDeleteAssetError(null);
+    try {
+      await inventoryService.deleteAsset(assetToDelete.activo_id);
+      setAssetToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      setDeleteAssetError(err?.message || "No se pudo eliminar el activo.");
+    } finally {
+      setDeleteAssetLoading(false);
     }
   };
 
@@ -286,30 +546,36 @@ export const Inventory: React.FC = () => {
 
       {/* Tabs Header */}
       <div className="tabs-header">
-        <button 
-          className={`tab-btn ${activeTab === "assets" ? "active" : ""}`}
-          onClick={() => setActiveTab("assets")}
-        >
-          Activos Seriados
-        </button>
+        {!isClient && (
+          <button 
+            className={`tab-btn ${activeTab === "assets" ? "active" : ""}`}
+            onClick={() => setActiveTab("assets")}
+          >
+            Activos Seriados
+          </button>
+        )}
         <button 
           className={`tab-btn ${activeTab === "locations" ? "active" : ""}`}
           onClick={() => setActiveTab("locations")}
         >
-          Bodegas y Tiendas
+          {isClient ? "Mis Locales y Pantallas" : "Bodegas y Locales"}
         </button>
-        <button 
-          className={`tab-btn ${activeTab === "products" ? "active" : ""}`}
-          onClick={() => setActiveTab("products")}
-        >
-          Catálogo
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === "movements" ? "active" : ""}`}
-          onClick={() => setActiveTab("movements")}
-        >
-          Movimientos de Stock
-        </button>
+        {!isClient && (
+          <button 
+            className={`tab-btn ${activeTab === "products" ? "active" : ""}`}
+            onClick={() => setActiveTab("products")}
+          >
+            Catálogo
+          </button>
+        )}
+        {isAdminOrJefe && (
+          <button 
+            className={`tab-btn ${activeTab === "movements" ? "active" : ""}`}
+            onClick={() => setActiveTab("movements")}
+          >
+            Movimientos de Stock
+          </button>
+        )}
       </div>
 
       {/* Tab Contents */}
@@ -325,10 +591,12 @@ export const Inventory: React.FC = () => {
             <>
               <div className="panel-title">
                 <span>Inventario de Activos Físicos</span>
-                <button className="btn-primary" onClick={() => setModalOpen("asset")}>
-                  <Plus size={16} />
-                  <span>Registrar Activo</span>
-                </button>
+                {(isAdminOrJefe || isTech) && (
+                  <button className="btn-primary" onClick={() => setModalOpen("asset")}>
+                    <Plus size={16} />
+                    <span>Registrar Activo</span>
+                  </button>
+                )}
               </div>
 
               <div className="table-responsive">
@@ -345,6 +613,7 @@ export const Inventory: React.FC = () => {
                         <th>Código QR</th>
                         <th>Ubicación Actual</th>
                         <th>Estado Físico</th>
+                        {!isClient && <th>Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -363,6 +632,34 @@ export const Inventory: React.FC = () => {
                               {asset.estado_actual}
                             </span>
                           </td>
+                          {!isClient && (
+                            <td>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                {(isAdminOrJefe || isTech) && (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "6px 8px" }}
+                                    title="Editar Activo"
+                                    onClick={() => handleEditAsset(asset)}
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                )}
+                                {isAdminOrJefe && (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "6px 8px", color: "#f87171" }}
+                                    title="Eliminar Activo"
+                                    onClick={() => setAssetToDelete(asset)}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -376,17 +673,19 @@ export const Inventory: React.FC = () => {
           {activeTab === "locations" && (
             <>
               <div className="panel-title">
-                <span>Bodegas y Locales de Instalación (Convenios)</span>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button className="btn-secondary" onClick={() => setModalOpen("bulk_locations")}>
-                    <UploadCloud size={16} />
-                    <span>Carga Masiva</span>
-                  </button>
-                  <button className="btn-primary" onClick={() => setModalOpen("location")}>
-                    <Plus size={16} />
-                    <span>Crear Local / Ubicación</span>
-                  </button>
-                </div>
+                <span>{isClient ? "Mis Locales y Pantallas Instaladas" : "Bodegas y Locales de Instalación (Convenios)"}</span>
+                {isAdminOrJefe && (
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button className="btn-secondary" onClick={() => setModalOpen("bulk_locations")}>
+                      <UploadCloud size={16} />
+                      <span>Carga Masiva</span>
+                    </button>
+                    <button className="btn-primary" onClick={() => setModalOpen("location")}>
+                      <Plus size={16} />
+                      <span>Crear Local / Ubicación</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="table-responsive">
@@ -398,13 +697,17 @@ export const Inventory: React.FC = () => {
                   <table className="premium-table">
                     <thead>
                       <tr>
-                        <th>Código Local</th>
+                        <th>Código / EDS</th>
+                        <th>Zona</th>
                         <th>Nombre / Local</th>
                         <th>Convenio Asociado</th>
-                        <th>Comuna / Región</th>
+                        <th>Provincia / Comuna</th>
+                        <th>Región</th>
+                        <th># Pantallas</th>
                         <th>Dirección</th>
                         <th>Encargado</th>
                         <th>Tipo</th>
+                        {!isClient && <th>Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -419,6 +722,13 @@ export const Inventory: React.FC = () => {
                                 <span style={{ color: "hsl(var(--text-muted))", fontSize: "0.85rem" }}>S/C</span>
                               )}
                             </td>
+                            <td>
+                              {loc.zona ? (
+                                <span className="badge warning" style={{ fontWeight: 600, fontSize: "0.75rem" }}>{loc.zona}</span>
+                              ) : (
+                                <span style={{ color: "hsl(var(--text-muted))" }}>-</span>
+                              )}
+                            </td>
                             <td style={{ fontWeight: 600 }}>{loc.nombre}</td>
                             <td>
                               {agreement ? (
@@ -429,7 +739,29 @@ export const Inventory: React.FC = () => {
                                 <span style={{ color: "hsl(var(--text-muted))" }}>Sin convenio / Propio</span>
                               )}
                             </td>
-                            <td>{loc.comuna ? `${loc.comuna}, ` : ""}{loc.region}</td>
+                            <td>
+                              <div>
+                                {loc.comuna && <strong>{loc.comuna}</strong>}
+                                {loc.provincia && (
+                                  <div style={{ fontSize: "0.75rem", color: "hsl(var(--text-muted))" }}>
+                                    {loc.provincia}
+                                  </div>
+                                )}
+                                <LocationWeatherBadge
+                                  comuna={loc.comuna}
+                                  region={loc.region}
+                                  ubicacionId={loc.ubicacion_id}
+                                />
+                              </div>
+                            </td>
+                            <td style={{ fontSize: "0.85rem" }}>{loc.region}</td>
+                            <td style={{ textAlign: "center" }}>
+                              {loc.cantidad_pantallas !== undefined && loc.cantidad_pantallas > 0 ? (
+                                <span className="badge info" style={{ fontWeight: 600 }}>{loc.cantidad_pantallas}</span>
+                              ) : (
+                                <span style={{ color: "hsl(var(--text-muted))" }}>-</span>
+                              )}
+                            </td>
                             <td>{loc.direccion}</td>
                             <td>
                               {loc.nombre_encargado ? (
@@ -448,6 +780,34 @@ export const Inventory: React.FC = () => {
                                 {loc.es_bodega ? "Bodega" : "Punto de Venta / Local"}
                               </span>
                             </td>
+                            {!isClient && (
+                              <td>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  {isAdminOrJefe && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary"
+                                        style={{ padding: "6px 8px" }}
+                                        title="Editar Ubicación"
+                                        onClick={() => handleEditLocation(loc)}
+                                      >
+                                        <Edit2 size={14} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary"
+                                        style={{ padding: "6px 8px", color: "#f87171" }}
+                                        title="Eliminar Ubicación"
+                                        onClick={() => setLocationToDelete(loc)}
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -483,6 +843,7 @@ export const Inventory: React.FC = () => {
                         <th>Marca</th>
                         <th>Categoría</th>
                         <th>Tamaño (pulgadas)</th>
+                        {!isClient && <th>Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -493,6 +854,34 @@ export const Inventory: React.FC = () => {
                           <td>{prod.marca}</td>
                           <td>{prod.categoria}</td>
                           <td>{prod.pulgadas ? `${prod.pulgadas}"` : "N/A"}</td>
+                          {!isClient && (
+                            <td>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                {isAdminOrJefe && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      style={{ padding: "6px 8px" }}
+                                      title="Editar Producto"
+                                      onClick={() => handleEditProduct(prod)}
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      style={{ padding: "6px 8px", color: "#f87171" }}
+                                      title="Eliminar Producto"
+                                      onClick={() => setProductToDelete(prod)}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -602,7 +991,9 @@ export const Inventory: React.FC = () => {
                 </div>
                 <div>
                   <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0 }} className="accent-text-gradient">
-                    {locIsWarehouse ? "Registrar Nueva Bodega Central" : "Registrar Local / Punto de Venta"}
+                    {editingLocation
+                      ? (locIsWarehouse ? "Editar Bodega Central" : "Editar Local / Punto de Venta")
+                      : (locIsWarehouse ? "Registrar Nueva Bodega Central" : "Registrar Local / Punto de Venta")}
                   </h3>
                   <p style={{ fontSize: "0.8rem", color: "hsl(var(--text-muted))", margin: "2px 0 0 0" }}>
                     {locIsWarehouse 
@@ -678,7 +1069,7 @@ export const Inventory: React.FC = () => {
             </div>
 
             {/* Formulario con Scroll Interno Suave si es necesario */}
-            <form onSubmit={handleCreateLocation} style={{ display: "flex", flexDirection: "column", flexGrow: 1, overflow: "hidden" }}>
+            <form onSubmit={handleSaveLocation} style={{ display: "flex", flexDirection: "column", flexGrow: 1, overflow: "hidden" }}>
               <div style={{ padding: "20px 28px", overflowY: "auto", flexGrow: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
                 
                 {modalError && (
@@ -760,7 +1151,43 @@ export const Inventory: React.FC = () => {
                         />
                       </div>
 
+                      <div className="form-row" style={{ margin: 0, marginBottom: "10px" }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Zona Operativa</label>
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            placeholder="ej: OZN, OZC, OS, OZS" 
+                            value={locZona} 
+                            onChange={e=>setLocZona(e.target.value)} 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}># Pantallas</label>
+                          <input 
+                            type="number" 
+                            className="glass-input" 
+                            placeholder="3" 
+                            value={locPantallas} 
+                            onChange={e=>setLocPantallas(Number(e.target.value))} 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                      </div>
+
                       <div className="form-row" style={{ margin: 0 }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Provincia</label>
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            placeholder="ej: Santiago, Elqui" 
+                            value={locProvincia} 
+                            onChange={e=>setLocProvincia(e.target.value)} 
+                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                          />
+                        </div>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Comuna</label>
                           <input 
@@ -772,18 +1199,19 @@ export const Inventory: React.FC = () => {
                             style={{ padding: "8px 12px", fontSize: "0.85rem" }}
                           />
                         </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Región *</label>
-                          <input 
-                            type="text" 
-                            className="glass-input" 
-                            placeholder="ej: Región Metropolitana" 
-                            value={locRegion} 
-                            onChange={e=>setLocRegion(e.target.value)} 
-                            required 
-                            style={{ padding: "8px 12px", fontSize: "0.85rem" }}
-                          />
-                        </div>
+                      </div>
+
+                      <div className="form-group" style={{ marginTop: "10px", marginBottom: 0 }}>
+                        <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Región *</label>
+                        <input 
+                          type="text" 
+                          className="glass-input" 
+                          placeholder="ej: Región Metropolitana" 
+                          value={locRegion} 
+                          onChange={e=>setLocRegion(e.target.value)} 
+                          required 
+                          style={{ padding: "8px 12px", fontSize: "0.85rem" }}
+                        />
                       </div>
                     </div>
 
@@ -925,7 +1353,7 @@ export const Inventory: React.FC = () => {
                   ) : (
                     <>
                       <Plus size={16} />
-                      <span>{locIsWarehouse ? "Registrar Bodega" : "Registrar Local"}</span>
+                      <span>{editingLocation ? "Guardar Cambios" : (locIsWarehouse ? "Registrar Bodega" : "Registrar Local")}</span>
                     </>
                   )}
                 </button>
@@ -939,64 +1367,250 @@ export const Inventory: React.FC = () => {
       {/* Bulk Locations Modal */}
       {modalOpen === "bulk_locations" && createPortal(
         <div className="modal-overlay">
-          <div className="modal-content glass-panel" style={{ maxWidth: "650px", padding: "30px" }}>
-            <button className="modal-close" onClick={closeModals}><X size={20} /></button>
-            <h3 style={{ marginBottom: "15px", fontWeight: 600 }} className="accent-text-gradient">Carga Masiva de Locales e Instalaciones</h3>
-            <p style={{ fontSize: "0.85rem", color: "hsl(var(--text-muted))", marginBottom: "20px" }}>
-              Pega un arreglo en formato JSON con la lista de locales a registrar o actualizar. Puedes incluir el <code>convenio_id</code> para cruzarlos directamente con cada cliente.
-            </p>
-            {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
-            <form onSubmit={handleBulkCreateLocations}>
-              <div className="form-group" style={{ marginBottom: "20px" }}>
-                <label>Datos en formato JSON</label>
-                <textarea 
-                  className="glass-input" 
-                  style={{ minHeight: "220px", fontFamily: "monospace", fontSize: "0.85rem", lineHeight: "1.4" }}
-                  placeholder={`[\n  {\n    "codigo_local": "COP-001",\n    "nombre": "Pronto Copec Kennedy",\n    "direccion": "Av. Presidente Kennedy 5000",\n    "comuna": "Las Condes",\n    "region": "Región Metropolitana",\n    "es_bodega": false,\n    "nombre_encargado": "Carlos Soto",\n    "telefono_encargado": "+56987654321"\n  }\n]`}
-                  value={bulkLocJson}
-                  onChange={e=>setBulkLocJson(e.target.value)}
-                  required
-                />
+          <div className="modal-content glass-panel" style={{ maxWidth: "750px", width: "95vw", maxHeight: "90vh", display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}>
+            
+            {/* Header */}
+            <div style={{ padding: "20px 28px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15,20,35,0.5)" }}>
+              <div>
+                <h3 style={{ margin: 0, fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }} className="accent-text-gradient">
+                  <FileSpreadsheet size={22} />
+                  <span>Importación Masiva de Locales e Instalaciones</span>
+                </h3>
+                <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "hsl(var(--text-muted))" }}>
+                  Carga directamente un archivo <strong>.CSV</strong> o pega los datos para registrar y actualizar locales EDS en la base de datos.
+                </p>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary"
-                  onClick={() => {
-                    const sample = [
-                      {
-                        codigo_local: "COP-001",
-                        nombre: "Pronto Copec Kennedy",
-                        direccion: "Av. Presidente Kennedy 5000",
-                        comuna: "Las Condes",
-                        region: "Región Metropolitana",
-                        es_bodega: false,
-                        nombre_encargado: "Carlos Soto",
-                        telefono_encargado: "+56987654321",
-                        correo_encargado: "csoto@copec.cl"
-                      },
-                      {
-                        codigo_local: "PRON-002",
-                        nombre: "Pronto Copec Pudahuel",
-                        direccion: "Ruta 68 Km 12",
-                        comuna: "Pudahuel",
-                        region: "Región Metropolitana",
-                        es_bodega: false,
-                        nombre_encargado: "María Rojas",
-                        telefono_encargado: "+56911223344",
-                        correo_encargado: "mrojas@copec.cl"
-                      }
-                    ];
-                    setBulkLocJson(JSON.stringify(sample, null, 2));
-                  }}
-                >
-                  Pegar Ejemplo
-                </button>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
-                  <button type="submit" className="btn-primary" disabled={modalLoading}>Cargar Locales</button>
+              <button className="modal-close" onClick={closeModals} style={{ position: "static", background: "rgba(255,255,255,0.05)", padding: "6px", borderRadius: "6px" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleBulkCreateLocations} style={{ display: "flex", flexDirection: "column", flexGrow: 1, overflow: "hidden" }}>
+              <div style={{ padding: "22px 28px", overflowY: "auto", flexGrow: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
+                
+                {modalError && (
+                  <div className="badge error" style={{ width: "100%", padding: "10px 14px", borderRadius: "6px", fontSize: "0.85rem" }}>
+                    {modalError}
+                  </div>
+                )}
+
+                {/* Convenio Selector & Mode Selector */}
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "16px", alignItems: "center" }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Convenio a Asociar (Opcional)</label>
+                    <select 
+                      className="glass-input" 
+                      style={{ background: "#181d2e", padding: "8px 12px", fontSize: "0.85rem" }}
+                      value={bulkAgreementId}
+                      onChange={e => setBulkAgreementId(e.target.value)}
+                    >
+                      <option value="">Seleccionar Convenio (ej: Copec S.A.)...</option>
+                      {agreements.map(a => (
+                        <option key={a.convenio_id} value={a.convenio_id}>
+                          {a.nombre_empresa} ({a.rut})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "18px" }}>
+                    <button 
+                      type="button" 
+                      className={bulkMode === "file" ? "btn-primary" : "btn-secondary"}
+                      onClick={() => setBulkMode("file")}
+                      style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+                    >
+                      <UploadCloud size={14} style={{ marginRight: "4px" }} />
+                      Subir Archivo CSV
+                    </button>
+                    <button 
+                      type="button" 
+                      className={bulkMode === "text" ? "btn-primary" : "btn-secondary"}
+                      onClick={() => setBulkMode("text")}
+                      style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+                    >
+                      <FileText size={14} style={{ marginRight: "4px" }} />
+                      Editor Texto / JSON
+                    </button>
+                  </div>
                 </div>
+
+                {/* MODE 1: DIRECT CSV FILE UPLOAD */}
+                {bulkMode === "file" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    
+                    {/* Drag & Drop Zone */}
+                    <div 
+                      style={{ 
+                        border: "2px dashed rgba(255,255,255,0.18)", 
+                        borderRadius: "12px", 
+                        padding: "30px 20px", 
+                        textAlign: "center",
+                        background: bulkFileName ? "rgba(46, 213, 115, 0.04)" : "rgba(255,255,255,0.015)",
+                        transition: "all 0.2s ease",
+                        position: "relative",
+                        cursor: "pointer"
+                      }}
+                      onClick={() => document.getElementById("csv-file-input")?.click()}
+                    >
+                      <input 
+                        id="csv-file-input"
+                        type="file" 
+                        accept=".csv, text/csv, .txt" 
+                        style={{ display: "none" }}
+                        onChange={handleCsvFileChange}
+                      />
+                      
+                      {bulkFileName ? (
+                        <div>
+                          <CheckCircle2 size={40} style={{ color: "#2ed573", margin: "0 auto 10px auto" }} />
+                          <h4 style={{ margin: "0 0 6px 0", fontSize: "1rem", color: "#fff" }}>
+                            {bulkFileName}
+                          </h4>
+                          <span className="badge success" style={{ fontSize: "0.8rem", padding: "4px 10px" }}>
+                            {bulkRowCount !== null ? `${bulkRowCount} locales detectados para importar` : "Archivo CSV cargado"}
+                          </span>
+                          <p style={{ margin: "10px 0 0 0", fontSize: "0.78rem", color: "hsl(var(--text-muted))" }}>
+                            Haz clic para seleccionar otro archivo
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <UploadCloud size={40} style={{ color: "hsl(var(--accent-primary))", margin: "0 auto 10px auto" }} />
+                          <h4 style={{ margin: "0 0 6px 0", fontSize: "0.95rem", color: "#fff" }}>
+                            Selecciona o arrastra tu archivo CSV aquí
+                          </h4>
+                          <p style={{ margin: 0, fontSize: "0.8rem", color: "hsl(var(--text-muted))" }}>
+                            Formatos compatibles: .csv (separado por coma o punto y coma)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Bar (Download Template & Reset) */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <button 
+                        type="button" 
+                        className="btn-secondary"
+                        onClick={handleDownloadTemplate}
+                        style={{ fontSize: "0.8rem", padding: "6px 14px", display: "flex", alignItems: "center", gap: "6px" }}
+                      >
+                        <Download size={14} />
+                        <span>Descargar Plantilla CSV</span>
+                      </button>
+
+                      {bulkFileName && (
+                        <button 
+                          type="button" 
+                          className="btn-secondary"
+                          onClick={() => {
+                            setBulkFileName("");
+                            setBulkLocJson("");
+                            setBulkRowCount(null);
+                          }}
+                          style={{ fontSize: "0.8rem", padding: "6px 12px", color: "#ff4757" }}
+                        >
+                          <Trash2 size={13} style={{ marginRight: "4px" }} />
+                          Limpiar archivo
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+
+                {/* MODE 2: TEXTAREA / JSON */}
+                {bulkMode === "text" && (
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <label style={{ fontSize: "0.78rem", fontWeight: 500 }}>Contenido CSV o JSON</label>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <button 
+                          type="button" 
+                          className="btn-secondary"
+                          style={{ fontSize: "0.75rem", padding: "3px 8px" }}
+                          onClick={() => {
+                            const sampleCsv = `codigo_local,nombre,direccion,zona,region,provincia,comuna,cantidad_pantallas\nEDS-10097,EDS 10097 - Alto Hospicio,AV. TENIENTE ARTURO MERINO CORREA N° 3945,OZN,Región de Tarapacá,Iquique,Alto Hospicio,3\nEDS-10004,EDS 10004 - Antofagasta,AV. ANTONIO RENDIC N° 3855,OZN,Región de Antofagasta,Antofagasta,Antofagasta,3\nEDS-60321,EDS 60321 - Doñihue,AV. CACHAPOAL N° 2,OS,Región del Libertador General Bernardo O'Higgins,Cachapoal,Doñihue,3`;
+                            setBulkLocJson(sampleCsv);
+                          }}
+                        >
+                          Ejemplo CSV
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-secondary"
+                          style={{ fontSize: "0.75rem", padding: "3px 8px" }}
+                          onClick={() => {
+                            const sampleJson = [
+                              {
+                                codigo_local: "EDS-10097",
+                                nombre: "EDS 10097 - Alto Hospicio",
+                                direccion: "AV. TENIENTE ARTURO MERINO CORREA N° 3945",
+                                zona: "OZN",
+                                region: "Región de Tarapacá",
+                                provincia: "Iquique",
+                                comuna: "Alto Hospicio",
+                                cantidad_pantallas: 3,
+                                es_bodega: false
+                              }
+                            ];
+                            setBulkLocJson(JSON.stringify(sampleJson, null, 2));
+                          }}
+                        >
+                          Ejemplo JSON
+                        </button>
+                      </div>
+                    </div>
+                    <textarea 
+                      className="glass-input" 
+                      style={{ minHeight: "180px", fontFamily: "monospace", fontSize: "0.82rem", lineHeight: "1.4" }}
+                      placeholder={`codigo_local,nombre,direccion,zona,region,provincia,comuna,cantidad_pantallas\nEDS-10097,EDS 10097 - Alto Hospicio,AV. TENIENTE ARTURO MERINO CORREA N° 3945,OZN,Región de Tarapacá,Iquique,Alto Hospicio,3`}
+                      value={bulkLocJson}
+                      onChange={e => setBulkLocJson(e.target.value)}
+                    />
+                  </div>
+                )}
+
               </div>
+
+              {/* Footer Fijo */}
+              <div style={{ 
+                padding: "16px 28px", 
+                borderTop: "1px solid rgba(255,255,255,0.08)", 
+                background: "rgba(10,14,24,0.6)", 
+                display: "flex", 
+                justifyContent: "flex-end", 
+                gap: "12px",
+                flexShrink: 0
+              }}>
+                <button type="button" className="btn-secondary" onClick={closeModals} style={{ padding: "8px 18px", fontSize: "0.85rem" }}>
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  disabled={modalLoading || !bulkLocJson.trim()}
+                  style={{ padding: "8px 24px", fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  {modalLoading ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                      <span>Importando locales...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud size={16} />
+                      <span>
+                        {bulkRowCount !== null && bulkRowCount > 0
+                          ? `Importar ${bulkRowCount} Locales`
+                          : "Importar Locales a Base de Datos"}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+
             </form>
           </div>
         </div>,
@@ -1008,9 +1622,11 @@ export const Inventory: React.FC = () => {
         <div className="modal-overlay">
           <div className="modal-content glass-panel" style={{ padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
-            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Producto en Catálogo</h3>
+            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">
+              {editingProduct ? "Editar Producto del Catálogo" : "Registrar Producto en Catálogo"}
+            </h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
-            <form onSubmit={handleCreateProduct}>
+            <form onSubmit={handleSaveProduct}>
               <div className="form-row">
                 <div className="form-group">
                   <label>Código SKU</label>
@@ -1041,7 +1657,16 @@ export const Inventory: React.FC = () => {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar</button>
+                <button type="submit" className="btn-primary" disabled={modalLoading}>
+                  {modalLoading ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{editingProduct ? "Guardar Cambios" : "Registrar"}</span>
+                  )}
+                </button>
               </div>
             </form>
           </div>
@@ -1054,9 +1679,11 @@ export const Inventory: React.FC = () => {
         <div className="modal-overlay">
           <div className="modal-content glass-panel" style={{ padding: "30px" }}>
             <button className="modal-close" onClick={closeModals}><X size={20} /></button>
-            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">Registrar Activo Físico (Serie)</h3>
+            <h3 style={{ marginBottom: "25px", fontWeight: 600 }} className="accent-text-gradient">
+              {editingAsset ? "Editar Activo Físico (Serie)" : "Registrar Activo Físico (Serie)"}
+            </h3>
             {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
-            <form onSubmit={handleCreateAsset}>
+            <form onSubmit={handleSaveAsset}>
               <div className="form-group">
                 <label>Producto en Catálogo</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetProductId} onChange={e=>setAssetProductId(e.target.value)} required>
@@ -1075,23 +1702,34 @@ export const Inventory: React.FC = () => {
                 </div>
               </div>
               <div className="form-group">
-                <label>Ubicación Inicial</label>
+                <label>{editingAsset ? "Ubicación Actual" : "Ubicación Inicial"}</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetLocationId} onChange={e=>setAssetLocationId(e.target.value)} required>
                   <option value="">Selecciona ubicación...</option>
                   {locations.map(l=><option key={l.ubicacion_id} value={l.ubicacion_id}>{l.nombre}</option>)}
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: "25px" }}>
-                <label>Estado Inicial del Activo</label>
+                <label>Estado del Activo</label>
                 <select className="glass-input" style={{ background: "#1b2030" }} value={assetStatus} onChange={e=>setAssetStatus(e.target.value)}>
                   <option value="NUEVO">NUEVO</option>
                   <option value="USADO_BUEN_ESTADO">USADO EN BUEN ESTADO</option>
                   <option value="DEFECTUOSO">DEFECTUOSO</option>
+                  <option value="EN_TRANSITO">EN TRÁNSITO</option>
+                  <option value="DADO_DE_BAJA">DADO DE BAJA</option>
                 </select>
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button type="button" className="btn-secondary" onClick={closeModals}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar</button>
+                <button type="submit" className="btn-primary" disabled={modalLoading}>
+                  {modalLoading ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{editingAsset ? "Guardar Cambios" : "Registrar"}</span>
+                  )}
+                </button>
               </div>
             </form>
           </div>
@@ -1130,6 +1768,301 @@ export const Inventory: React.FC = () => {
                 <button type="submit" className="btn-primary" disabled={modalLoading}>Registrar Movimiento</button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Confirmación de Seguridad para Eliminar Activo */}
+      {assetToDelete && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "480px" }}>
+            <button className="modal-close" onClick={() => setAssetToDelete(null)}>
+              <X size={20} />
+            </button>
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                marginBottom: "16px"
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
+                Confirmación de Seguridad
+              </h3>
+              <p style={{
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                color: "#f87171",
+                marginBottom: "12px",
+                lineHeight: 1.4
+              }}>
+                ¿Estás seguro que deseas eliminar este activo?
+              </p>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}>
+                <div style={{ color: "#fff", fontWeight: 600 }}>
+                  {assetToDelete.producto?.nombre} ({assetToDelete.producto?.marca})
+                </div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem", marginTop: "4px" }}>
+                  N° Serie: <strong style={{ color: "#fff" }}>{assetToDelete.numero_serie}</strong>
+                </div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem" }}>
+                  Ubicación: {assetToDelete.ubicacion_actual?.nombre || "No asignada"}
+                </div>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: 0 }}>
+                Esta acción removerá permanentemente el activo del inventario y sus movimientos históricos.
+              </p>
+            </div>
+
+            {deleteAssetError && (
+              <div className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "20px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={16} />
+                <span>{deleteAssetError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setAssetToDelete(null)}
+                disabled={deleteAssetLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  background: "#dc2626",
+                  borderColor: "#b91c1c",
+                  color: "#fff"
+                }}
+                onClick={handleConfirmDeleteAsset}
+                disabled={deleteAssetLoading}
+              >
+                {deleteAssetLoading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, Eliminar Activo</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Confirmación de Seguridad para Eliminar Ubicación */}
+      {locationToDelete && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "480px" }}>
+            <button className="modal-close" onClick={() => setLocationToDelete(null)}>
+              <X size={20} />
+            </button>
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                marginBottom: "16px"
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
+                Confirmación de Seguridad
+              </h3>
+              <p style={{
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                color: "#f87171",
+                marginBottom: "12px",
+                lineHeight: 1.4
+              }}>
+                ¿Estás seguro que deseas eliminar esta ubicación?
+              </p>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}>
+                <div style={{ color: "#fff", fontWeight: 600 }}>{locationToDelete.nombre}</div>
+                {locationToDelete.codigo_local && (
+                  <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem" }}>
+                    Código: {locationToDelete.codigo_local}
+                  </div>
+                )}
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem", marginTop: "2px" }}>
+                  📍 {locationToDelete.direccion}
+                </div>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: 0 }}>
+                Esta acción removerá esta ubicación de la plataforma y reasignará sus activos vinculados.
+              </p>
+            </div>
+
+            {deleteLocationError && (
+              <div className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "20px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={16} />
+                <span>{deleteLocationError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setLocationToDelete(null)}
+                disabled={deleteLocationLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  background: "#dc2626",
+                  borderColor: "#b91c1c",
+                  color: "#fff"
+                }}
+                onClick={handleConfirmDeleteLocation}
+                disabled={deleteLocationLoading}
+              >
+                {deleteLocationLoading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, Eliminar Ubicación</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Confirmación de Seguridad para Eliminar Producto */}
+      {productToDelete && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel" style={{ maxWidth: "480px" }}>
+            <button className="modal-close" onClick={() => setProductToDelete(null)}>
+              <X size={20} />
+            </button>
+            <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                marginBottom: "16px"
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
+                Confirmación de Seguridad
+              </h3>
+              <p style={{
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                color: "#f87171",
+                marginBottom: "12px",
+                lineHeight: 1.4
+              }}>
+                ¿Estás seguro que deseas eliminar este producto del catálogo?
+              </p>
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}>
+                <div style={{ color: "#fff", fontWeight: 600 }}>{productToDelete.nombre}</div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem", marginTop: "2px" }}>
+                  SKU: <strong style={{ color: "#fff" }}>{productToDelete.sku}</strong>
+                </div>
+                <div style={{ color: "hsl(var(--text-muted))", fontSize: "0.82rem" }}>
+                  {productToDelete.marca} — {productToDelete.categoria}
+                </div>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: 0 }}>
+                Esta acción removerá el producto del catálogo general.
+              </p>
+            </div>
+
+            {deleteProductError && (
+              <div className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "20px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={16} />
+                <span>{deleteProductError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setProductToDelete(null)}
+                disabled={deleteProductLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  background: "#dc2626",
+                  borderColor: "#b91c1c",
+                  color: "#fff"
+                }}
+                onClick={handleConfirmDeleteProduct}
+                disabled={deleteProductLoading}
+              >
+                {deleteProductLoading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, Eliminar Producto</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>,
         document.body
