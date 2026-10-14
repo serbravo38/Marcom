@@ -1,0 +1,883 @@
+{
+  "info": {
+    "_postman_id": "marcom-qa-suite-2026-v1",
+    "name": "MARCOM - API Test Suite Modular (QA Master)",
+    "description": "Colección completa de pruebas de QA para la plataforma MARCOM. Cubre microservicios de Auth, Inventario, Órdenes de Trabajo, Facturación (Flow / DTE) y API Gateway.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00. Gateway & Infraestructura",
+      "item": [
+        {
+          "name": "Health Check Gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Estructura de respuesta contiene servicios registrados\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"healthy\");",
+                  "    pm.expect(jsonData.services).to.have.property(\"auth-service\");",
+                  "    pm.expect(jsonData.services).to.have.property(\"inventory-service\");",
+                  "    pm.expect(jsonData.services).to.have.property(\"work-order-service\");",
+                  "    pm.expect(jsonData.services).to.have.property(\"billing-service\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar Ruta Inexistente (404 Not Found)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ruta-que-no-existe-xyz",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ruta-que-no-existe-xyz"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 404 NOT FOUND\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01. Módulo Autenticación & Usuarios (Auth Service)",
+      "item": [
+        {
+          "name": "Login Administrador Semilla",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@marcom.cl\",\n  \"clave\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/iniciar-sesion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "iniciar-sesion"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login semilla exitoso (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Token JWT recibido\", function () {",
+                  "    pm.expect(jsonData).to.have.property(\"access_token\");",
+                  "    pm.collectionVariables.set(\"adminToken\", jsonData.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar Nuevo Usuario Técnico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rut\": \"17.890.123-4\",\n  \"correo\": \"tecnico_{{$timestamp}}@marcom.cl\",\n  \"clave\": \"PasswordSeguro123!\",\n  \"nombre\": \"Esteban\",\n  \"apellido\": \"Técnico\",\n  \"rol\": \"TECNICO_TERRENO\",\n  \"activo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/registrar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "registrar"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Usuario creado con éxito (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.collectionVariables.set(\"tecnicoId\", data.usuario_id);",
+                  "pm.collectionVariables.set(\"tecnicoEmail\", data.correo);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Fallido - Control de Intentos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@marcom.cl\",\n  \"clave\": \"clave_totalmente_erronea_123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/iniciar-sesion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "iniciar-sesion"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Rechazo de credenciales inválidas (401 o 400)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar Perfil Propio (/usuarios/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var profile = pm.response.json();",
+                  "pm.test(\"Perfil pertenece a ADMIN\", function () {",
+                  "    pm.expect(profile.rol).to.eql(\"ADMIN\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear Convenio Corporativo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre_empresa\": \"Copec Red Pronto {{$timestamp}}\",\n  \"rut\": \"96.{{$randomInt}}0-K\",\n  \"limite_credito\": 15000000.00,\n  \"credito_usado\": 0.00,\n  \"activo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/convenios",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "convenios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Convenio creado exitosamente (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var conv = pm.response.json();",
+                  "pm.collectionVariables.set(\"convenioId\", conv.convenio_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enviar Formulario de Contacto Web",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cliente Interesado\",\n  \"correo\": \"contacto_qa@marcom.cl\",\n  \"telefono\": \"+56998765432\",\n  \"mensaje\": \"Deseo cotizar servicio para 10 estaciones de servicio.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/contacto",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "contacto"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Mensaje de contacto enviado con éxito (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Módulo Inventario & Locales (Inventory Service)",
+      "item": [
+        {
+          "name": "Crear Ubicación Bodega Central",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Bodega Central MARCOM Pudahuel\",\n  \"direccion\": \"Av. Américo Vespucio 1500\",\n  \"region\": \"Región Metropolitana\",\n  \"comuna\": \"Pudahuel\",\n  \"es_bodega\": true,\n  \"activo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ubicaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ubicaciones"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bodega creada (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var b = pm.response.json();",
+                  "pm.collectionVariables.set(\"bodegaId\", b.ubicacion_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear Local Tienda Asociado a Convenio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo_local\": \"LOC-COP-{{$timestamp}}\",\n  \"nombre\": \"Pronto Copec Costanera\",\n  \"direccion\": \"Av. Andrés Bello 2425\",\n  \"region\": \"Región Metropolitana\",\n  \"comuna\": \"Providencia\",\n  \"es_bodega\": false,\n  \"convenio_id\": \"{{convenioId}}\",\n  \"nombre_encargado\": \"Javier Morales\",\n  \"telefono_encargado\": \"+56955554444\",\n  \"correo_encargado\": \"jmorales@copec.cl\",\n  \"cantidad_pantallas\": 4,\n  \"activo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ubicaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ubicaciones"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Local creado y vinculado (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var l = pm.response.json();",
+                  "pm.collectionVariables.set(\"localId\", l.ubicacion_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Carga Masiva de Locales",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locales\": [\n    {\n      \"codigo_local\": \"BULK-01-{{$timestamp}}\",\n      \"nombre\": \"Pronto Copec Maipú Plaza\",\n      \"direccion\": \"Av. Pajaritos 2000\",\n      \"region\": \"Región Metropolitana\",\n      \"comuna\": \"Maipú\",\n      \"es_bodega\": false,\n      \"convenio_id\": \"{{convenioId}}\"\n    },\n    {\n      \"codigo_local\": \"BULK-02-{{$timestamp}}\",\n      \"nombre\": \"Pronto Copec Rancagua Centro\",\n      \"direccion\": \"Carretera del Cobre 100\",\n      \"region\": \"Libertador General Bernardo O'Higgins\",\n      \"comuna\": \"Rancagua\",\n      \"es_bodega\": false,\n      \"convenio_id\": \"{{convenioId}}\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ubicaciones/carga-masiva",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ubicaciones", "carga-masiva"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Carga masiva procesada exitosamente (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().length).to.be.at.least(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar Producto en Catálogo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"MON-QM55R-{{$timestamp}}\",\n  \"nombre\": \"Samsung Smart Signage QM55R 55 Pulgadas 4K\",\n  \"marca\": \"Samsung\",\n  \"categoria\": \"Monitores Profesionales\",\n  \"pulgadas\": 55.0,\n  \"descripcion\": \"Pantalla comercial para funcionamiento 24/7 con brillo 500 nits\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/productos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "productos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Producto creado en catálogo (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var p = pm.response.json();",
+                  "pm.collectionVariables.set(\"productoId\", p.producto_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alta de Activo Físico (Serial + QR) en Bodega",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"numero_serie\": \"SN-SAM-{{$timestamp}}\",\n  \"codigo_qr\": \"QR-MARCOM-{{$timestamp}}\",\n  \"estado_actual\": \"NUEVO\",\n  \"ubicacion_actual_id\": \"{{bodegaId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/activos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "activos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Activo registrado con número de serie (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var a = pm.response.json();",
+                  "pm.collectionVariables.set(\"activoId\", a.activo_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar Traslado de Stock (Bodega a Local)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo_id\": \"{{activoId}}\",\n  \"ubicacion_origen_id\": \"{{bodegaId}}\",\n  \"ubicacion_destino_id\": \"{{localId}}\",\n  \"motivo\": \"Despacho para instalación de monitor de menú digital\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/movimientos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "movimientos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Movimiento de stock registrado (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Módulo Órdenes de Trabajo & Terreno (Work Order Service)",
+      "item": [
+        {
+          "name": "Crear Orden de Trabajo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_orden\": \"OT-QA-{{$timestamp}}\",\n  \"convenio_cliente_id\": \"{{convenioId}}\",\n  \"ubicacion_id\": \"{{localId}}\",\n  \"tecnico_asignado_id\": \"{{tecnicoId}}\",\n  \"estado\": \"PENDIENTE\",\n  \"fecha_programada\": \"2026-10-20T10:00:00Z\",\n  \"notas\": \"Instalación en pared con soporte inclinable VESA 400x400\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Orden de trabajo creada (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var ot = pm.response.json();",
+                  "pm.collectionVariables.set(\"ordenTrabajoId\", ot.orden_trabajo_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar Estado de Orden de Trabajo (A EN_PROCESO)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PROCESO\",\n  \"notas\": \"Técnico ha arribado al local e inicia labores de montaje\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Estado de OT modificado correctamente (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().estado).to.eql(\"EN_PROCESO\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vincular Activo Instalado a la OT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo_instalado_id\": \"{{activoId}}\",\n  \"tipo_accion\": \"INSTALACION\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}/activos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}", "activos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Activo vinculado a la OT (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cargar Evidencia Fotográfica y Firma en Terreno",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url_imagen\": \"https://marcom.cl/evidencias/ot-pantalla-montada.jpg\",\n  \"url_firma\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=\",\n  \"comentarios\": \"Instalación completada y probada con señal HDMI. Cliente conforme.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}/evidencias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}", "evidencias"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Evidencias y firma guardadas con éxito (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Módulo Facturación, Cotizaciones & Pagos (Billing Service)",
+      "item": [
+        {
+          "name": "Crear Cotización Automática para Convenio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"convenio_id\": \"{{convenioId}}\",\n  \"ubicacion_id\": \"{{localId}}\",\n  \"fecha_solicitud_aprobacion\": \"2026-10-14T10:00:00Z\",\n  \"tipo_soporte\": \"ESTANDAR_CONVENIO\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{productoId}}\",\n      \"cantidad\": 2,\n      \"precio_unitario\": 450000.00\n    }\n  ],\n  \"notas\": \"Cotización formal para renovación de pantallas digitales\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cotizaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cotizaciones"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Cotización creada con cálculo automático (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var cot = pm.response.json();",
+                  "pm.test(\"Cálculos financieros coherentes (IVA 19%)\", function () {",
+                  "    pm.expect(cot.subtotal_neto).to.be.above(0);",
+                  "    pm.expect(cot.monto_iva).to.be.above(0);",
+                  "    pm.expect(cot.monto_total).to.be.above(cot.subtotal_neto);",
+                  "});",
+                  "pm.collectionVariables.set(\"cotizacionId\", cot.cotizacion_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aprobar Cotización con Orden de Compra (OC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orden_compra_numero\": \"OC-CLIENTE-2026-{{$timestamp}}\",\n  \"orden_compra_adjunto\": \"https://marcom.cl/docs/oc/OC-2026-FIRMADA.pdf\",\n  \"notas\": \"Aprobación formal con Orden de Compra adjunta y crédito validado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cotizaciones/{{cotizacionId}}/aprobar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cotizaciones", "{{cotizacionId}}", "aprobar"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Cotización aprobada y convertida a OT/Pedido (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.estado).to.eql(\"APROBADA\");",
+                  "    pm.expect(data.pedido_id).to.not.be.null;",
+                  "    pm.collectionVariables.set(\"pedidoId\", data.pedido_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generar Documento Tributario Electrónico (DTE Factura SII)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pedido_id\": \"{{pedidoId}}\",\n  \"tipo_dte\": \"FACTURA_ELECTRONICA\",\n  \"folio_sii\": 15482,\n  \"url_pdf\": \"https://marcom.cl/dte/factura-15482.pdf\",\n  \"url_xml\": \"https://marcom.cl/dte/factura-15482.xml\",\n  \"estado_sii\": \"ACEPTADO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documentos-dte",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "documentos-dte"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Documento DTE emitido satisfactoriamente (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().tipo_dte).to.eql(\"FACTURA_ELECTRONICA\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "tecnicoId",
+      "value": ""
+    },
+    {
+      "key": "tecnicoEmail",
+      "value": ""
+    },
+    {
+      "key": "convenioId",
+      "value": ""
+    },
+    {
+      "key": "bodegaId",
+      "value": ""
+    },
+    {
+      "key": "localId",
+      "value": ""
+    },
+    {
+      "key": "productoId",
+      "value": ""
+    },
+    {
+      "key": "activoId",
+      "value": ""
+    },
+    {
+      "key": "ordenTrabajoId",
+      "value": ""
+    },
+    {
+      "key": "cotizacionId",
+      "value": ""
+    },
+    {
+      "key": "pedidoId",
+      "value": ""
+    }
+  ]
+}

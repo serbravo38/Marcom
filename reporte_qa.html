@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MARCOM - Panel de Aplicación de Pruebas QA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
+    <!-- Header -->
+    <header class="bg-indigo-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="bg-indigo-700 text-indigo-200 text-xs font-bold px-2.5 py-1 rounded">QA MASTER SUITE</span>
+                    <h1 class="text-2xl font-bold tracking-tight">MARCOM - Panel de Aseguramiento de Calidad</h1>
+                </div>
+                <p class="text-indigo-200 text-sm mt-1">Plataforma Web de Gestión Tecnológica e Inventario (Duoc UC Capstone)</p>
+            </div>
+            <div class="text-right text-xs text-indigo-300">
+                <p>Fecha de Ejecución: <span class="text-white font-medium">14/10/2026 12:28:12</span></p>
+                <p>Estándar: <span class="text-white font-medium">IEEE 829 / ISO 29119</span></p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pruebas Unitarias</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span class="text-3xl font-extrabold text-slate-900">22</span>
+                    <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">100% Pasadas</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Módulos: Auth, Inv, WO, Bill, Gateway</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Colección de API (Postman)</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span class="text-3xl font-extrabold text-indigo-600">15</span>
+                    <span class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">v2.1 Exportada</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Endpoints parametrizados y testeados</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tiempo de Ejecución</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span class="text-3xl font-extrabold text-slate-900">3.3s</span>
+                    <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Ultra Rápido</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Autónomo sin dependencias externas</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pruebas Integración E2E</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span class="text-xl font-bold text-amber-700">OMITIDO (Docker Inactivo)</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Requiere 'docker compose up -d'</p>
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+            <h2 class="text-lg font-bold text-slate-900 mb-3">¿Cómo Aplicar y Visualizar las Pruebas?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 hover:border-indigo-400 transition">
+                    <h3 class="font-bold text-slate-800 text-sm mb-1">1. En Postman (Aplicación Desktop)</h3>
+                    <p class="text-xs text-slate-600 mb-3">Abre Postman &gt; Clic en <strong>Import</strong> &gt; Selecciona <code>marcom_postman_collection.json</code> para ver todos los endpoints con tests.</p>
+                    <span class="inline-block text-xs font-semibold text-indigo-600">marcom_postman_collection.json</span>
+                </div>
+                <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 hover:border-indigo-400 transition">
+                    <h3 class="font-bold text-slate-800 text-sm mb-1">2. En Terminal con un Clic</h3>
+                    <p class="text-xs text-slate-600 mb-3">Haz doble clic sobre <code>ejecutar_pruebas.bat</code> en el Explorador de Windows para correr la suite completa en segundos.</p>
+                    <span class="inline-block text-xs font-semibold text-indigo-600">ejecutar_pruebas.bat</span>
+                </div>
+                <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 hover:border-indigo-400 transition">
+                    <h3 class="font-bold text-slate-800 text-sm mb-1">3. Con Newman (CLI Automático)</h3>
+                    <p class="text-xs text-slate-600 mb-3">Ejecuta: <code>npx newman run marcom_postman_collection.json -e marcom_postman_environment.json</code></p>
+                    <span class="inline-block text-xs font-semibold text-indigo-600">Integración Continua / CI/CD</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matriz de Casos de Prueba -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Matriz de Casos de Prueba Automatizados</h2>
+                    <p class="text-xs text-slate-500 mt-1">22 pruebas unitarias y de validación de reglas de negocio ejecutadas con Pytest</p>
+                </div>
+                <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">22 / 22 APROBADAS</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                            <th class="py-3 px-4 font-semibold">ID Caso</th>
+                            <th class="py-3 px-4 font-semibold">Módulo</th>
+                            <th class="py-3 px-4 font-semibold">Descripción Funcional</th>
+                            <th class="py-3 px-4 font-semibold">Función de Prueba</th>
+                            <th class="py-3 px-4 font-semibold text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-AUTH-01</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Auth Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Hashing seguro con Bcrypt y verificación</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_password_hashing_and_verification</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-AUTH-02</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Auth Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Generación de JWT y validación de claims RBAC</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_jwt_token_generation_and_payload</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-AUTH-03</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Auth Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Generación de secreto TOTP y validación 6 dígitos</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_mfa_totp_generation_and_verification</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-AUTH-04</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Auth Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Bloqueo por fuerza bruta tras 5 intentos (15 min)</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_auth_lockout_calculation</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-AUTH-05</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Auth Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Validación estricta de schema Pydantic UsuarioCrear</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_user_schema_validation</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-INV-01</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Inventory Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Alta de bodega central con parámetros geográficos</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_ubicacion_crear_bodega</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-INV-02</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Inventory Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Vinculación de local EDS con convenio de cliente</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_ubicacion_crear_local_convenio</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-INV-03</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Inventory Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Importación masiva de sucursales en lote</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_carga_masiva_locales</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-INV-04</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Inventory Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Registro de monitores Samsung con pulgadas y SKU</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_catalogo_productos</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-INV-05</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Inventory Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Gestión de activos físicos (Serial, QR, Estado)</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_activo_fisico_estados</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-INV-06</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Inventory Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Traslados de stock y trazabilidad de bodegas</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_movimiento_stock</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-WO-01</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Work Order Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Creación de OT asociada a local y técnico</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_orden_trabajo_crear_valida</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-WO-02</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Work Order Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Validación del ciclo de estados de orden de trabajo</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_orden_trabajo_estados_enum</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-WO-03</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Work Order Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Protección XSS en firma digital y fotos de terreno</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_evidencia_firma_digital_validador</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-WO-04</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Work Order Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Asociación de activos instalados o retirados a OT</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_activos_orden_trabajo</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-BILL-01</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Billing Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Fórmulas matemáticas: Equipos + Km + IVA 19%</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_calculo_financiero_cotizacion</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-BILL-02</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Billing Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Aprobación con Orden de Compra (OC) y adjunto</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_cotizacion_aprobar_oc_validation</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-BILL-03</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Billing Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Validación de tipos de DTE y folios tributarios SII</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_documento_dte_schemas</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-BILL-04</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">Billing Service</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Soporte de Webpay, MercadoPago y Crédito Convenio</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_metodos_pago_disponibles</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-GW-01</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">API Gateway</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Rate Limiter perimetral en autenticación (60 req/min)</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_gateway_rate_limiting_auth</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-GW-02</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">API Gateway</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Rate Limiter general para rutas públicas (300 req/min)</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_gateway_rate_limiting_general</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+        <tr class="hover:bg-slate-50 transition border-b border-slate-200">
+            <td class="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">CP-GW-03</td>
+            <td class="py-3 px-4 text-sm font-medium text-slate-800">API Gateway</td>
+            <td class="py-3 px-4 text-sm text-slate-700">Reinicio automático de ventana temporal tras 60s</td>
+            <td class="py-3 px-4 font-mono text-xs text-slate-500">test_gateway_rate_limiting_window_expiry</td>
+            <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">APROBADO</span></td>
+        </tr>
+        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer class="max-w-7xl mx-auto px-6 py-6 text-center text-xs text-slate-400">
+        Proyecto MARCOM &bull; Aseguramiento de Calidad de Software &bull; Escuela de Informática y Telecomunicaciones Duoc UC
+    </footer>
+</body>
+</html>
