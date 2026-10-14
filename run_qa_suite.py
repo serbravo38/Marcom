@@ -60,6 +60,8 @@ def run_integration_tests():
         "test_users_crud.py",
         "test_cotizaciones.py",
         "test_contacto_flow.py",
+        "test_password_reset.py",
+        "test_auth_lockout.py",
         "test_e2e.py"
     ]
     
