@@ -40,11 +40,14 @@ export interface RespuestaIniciarSesion {
   token_type?: string;
   requiere_mfa?: boolean;
   token_temporal_mfa?: string;
+  requiere_cambio_clave?: boolean;
+  clave_temporal?: string;
 }
 
 export interface RespuestaRecuperacion {
   mensaje: string;
   token_temporal?: string;
+  clave_temporal?: string;
 }
 
 export interface RespuestaConfigurarMFA {
@@ -87,8 +90,12 @@ export const authService = {
     return api.post<RespuestaRecuperacion>("/auth/solicitar-recuperacion", { correo });
   },
 
-  resetPassword: async (token: string, nueva_clave: string): Promise<RespuestaRecuperacion> => {
-    return api.post<RespuestaRecuperacion>("/auth/restablecer-clave", { token, nueva_clave });
+  resetPassword: async (token: string, nueva_clave: string, correo?: string): Promise<RespuestaRecuperacion> => {
+    return api.post<RespuestaRecuperacion>("/auth/restablecer-clave", {
+      token,
+      nueva_clave,
+      ...(correo ? { correo } : {})
+    });
   },
 
   register: async (datosUsuario: any): Promise<Usuario> => {

@@ -47,13 +47,30 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # 0. Verificar si el usuario está ingresando con una Contraseña Temporal de recuperación vigente
+    if auth.check_temporary_password_for_user(user.correo, user_login.clave):
+        if not user.activo:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Usuario inactivo. Contacta al administrador."
+            )
+        crud.resetear_intentos_fallidos(db, user)
+        logger.info(f"[AUDIT_SEGURIDAD] Ingreso con contraseña temporal válido para: {user.correo}. Requiere definir nueva clave.")
+        return {
+            "access_token": None,
+            "token_type": "bearer",
+            "requiere_mfa": False,
+            "requiere_cambio_clave": True,
+            "clave_temporal": user_login.clave.strip()
+        }
+
     # 1. Verificar si la cuenta se encuentra actualmente bloqueada
     esta_bloqueado, segundos_restantes = crud.esta_cuenta_bloqueada(user)
     if esta_bloqueado:
         minutos_restantes = max(1, (segundos_restantes + 59) // 60)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Cuenta bloqueada temporalmente por múltiples intentos fallidos. Inténtalo nuevamente en {minutos_restantes} minuto(s) o restablece tu contraseña.",
+            detail=f"Cuenta bloqueada temporalmente por múltiples intentos fallidos. Inténtalo nuevamente en {minutos_restantes} minuto(s) o solicita una contraseña temporal de recuperación.",
             headers={"Retry-After": str(segundos_restantes)}
         )
     
@@ -65,7 +82,7 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
             minutos = max(1, (segs + 59) // 60)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Demasiados intentos fallidos. Por motivos de seguridad, tu cuenta ha sido bloqueada temporalmente por {minutos} minutos. Puedes esperar o restablecer tu contraseña para desbloquearla.",
+                detail=f"Demasiados intentos fallidos. Por motivos de seguridad, tu cuenta ha sido bloqueada temporalmente por {minutos} minutos. Puedes esperar o solicitar una contraseña temporal por correo para desbloquearla.",
                 headers={"Retry-After": str(segs)}
             )
         else:
@@ -85,8 +102,9 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
             detail="Usuario inactivo. Contacta al administrador."
         )
     
-    # 4. Login exitoso: Resetear contador de intentos fallidos
+    # 4. Login exitoso: Resetear contador de intentos fallidos y limpiar cualquier clave temporal sin usar
     crud.resetear_intentos_fallidos(db, user)
+    auth.consume_temporary_password_for_user(user.correo)
     logger.info(f"[AUDIT_SEGURIDAD] Autenticación exitosa para: {user.correo} (rol: {user.rol})")
     
     # Extraer convenio_id si existe perfil
@@ -124,36 +142,54 @@ def request_password_reset(
     
     # Respuesta neutral y estándar para mitigar enumeración de cuentas
     mensaje_estandar = (
-        "Si el correo electrónico se encuentra registrado en nuestro sistema, "
-        "recibirás un mensaje con las instrucciones y el código para restablecer tu contraseña."
+        f"Si el correo electrónico está registrado en el sistema, hemos enviado una contraseña temporal "
+        f"desde {settings.SMTP_FROM} para que puedas recuperar tu acceso."
     )
     
-    token_para_respuesta = None
+    clave_para_respuesta = None
     
     if user and user.activo:
-        reset_token = auth.create_password_reset_token(usuario_id=str(user.usuario_id), correo=user.correo)
-        # Envío seguro de token vía correo electrónico en segundo plano
-        background_tasks.add_task(email_service.enviar_correo_recuperacion_clave, user.correo, user.nombre, reset_token)
+        clave_temporal = auth.generate_temporary_password()
+        auth.register_temporary_password(
+            usuario_id=str(user.usuario_id),
+            correo=user.correo,
+            clave_temporal=clave_temporal,
+            expires_minutes=30
+        )
+        # Envío de la contraseña temporal vía correo electrónico oficial (contacto@marcomchile.cl)
+        background_tasks.add_task(
+            email_service.enviar_correo_recuperacion_clave,
+            user.correo,
+            user.nombre,
+            clave_temporal
+        )
         
-        # En entorno de desarrollo (o flag activo) se adjunta para pruebas automatizadas y sandbox local
+        # En entorno de desarrollo (o flag activo) se adjunta para pruebas automatizadas
         if settings.ENVIRONMENT == "development" and settings.EXPOSE_RESET_TOKEN_IN_DEV:
-            token_para_respuesta = reset_token
+            clave_para_respuesta = clave_temporal
     
     return {
         "mensaje": mensaje_estandar,
-        "token_temporal": token_para_respuesta
+        "token_temporal": clave_para_respuesta,
+        "clave_temporal": clave_para_respuesta
     }
 
 @router.post("/auth/restablecer-clave", response_model=schemas.RespuestaRecuperacion)
 def reset_password(datos: schemas.RestablecerClave, db: Session = Depends(get_db)):
-    payload = auth.verify_password_reset_token(datos.token)
+    if datos.nueva_clave.strip() == datos.token.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tu nueva contraseña definitiva debe ser diferente a la contraseña temporal recibida."
+        )
+
+    payload = auth.verify_temporary_password_or_token(datos.token, datos.correo)
     usuario_id = payload.get("usuario_id")
     
     user = crud.obtener_usuario_por_id(db, usuario_id=UUID(usuario_id))
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario asociado al token no encontrado."
+            detail="Usuario asociado a la solicitud no encontrado."
         )
     if not user.activo:
         raise HTTPException(
@@ -162,9 +198,10 @@ def reset_password(datos: schemas.RestablecerClave, db: Session = Depends(get_db
         )
         
     crud.cambiar_clave_usuario(db=db, db_usuario=user, nueva_clave=datos.nueva_clave)
-    logger.info(f"[AUDIT_SEGURIDAD] Contraseña restablecida exitosamente para usuario_id: {usuario_id} ({user.correo})")
+    auth.consume_temporary_password_for_user(user.correo)
+    logger.info(f"[AUDIT_SEGURIDAD] Contraseña restablecida exitosamente con clave temporal para usuario_id: {usuario_id} ({user.correo})")
     return {
-        "mensaje": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña."
+        "mensaje": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña segura."
     }
 
 # --- 2FA / MFA ENDPOINTS ---

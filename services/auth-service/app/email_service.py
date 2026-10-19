@@ -247,33 +247,38 @@ Sociedad de Instalaciones Marcom Compañía Limitada
         logger.error(f"Error al enviar confirmación al cliente {destinatario} para ticket {ticket_id}: {repr(e)}")
         return False
 
-def enviar_correo_recuperacion_clave(correo: str, nombre: str, token: str) -> bool:
+def enviar_correo_recuperacion_clave(correo: str, nombre: str, clave_temporal: str) -> bool:
     """
-    Envía token/enlace para restablecer contraseña de forma segura por correo electrónico.
+    Envía una contraseña temporal segura por correo electrónico desde la cuenta corporativa (contacto@marcomchile.cl).
     """
     destinatario = _sanitize_header(correo)
-    asunto = _sanitize_header("Recuperación de Contraseña - MARCOM Chile")
+    asunto = _sanitize_header("Contraseña Temporal de Recuperación - MARCOM Chile")
     
     nombre_seguro = _escape_html(nombre)
-    token_seguro = _escape_html(token)
+    clave_segura = _escape_html(clave_temporal)
     frontend_base = settings.FRONTEND_URL.rstrip("/")
-    enlace_reset = f"{frontend_base}/login?mode=reset&token={token}"
+    enlace_reset = f"{frontend_base}/login?mode=reset"
 
     cuerpo_texto = f"""
 Estimado/a {nombre},
 
-Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en MARCOM Chile.
+Hemos recibido una solicitud para recuperar el acceso a tu cuenta en MARCOM Chile.
 
-Tu token de recuperación es:
-{token}
+Tu Contraseña Temporal de recuperación es:
+{clave_temporal}
 
-O puedes acceder directamente al siguiente enlace seguro:
-{enlace_reset}
+¿Cómo utilizar tu contraseña temporal?
+1. Ingresa esta Contraseña Temporal en la pantalla de recuperación de contraseña de MARCOM (o úsala para iniciar sesión en {frontend_base}/login).
+2. Define tu nueva contraseña definitiva cumpliendo con la política de seguridad:
+   - Mínimo 8 caracteres
+   - Alfanumérica (al menos una letra mayúscula, una minúscula y un número)
+   - Al menos un carácter especial (ej: !@#$%^&*._-)
 
-Este enlace y token expiran en 30 minutos. Si no realizaste esta solicitud, puedes ignorar este mensaje de forma segura.
+Esta contraseña temporal es de un solo uso y expira en 30 minutos. Si no realizaste esta solicitud, tu contraseña actual sigue protegida y puedes ignorar este mensaje.
 
 Atentamente,
 Equipo de Seguridad MARCOM Chile
+Correo oficial: {settings.SMTP_FROM}
     """.strip()
 
     cuerpo_html = f"""
@@ -283,11 +288,13 @@ Equipo de Seguridad MARCOM Chile
   <meta charset="utf-8">
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }}
-    .container {{ max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; }}
+    .container {{ max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.45); }}
     .header {{ background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 24px 30px; text-align: left; }}
     .header h1 {{ margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; }}
     .content {{ padding: 28px 30px; }}
-    .token-box {{ background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; color: #38bdf8; word-break: break-all; margin: 16px 0; }}
+    .temp-pass-box {{ background: #0f172a; border: 2px dashed #38bdf8; border-radius: 10px; padding: 18px; text-align: center; font-family: monospace; font-size: 24px; font-weight: 800; letter-spacing: 3px; color: #38bdf8; margin: 18px 0; }}
+    .policy-box {{ background: rgba(15, 23, 42, 0.7); border-left: 4px solid #10b981; border-radius: 6px; padding: 14px 18px; margin: 18px 0; font-size: 13px; color: #cbd5e1; line-height: 1.6; }}
+    .btn-link {{ display: inline-block; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); color: #ffffff !important; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 8px; margin-top: 10px; }}
     .footer {{ background: #0b1120; padding: 16px 30px; font-size: 12px; color: #64748b; text-align: center; border-top: 1px solid #1e293b; }}
   </style>
 </head>
@@ -295,21 +302,32 @@ Equipo de Seguridad MARCOM Chile
   <div class="container">
     <div class="header">
       <h1>MARCOM Chile</h1>
-      <p style="margin: 4px 0 0; color: #bae6fd; font-size: 13px;">Gestión de Seguridad de Acceso</p>
+      <p style="margin: 4px 0 0; color: #bae6fd; font-size: 13px;">Recuperación de Acceso • Contraseña Temporal</p>
     </div>
     <div class="content">
       <p style="font-size: 15px; color: #ffffff; margin-top: 0;">Estimado/a <strong>{nombre_seguro}</strong>,</p>
       <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6;">
-        Se ha solicitado el restablecimiento de contraseña para tu cuenta de usuario.
+        Hemos generado una <strong>Contraseña Temporal</strong> para que puedas recuperar el acceso a tu cuenta en la plataforma operativa de MARCOM:
       </p>
-      <p style="font-size: 13px; color: #94a3b8;">Tu código / token de verificación es:</p>
-      <div class="token-box">{token_seguro}</div>
-      <p style="font-size: 13px; color: #94a3b8;">
-        Este token expira en 30 minutos. Si no solicitaste este cambio, te recomendamos notificar inmediatamente a la mesa de ayuda.
+      <div class="temp-pass-box">{clave_segura}</div>
+      <p style="font-size: 13.5px; color: #e2e8f0; line-height: 1.6;">
+        Ingresa esta contraseña temporal en la ventana de recuperación (o inicia sesión con ella) para definir tu nueva contraseña personalizada.
+      </p>
+      <div class="policy-box">
+        <strong style="color: #34d399;">Requisitos para tu nueva contraseña definitiva:</strong><br/>
+        • Mínimo <strong>8 caracteres</strong> de longitud.<br/>
+        • <strong>Alfanumérica:</strong> letras mayúsculas (A-Z), minúsculas (a-z) y números (0-9).<br/>
+        • Al menos un <strong>carácter especial</strong> (ej: <code>! @ # $ % ^ &amp; * . _ -</code>).
+      </div>
+      <div style="text-align: center; margin: 22px 0 12px;">
+        <a href="{enlace_reset}" class="btn-link">Ir a Restablecer Contraseña</a>
+      </div>
+      <p style="font-size: 12.5px; color: #94a3b8; margin-top: 18px;">
+        Esta contraseña temporal es de uso único y tiene una validez de <strong>30 minutos</strong>. Si no solicitaste este cambio, tu clave actual permanece intacta.
       </p>
     </div>
     <div class="footer">
-      Sociedad de Instalaciones Marcom Compañía Limitada • Seguridad Operativa
+      Sociedad de Instalaciones Marcom Compañía Limitada • Enviado desde {settings.SMTP_FROM}
     </div>
   </div>
 </body>
@@ -328,8 +346,9 @@ Equipo de Seguridad MARCOM Chile
         with _get_smtp_connection() as server:
             server.sendmail(settings.SMTP_FROM, [destinatario], msg.as_string())
         
-        logger.info(f"Correo de recuperación de contraseña enviado exitosamente a {destinatario}")
+        logger.info(f"Correo con contraseña temporal enviado exitosamente desde {settings.SMTP_FROM} a {destinatario}")
         return True
     except Exception as e:
-        logger.error(f"Error al enviar correo de recuperación a {destinatario}: {repr(e)}")
+        logger.error(f"Error al enviar correo con contraseña temporal a {destinatario}: {repr(e)}")
         return False
+

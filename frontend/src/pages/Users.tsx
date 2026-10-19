@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, X, Loader2, Users as UsersIcon, Edit2, Trash2, AlertCircle, Search, Filter, UserMinus, UserCheck, CheckCircle2 } from "lucide-react";
 import { authService } from "../services/auth";
 import type { Usuario } from "../services/auth";
+import { validateStrongPassword, PasswordRequirementsChecklist } from "../utils/passwordValidation";
 
 export const Users: React.FC = () => {
   const [users, setUsers] = useState<Usuario[]>([]);
@@ -87,6 +88,15 @@ export const Users: React.FC = () => {
       setModalError("La contraseña es requerida para nuevos usuarios.");
       setModalLoading(false);
       return;
+    }
+
+    if (password.trim() !== "") {
+      const validation = validateStrongPassword(password);
+      if (!validation.isValid) {
+        setModalError(validation.errorMessage || "La contraseña no cumple con los requisitos de seguridad.");
+        setModalLoading(false);
+        return;
+      }
     }
 
     try {
@@ -390,13 +400,19 @@ export const Users: React.FC = () => {
                   <input
                     type="password"
                     className="glass-input"
-                    placeholder={modalType === "create" ? "••••••••" : "Dejar en blanco para no cambiar"}
+                    placeholder={modalType === "create" ? "Alfanumérica + especial (mín. 8)" : "Dejar en blanco para no cambiar"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required={modalType === "create"}
                   />
                 </div>
               </div>
+
+              {(modalType === "create" || password.trim() !== "") && (
+                <div style={{ marginBottom: "16px" }}>
+                  <PasswordRequirementsChecklist password={password} />
+                </div>
+              )}
 
               <div className="form-group" style={{ margin: "10px 0 30px 0", flexDirection: "row", alignItems: "center", gap: "10px" }}>
                 <input

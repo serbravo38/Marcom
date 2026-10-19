@@ -73,6 +73,136 @@ def require_role(roles: list[models.RolUsuario]):
         return current_user
     return dependency
 
+# Almacén en memoria con expiración para contraseñas temporales de recuperación (single-use, 30 min)
+# Estructura: { correo_lower: {"usuario_id": str, "correo": str, "clave_hash": str, "expira_en": datetime} }
+_TEMP_PASSWORDS_BY_EMAIL: dict[str, dict] = {}
+# Índice rápido por hash SHA-256 de la clave temporal para permitir validación directa con o sin correo
+_TEMP_PASSWORDS_BY_HASH: dict[str, dict] = {}
+
+def _hash_temp_password(clave_temporal: str) -> str:
+    return hashlib.sha256(clave_temporal.strip().encode("utf-8")).hexdigest()
+
+def generate_temporary_password() -> str:
+    """
+    Genera una contraseña temporal segura (10 caracteres), legible y que cumple
+    con la política alfanumérica + carácter especial (ej: Mc#4829Kp!).
+    """
+    upper_chars = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    lower_chars = "abcdefghijkmnopqrstuvwxyz"
+    digits = "23456789"
+    specials = "#!@$%&*"
+
+    # Formato estructurado legible pero criptográficamente aleatorio: 2 letras + 1 especial + 4 dígitos + 2 letras + 1 especial
+    part1 = secrets.choice(upper_chars) + secrets.choice(lower_chars)
+    spec1 = secrets.choice(specials)
+    nums = "".join(secrets.choice(digits) for _ in range(4))
+    part2 = secrets.choice(upper_chars) + secrets.choice(lower_chars)
+    spec2 = secrets.choice(specials)
+    return f"{part1}{spec1}{nums}{part2}{spec2}"
+
+def register_temporary_password(usuario_id: str, correo: str, clave_temporal: str, expires_minutes: int = 30) -> None:
+    ahora = datetime.now(timezone.utc)
+    expira_en = ahora + timedelta(minutes=expires_minutes)
+    correo_norm = correo.strip().lower()
+    temp_hash = _hash_temp_password(clave_temporal)
+
+    # Limpiar clave temporal previa si existía para este correo
+    prev = _TEMP_PASSWORDS_BY_EMAIL.get(correo_norm)
+    if prev and prev.get("clave_hash") in _TEMP_PASSWORDS_BY_HASH:
+        _TEMP_PASSWORDS_BY_HASH.pop(prev["clave_hash"], None)
+
+    record = {
+        "usuario_id": str(usuario_id),
+        "correo": correo_norm,
+        "clave_hash": temp_hash,
+        "expira_en": expira_en
+    }
+    _TEMP_PASSWORDS_BY_EMAIL[correo_norm] = record
+    _TEMP_PASSWORDS_BY_HASH[temp_hash] = record
+
+def check_temporary_password_for_user(correo: str, candidate_password: str) -> bool:
+    """
+    Verifica si candidate_password corresponde a una contraseña temporal activa (no expirada)
+    para el correo indicado, sin consumirla todavía (permite redirigir al cambio obligatorio).
+    """
+    if not correo or not candidate_password:
+        return False
+    correo_norm = correo.strip().lower()
+    record = _TEMP_PASSWORDS_BY_EMAIL.get(correo_norm)
+    if not record:
+        return False
+    ahora = datetime.now(timezone.utc)
+    if record["expira_en"] < ahora:
+        _TEMP_PASSWORDS_BY_EMAIL.pop(correo_norm, None)
+        _TEMP_PASSWORDS_BY_HASH.pop(record["clave_hash"], None)
+        return False
+    return secrets.compare_digest(record["clave_hash"], _hash_temp_password(candidate_password))
+
+def consume_temporary_password_for_user(correo: str) -> None:
+    if not correo:
+        return
+    correo_norm = correo.strip().lower()
+    record = _TEMP_PASSWORDS_BY_EMAIL.pop(correo_norm, None)
+    if record:
+        _TEMP_PASSWORDS_BY_HASH.pop(record.get("clave_hash", ""), None)
+
+def verify_temporary_password_or_token(token_or_temp_pass: str, correo: Optional[str] = None) -> dict:
+    """
+    Verifica una contraseña temporal enviada por correo (o un token JWT de recuperación),
+    la consume (uso único) y retorna {"usuario_id": ..., "correo": ...}.
+    """
+    cleaned = (token_or_temp_pass or "").strip()
+    if not cleaned:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes ingresar la contraseña temporal o código de recuperación."
+        )
+
+    ahora = datetime.now(timezone.utc)
+    candidate_hash = _hash_temp_password(cleaned)
+
+    # 1. Buscar primero por correo si fue proporcionado
+    if correo:
+        correo_norm = correo.strip().lower()
+        record = _TEMP_PASSWORDS_BY_EMAIL.get(correo_norm)
+        if record:
+            if record["expira_en"] < ahora:
+                _TEMP_PASSWORDS_BY_EMAIL.pop(correo_norm, None)
+                _TEMP_PASSWORDS_BY_HASH.pop(record["clave_hash"], None)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="La contraseña temporal ha expirado (validez 30 minutos). Por favor solicita una nueva."
+                )
+            if secrets.compare_digest(record["clave_hash"], candidate_hash):
+                _TEMP_PASSWORDS_BY_EMAIL.pop(correo_norm, None)
+                _TEMP_PASSWORDS_BY_HASH.pop(record["clave_hash"], None)
+                return {
+                    "usuario_id": record["usuario_id"],
+                    "correo": record["correo"],
+                    "type": "password_reset"
+                }
+
+    # 2. Buscar directamente por el hash de la contraseña temporal
+    record_by_hash = _TEMP_PASSWORDS_BY_HASH.get(candidate_hash)
+    if record_by_hash:
+        if record_by_hash["expira_en"] < ahora:
+            _TEMP_PASSWORDS_BY_HASH.pop(candidate_hash, None)
+            _TEMP_PASSWORDS_BY_EMAIL.pop(record_by_hash["correo"], None)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña temporal ha expirado (validez 30 minutos). Por favor solicita una nueva."
+            )
+        _TEMP_PASSWORDS_BY_HASH.pop(candidate_hash, None)
+        _TEMP_PASSWORDS_BY_EMAIL.pop(record_by_hash["correo"], None)
+        return {
+            "usuario_id": record_by_hash["usuario_id"],
+            "correo": record_by_hash["correo"],
+            "type": "password_reset"
+        }
+
+    # 3. Fallback compatible con tokens JWT firmados
+    return verify_password_reset_token(cleaned)
+
 def create_password_reset_token(usuario_id: str, correo: str, expires_minutes: int = 30) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
     to_encode = {
@@ -89,24 +219,24 @@ def verify_password_reset_token(token: str) -> dict:
         if payload.get("type") != "password_reset":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El token proporcionado no es válido para recuperación de contraseña."
+                detail="La contraseña temporal o código proporcionado no es válido."
             )
         usuario_id = payload.get("usuario_id")
         if not usuario_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Token de recuperación inválido o malformado."
+                detail="Contraseña temporal o código inválido."
             )
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El enlace de recuperación ha expirado. Por favor solicita uno nuevo."
+            detail="La contraseña temporal ha expirado. Por favor solicita una nueva."
         )
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token de recuperación inválido o alterado."
+            detail="La contraseña temporal ingresada es incorrecta o ha expirado."
         )
 
 # --- MFA / 2FA HELPERS ---

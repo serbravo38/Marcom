@@ -57,22 +57,32 @@ def test_password_recovery():
     assert login_resp.status_code == 200, f"Error en login inicial: {login_resp.text}"
     print("✅ Inicio de sesión con contraseña original exitoso.")
 
-    # 4. Solicitar recuperación de contraseña
-    print(f"\n4. Solicitando recuperación de contraseña para {test_email}...")
+    # 4. Solicitar recuperación de contraseña (envío de contraseña temporal)
+    print(f"\n4. Solicitando contraseña temporal de recuperación para {test_email}...")
     solicitud_resp = httpx.post(f"{GATEWAY_URL}/api/v1/auth/solicitar-recuperacion", json={"correo": test_email})
     if solicitud_resp.status_code != 200:
         print(f"❌ Error al solicitar recuperación: {solicitud_resp.status_code} - {solicitud_resp.text}")
         sys.exit(1)
     data = solicitud_resp.json()
-    reset_token = data.get("token_temporal")
-    assert reset_token is not None, "El token de recuperación no fue retornado"
-    print(f"✅ Solicitud aceptada. Token generado correctamente.")
+    clave_temporal = data.get("clave_temporal") or data.get("token_temporal")
+    assert clave_temporal is not None, "La contraseña temporal no fue retornada"
+    print(f"✅ Solicitud aceptada. Contraseña temporal generada: {clave_temporal}")
 
-    # 5. Restablecer contraseña con el token
-    print(f"\n5. Restableciendo contraseña a nueva clave...")
+    # 4.5. Verificar rechazo de contraseña insegura (sin caracteres especiales)
+    print("\n4.5. Verificando que se rechace una contraseña sin caracteres especiales...")
+    weak_resp = httpx.post(
+        f"{GATEWAY_URL}/api/v1/auth/restablecer-clave",
+        json={"token": clave_temporal, "nueva_clave": "ClaveSinEspecial2026", "correo": test_email}
+    )
+    assert weak_resp.status_code == 422, f"Se esperaba rechazo 422 para clave sin carácter especial, se obtuvo {weak_resp.status_code}"
+    print("✅ Correcto: Contraseña sin carácter especial fue rechazada por la política de seguridad.")
+
+    # 5. Restablecer contraseña con la contraseña temporal y nueva clave segura
+    print(f"\n5. Restableciendo contraseña con la contraseña temporal a nueva clave segura...")
     reset_payload = {
-        "token": reset_token,
-        "nueva_clave": new_password
+        "token": clave_temporal,
+        "nueva_clave": new_password,
+        "correo": test_email
     }
     reset_resp = httpx.post(f"{GATEWAY_URL}/api/v1/auth/restablecer-clave", json=reset_payload)
     if reset_resp.status_code != 200:
@@ -104,3 +114,4 @@ def test_password_recovery():
 
 if __name__ == "__main__":
     test_password_recovery()
+

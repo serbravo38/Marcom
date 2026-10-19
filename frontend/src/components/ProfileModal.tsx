@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X, User, Mail, Phone, MapPin, Lock, Loader2, CheckCircle2, AlertCircle, Shield, KeyRound, Smartphone, Copy, Check, ShieldCheck, ShieldAlert } from "lucide-react";
 import { authService } from "../services/auth";
 import type { Usuario } from "../services/auth";
+import { validateStrongPassword, PasswordRequirementsChecklist } from "../utils/passwordValidation";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -107,8 +108,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onP
         setError("Debes ingresar tu contraseña actual para cambiarla.");
         return;
       }
-      if (newPassword.length < 6) {
-        setError("La nueva contraseña debe tener al menos 6 caracteres.");
+      const validation = validateStrongPassword(newPassword);
+      if (!validation.isValid) {
+        setError(validation.errorMessage || "La nueva contraseña no cumple con los requisitos de seguridad.");
         return;
       }
       if (newPassword !== confirmPassword) {
@@ -546,15 +548,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onP
 
                   <div className="form-row">
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label htmlFor="modal-new-password">Nueva Contraseña (mín. 6 caracteres)</label>
+                      <label htmlFor="modal-new-password">Nueva Contraseña (mín. 8 caracteres)</label>
                       <input
                         id="modal-new-password"
                         type="password"
                         className="glass-input"
-                        placeholder="••••••••"
+                        placeholder="Alfanumérica + especial"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        minLength={6}
+                        minLength={8}
                         required={changePassword}
                       />
                     </div>
@@ -568,11 +570,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onP
                         placeholder="••••••••"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        minLength={6}
+                        minLength={8}
                         required={changePassword}
                       />
                     </div>
                   </div>
+                  <PasswordRequirementsChecklist password={newPassword} />
                 </div>
               )}
             </div>

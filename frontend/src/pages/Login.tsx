@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Mail, Loader2, KeyRound, ArrowLeft, CheckCircle2, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
 import { authService } from "../services/auth";
 import { getDefaultRouteForRole } from "../utils/rbac";
+import { validateStrongPassword, PasswordRequirementsChecklist } from "../utils/passwordValidation";
 
 type AuthMode = "login" | "request_reset" | "reset_password" | "mfa_challenge";
 
@@ -29,11 +30,18 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Check URL token on mount
+  // Check URL token or mode on mount
   useEffect(() => {
     const tokenParam = searchParams.get("token");
+    const modeParam = searchParams.get("mode");
+    const emailParam = searchParams.get("correo");
+    if (emailParam) {
+      setEmail(emailParam);
+    }
     if (tokenParam) {
       setResetToken(tokenParam);
+      setMode("reset_password");
+    } else if (modeParam === "reset") {
       setMode("reset_password");
     }
   }, [searchParams]);
@@ -42,11 +50,21 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
-      // 1. Get access token or MFA challenge
+      // 1. Get access token, temporary password redirect, or MFA challenge
       const authData = await authService.login({ correo: email, clave: password });
-      
+
+      // Si el usuario ingresó con una contraseña temporal vigente, redirigir a creación de clave definitiva
+      if (authData.requiere_cambio_clave) {
+        setResetToken(authData.clave_temporal || password);
+        setPassword("");
+        setSuccessMessage("Contraseña temporal validada correctamente. Por seguridad, define ahora tu nueva contraseña definitiva.");
+        setMode("reset_password");
+        return;
+      }
+
       // Si el usuario tiene 2FA activado, pasar a la pantalla de desafío 2FA
       if (authData.requiere_mfa && authData.token_temporal_mfa) {
         setMfaChallengeToken(authData.token_temporal_mfa);
@@ -106,9 +124,10 @@ export const Login: React.FC = () => {
 
     try {
       const response = await authService.requestPasswordReset(email);
-      setSuccessMessage(response.mensaje || "Código de recuperación generado.");
-      if (response.token_temporal) {
-        setResetToken(response.token_temporal);
+      setSuccessMessage(response.mensaje || "Se ha enviado una contraseña temporal a tu correo electrónico.");
+      const tempPass = response.clave_temporal || response.token_temporal;
+      if (tempPass) {
+        setResetToken(tempPass);
       }
       // Move to step 2 (reset password)
       setMode("reset_password");
@@ -124,8 +143,19 @@ export const Login: React.FC = () => {
     setError(null);
     setSuccessMessage(null);
 
-    if (newPassword.length < 6) {
-      setError("La nueva contraseña debe tener al menos 6 caracteres.");
+    if (!resetToken.trim()) {
+      setError("Debes ingresar la contraseña temporal enviada a tu correo.");
+      return;
+    }
+
+    const validation = validateStrongPassword(newPassword);
+    if (!validation.isValid) {
+      setError(validation.errorMessage || "La contraseña no cumple con los requisitos de seguridad.");
+      return;
+    }
+
+    if (newPassword.trim() === resetToken.trim()) {
+      setError("La nueva contraseña definitiva debe ser diferente a la contraseña temporal.");
       return;
     }
 
@@ -134,15 +164,14 @@ export const Login: React.FC = () => {
       return;
     }
 
-    if (!resetToken.trim()) {
-      setError("Debes ingresar el token o código de recuperación.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const response = await authService.resetPassword(resetToken.trim(), newPassword);
+      const response = await authService.resetPassword(
+        resetToken.trim(),
+        newPassword,
+        email.trim() ? email.trim() : undefined
+      );
       setSuccessMessage(response.mensaje || "¡Contraseña actualizada exitosamente!");
       setPassword("");
       setNewPassword("");
@@ -153,7 +182,7 @@ export const Login: React.FC = () => {
         setMode("login");
       }, 2500);
     } catch (err: any) {
-      setError(err?.message || "Error al restablecer la contraseña. Verifica el token.");
+      setError(err?.message || "Error al restablecer la contraseña. Verifica tu contraseña temporal.");
     } finally {
       setLoading(false);
     }
@@ -439,8 +468,8 @@ export const Login: React.FC = () => {
         {/* 2. MODO SOLICITUD DE RECUPERACIÓN */}
         {mode === "request_reset" && (
           <form onSubmit={handleRequestReset}>
-            <p style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "0.9rem", marginBottom: "20px", textAlign: "center" }}>
-              Ingresa el correo electrónico asociado a tu cuenta para generar tu código de recuperación.
+            <p style={{ color: "hsl(var(--text-muted))", fontSize: "0.88rem", marginBottom: "20px", textAlign: "center", lineHeight: 1.45 }}>
+              Ingresa el correo electrónico de tu cuenta y te enviaremos una <strong>contraseña temporal</strong> desde <code>contacto@marcomchile.cl</code> para recuperar tu acceso.
             </p>
 
             <div className="form-group" style={{ marginBottom: "24px" }}>
@@ -470,10 +499,10 @@ export const Login: React.FC = () => {
               {loading ? (
                 <>
                   <Loader2 size={18} className="spin" style={{ animation: "spin 1s linear infinite" }} />
-                  <span>Generando código...</span>
+                  <span>Enviando contraseña temporal...</span>
                 </>
               ) : (
-                <span>Continuar a Restablecimiento</span>
+                <span>Enviar Contraseña Temporal</span>
               )}
             </button>
 
@@ -492,20 +521,20 @@ export const Login: React.FC = () => {
         {/* 3. MODO RESTABLECER CONTRASEÑA */}
         {mode === "reset_password" && (
           <form onSubmit={handleResetPassword}>
-            <p style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "0.88rem", marginBottom: "16px", textAlign: "center" }}>
-              Ingresa tu código de recuperación y define tu nueva contraseña segura.
+            <p style={{ color: "hsl(var(--text-muted))", fontSize: "0.88rem", marginBottom: "16px", textAlign: "center", lineHeight: 1.45 }}>
+              Ingresa la <strong>contraseña temporal</strong> enviada a tu correo y define tu nueva contraseña definitiva segura.
             </p>
 
             <div className="form-group" style={{ marginBottom: "14px" }}>
-              <label htmlFor="token">Código / Token de Recuperación</label>
+              <label htmlFor="token">Contraseña Temporal Recibida</label>
               <div style={{ position: "relative" }}>
                 <KeyRound size={18} style={{ position: "absolute", left: "14px", top: "14px", color: "rgba(255,255,255,0.4)" }} />
                 <input
                   id="token"
                   type="text"
                   className="glass-input"
-                  style={{ width: "100%", paddingLeft: "45px", fontFamily: "monospace", fontSize: "0.85rem" }}
-                  placeholder="Pega aquí el código de recuperación"
+                  style={{ width: "100%", paddingLeft: "45px", fontFamily: "monospace", fontSize: "0.95rem", letterSpacing: "1px" }}
+                  placeholder="Ej: Mc#4829Kp!"
                   value={resetToken}
                   onChange={(e) => setResetToken(e.target.value)}
                   required
@@ -514,7 +543,7 @@ export const Login: React.FC = () => {
             </div>
 
             <div className="form-group" style={{ marginBottom: "14px" }}>
-              <label htmlFor="new-password">Nueva Contraseña</label>
+              <label htmlFor="new-password">Nueva Contraseña Definitiva</label>
               <div style={{ position: "relative" }}>
                 <Lock size={18} style={{ position: "absolute", left: "14px", top: "14px", color: "rgba(255,255,255,0.4)" }} />
                 <input
@@ -522,13 +551,14 @@ export const Login: React.FC = () => {
                   type="password"
                   className="glass-input"
                   style={{ width: "100%", paddingLeft: "45px" }}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Alfanumérica + carácter especial (mín. 8)"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </div>
+              <PasswordRequirementsChecklist password={newPassword} />
             </div>
 
             <div className="form-group" style={{ marginBottom: "22px" }}>
@@ -544,7 +574,7 @@ export const Login: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </div>
             </div>
@@ -561,7 +591,7 @@ export const Login: React.FC = () => {
                   <span>Actualizando contraseña...</span>
                 </>
               ) : (
-                <span>Restablecer Contraseña</span>
+                <span>Guardar Nueva Contraseña</span>
               )}
             </button>
 

@@ -16,6 +16,14 @@ def validar_robustez_clave(v: str) -> str:
         raise ValueError("La contraseña debe tener al menos 8 caracteres.")
     if v.lower() in COMMON_WEAK_PASSWORDS:
         raise ValueError("La contraseña elegida es demasiado común o vulnerable. Por favor elige una contraseña más segura.")
+    if not any(c.isupper() for c in v):
+        raise ValueError("La contraseña debe contener al menos una letra mayúscula (A-Z).")
+    if not any(c.islower() for c in v):
+        raise ValueError("La contraseña debe contener al menos una letra minúscula (a-z).")
+    if not any(c.isdigit() for c in v):
+        raise ValueError("La contraseña debe ser alfanumérica e incluir al menos un número (0-9).")
+    if not any(not c.isalnum() and not c.isspace() for c in v):
+        raise ValueError("La contraseña debe incluir al menos un carácter especial (ej: !@#$%^&*._-).")
     return v
 
 # --- PROFILE SCHEMAS ---
@@ -49,7 +57,7 @@ class UsuarioBase(BaseModel):
     activo: bool = True
 
 class UsuarioCrear(UsuarioBase):
-    clave: str = Field(..., min_length=8, description="Contraseña en texto plano (mínimo 8 caracteres)")
+    clave: str = Field(..., min_length=8, description="Contraseña segura alfanumérica con carácter especial (mínimo 8 caracteres)")
 
     @field_validator("clave")
     @classmethod
@@ -67,12 +75,19 @@ class UsuarioActualizar(BaseModel):
     intentos_fallidos: Optional[int] = None
     bloqueado_hasta: Optional[datetime] = None
 
+    @field_validator("clave")
+    @classmethod
+    def validar_clave_opcional(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.strip() != "":
+            return validar_robustez_clave(v)
+        return v
+
 class UsuarioActualizarMe(BaseModel):
     nombre: Optional[str] = None
     apellido: Optional[str] = None
     correo: Optional[EmailStr] = None
     clave_actual: Optional[str] = None
-    nueva_clave: Optional[str] = Field(None, min_length=8, description="Nueva contraseña (mínimo 8 caracteres)")
+    nueva_clave: Optional[str] = Field(None, min_length=8, description="Nueva contraseña segura (mínimo 8 caracteres)")
     telefono: Optional[str] = None
     direccion: Optional[str] = None
     region: Optional[str] = None
@@ -132,6 +147,8 @@ class Token(BaseModel):
     token_type: Optional[str] = "bearer"
     requiere_mfa: bool = False
     token_temporal_mfa: Optional[str] = None
+    requiere_cambio_clave: bool = False
+    clave_temporal: Optional[str] = None
 
 class DatosToken(BaseModel):
     usuario_id: Optional[UUID] = None
@@ -142,8 +159,9 @@ class SolicitudRecuperacionClave(BaseModel):
     correo: EmailStr
 
 class RestablecerClave(BaseModel):
-    token: str
-    nueva_clave: str = Field(..., min_length=8, description="Nueva contraseña (mínimo 8 caracteres)")
+    correo: Optional[EmailStr] = None
+    token: str = Field(..., description="Contraseña temporal recibida por correo o token de recuperación")
+    nueva_clave: str = Field(..., min_length=8, description="Nueva contraseña segura (mínimo 8 caracteres, alfanumérica y carácter especial)")
 
     @field_validator("nueva_clave")
     @classmethod
@@ -153,6 +171,7 @@ class RestablecerClave(BaseModel):
 class RespuestaRecuperacion(BaseModel):
     mensaje: str
     token_temporal: Optional[str] = None
+    clave_temporal: Optional[str] = None
 
 # --- MFA SCHEMAS ---
 class SolicitudVerificarMFA(BaseModel):

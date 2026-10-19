@@ -86,3 +86,39 @@ def test_user_schema_validation():
     assert user_in.rut == "12.345.678-9"
     assert user_in.rol == RolUsuario.TECNICO_TERRENO
     assert user_in.correo == "usuario@marcom.cl"
+
+def test_password_complexity_policy():
+    """Valida que se rechacen contraseñas sin mayúsculas, minúsculas, números o caracteres especiales"""
+    # Sin números ni especiales
+    with pytest.raises(ValueError):
+        schemas.validar_robustez_clave("SoloLetrasMayusYMinus")
+    # Sin carácter especial
+    with pytest.raises(ValueError):
+        schemas.validar_robustez_clave("Alfanumerica2026")
+    # Sin mayúscula
+    with pytest.raises(ValueError):
+        schemas.validar_robustez_clave("minuscula2026!")
+    # Muy corta (< 8)
+    with pytest.raises(ValueError):
+        schemas.validar_robustez_clave("Ab1!xyz")
+    # Válida (alfanumérica + especial >= 8)
+    assert schemas.validar_robustez_clave("MarcomSegura2026!") == "MarcomSegura2026!"
+
+def test_temporary_password_generation_and_lifecycle():
+    """Valida la generación y consumo de contraseñas temporales de recuperación"""
+    temp_pass = auth.generate_temporary_password()
+    assert len(temp_pass) == 10
+    # Debe cumplir también con la política de robustez
+    assert schemas.validar_robustez_clave(temp_pass) == temp_pass
+
+    usuario_id = "11111111-2222-3333-4444-555555555555"
+    correo = "recuperacion_unit@marcom.cl"
+    auth.register_temporary_password(usuario_id, correo, temp_pass)
+    assert auth.check_temporary_password_for_user(correo, temp_pass) is True
+    verified = auth.verify_temporary_password_or_token(temp_pass, correo)
+    assert verified["correo"] == correo
+    assert verified["usuario_id"] == usuario_id
+    # Al consumirse en verify_temporary_password_or_token, ya no debe estar activa
+    assert auth.check_temporary_password_for_user(correo, temp_pass) is False
+
+

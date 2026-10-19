@@ -47,7 +47,7 @@ def run_tests():
     register_payload = {
         "rut": f"{(ts % 80000000) + 10000000}-{(ts % 9) + 1}",
         "correo": admin_email,
-        "clave": "supersecurepassword",
+        "clave": "SuperSecure2026!",
         "nombre": "Admin",
         "apellido": "Test",
         "rol": "ADMIN",
@@ -66,7 +66,7 @@ def run_tests():
     print("\n3. Iniciando sesión con el nuevo administrador para obtener token JWT...")
     login_payload = {
         "correo": admin_email,
-        "clave": "supersecurepassword"
+        "clave": "SuperSecure2026!"
     }
     response = httpx.post(f"{GATEWAY_URL}/api/v1/auth/iniciar-sesion", json=login_payload)
     if response.status_code != 200:
