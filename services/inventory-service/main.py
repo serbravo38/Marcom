@@ -21,25 +21,23 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print("GLOBAL EXCEPTION:", repr(exc))
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "InternalServerError",
             "message": "Ha ocurrido un error interno en el servidor.",
-            "detail": str(exc)
+            "detail": str(exc) if app.debug else None
         }
     )
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    print("SQLALCHEMY EXCEPTION:", repr(exc))
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
             "error": "DatabaseError",
             "message": "Ocurrió un problema con la persistencia de datos.",
-            "detail": str(exc)
+            "detail": str(exc) if app.debug else None
         }
     )
 
@@ -50,4 +48,6 @@ def health_check():
 app.include_router(inventory_router, prefix="/api/v1")
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8002, reload=True)
+    import os
+    reload_enabled = os.getenv("UVICORN_RELOAD", "false").lower() == "true"
+    uvicorn.run("main:app", host="0.0.0.0", port=8002, reload=reload_enabled)

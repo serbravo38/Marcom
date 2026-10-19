@@ -260,9 +260,11 @@ def create_flow_order(req: FlowPaymentRequest):
     api_key = req.apiKey or settings.FLOW_API_KEY
     secret_key = req.secretKey or settings.FLOW_SECRET_KEY
     flow_base_url = settings.FLOW_URL.rstrip("/")
+    frontend_base = settings.FRONTEND_URL.rstrip("/")
+    public_api_base = settings.PUBLIC_API_URL.rstrip("/")
     
-    url_return = req.urlReturn or "http://localhost:5173/catalogo?status=exito"
-    url_confirm = "http://localhost:8000/api/v1/pagos/flow/confirmacion"
+    url_return = req.urlReturn or f"{frontend_base}/catalogo?status=exito"
+    url_confirm = f"{public_api_base}/api/v1/pagos/flow/confirmacion"
     
     params = {
         "apiKey": api_key,
@@ -380,7 +382,8 @@ async def flow_return_handler(request: Request):
     except Exception:
         pass
         
-    frontend_url = f"http://localhost:5173/catalogo?status=exito&order={order}&token={token}"
+    frontend_base = settings.FRONTEND_URL.rstrip("/")
+    frontend_url = f"{frontend_base}/catalogo?status=exito&order={order}&token={token}"
     return RedirectResponse(url=frontend_url, status_code=303)
 
 

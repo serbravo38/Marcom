@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import { applyThemeToDocument, getInitialTheme } from "./components/ThemeToggle";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Agreements from "./pages/Agreements";
@@ -63,6 +64,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 export const App: React.FC = () => {
+  useEffect(() => {
+    applyThemeToDocument(getInitialTheme());
+  }, []);
+
   return (
     <Router>
       <Routes>

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     SMTP_FROM: str = "contacto@marcomchile.cl"
     SMTP_USE_SSL: bool = True
     # Entorno y Modo de Recuperación Segura
+    FRONTEND_URL: str = "https://marcomchile.cl"
     ENVIRONMENT: str = "development"
     EXPOSE_RESET_TOKEN_IN_DEV: bool = False  # En producción debe ser False; solo activable explícitamente vía .env en tests
 

@@ -256,7 +256,8 @@ def enviar_correo_recuperacion_clave(correo: str, nombre: str, token: str) -> bo
     
     nombre_seguro = _escape_html(nombre)
     token_seguro = _escape_html(token)
-    enlace_reset = f"http://localhost:5173/login?mode=reset&token={token}"
+    frontend_base = settings.FRONTEND_URL.rstrip("/")
+    enlace_reset = f"{frontend_base}/login?mode=reset&token={token}"
 
     cuerpo_texto = f"""
 Estimado/a {nombre},

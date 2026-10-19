@@ -18,6 +18,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Bell, ChevronDown, Building2, LogOut } from "lucide-react";
 import { NotificationsDropdown } from "./NotificationsDropdown";
+import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
   /** Título principal de la sección activa (ej. 'Panel Principal', 'Gestión de Inventario') */
@@ -70,6 +71,9 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
           <input type="text" placeholder="Buscar..." aria-label="Buscar activos o locales" />
         </div>
 
+        {/* Selector de Tema Claro / Oscuro */}
+        <ThemeToggle />
+
         {/* Campana de Notificaciones con Menú Desplegable */}
         <div className="header-notif-wrapper">
           <button 
@@ -116,10 +120,10 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
                 {currentUser.nombre ? currentUser.nombre.charAt(0).toUpperCase() : "U"}
               </div>
               <div style={{ display: "flex", flexDirection: "column", lineHeight: "1.2" }}>
-                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#f8fafc" }}>
+                <span className="header-user-name" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
                   {currentUser.nombre}
                 </span>
-                <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>
+                <span style={{ fontSize: "0.68rem", color: "#64748b" }}>
                   {currentUser.rol?.replace("_", " ")}
                 </span>
               </div>

@@ -4,7 +4,7 @@
  * Permite generar la sesión de pago oficial y redirigir directamente al portal de Flow.
  */
 
-import { api } from "./api";
+import { api, API_GATEWAY_URL } from "./api";
 
 export const FLOW_CONFIG = {
   currency: "CLP"
@@ -81,12 +81,16 @@ export const generateCommerceOrder = (): string => {
  * Firma con HMAC-SHA256 usando la Secret Key y devuelve la URL de pago de Flow.
  */
 export const requestFlowOrder = async (orderData: FlowOrderRequest): Promise<FlowOrderResponse> => {
+  const baseApiUrl = API_GATEWAY_URL.startsWith("http")
+    ? API_GATEWAY_URL
+    : `${window.location.origin}${API_GATEWAY_URL}`;
+
   const payload = {
     amount: Math.round(orderData.amount),
     email: orderData.email,
     subject: orderData.subject,
     commerceOrder: orderData.commerceOrder,
-    urlReturn: `http://localhost:8000/api/v1/pagos/flow/retorno?order=${orderData.commerceOrder}`
+    urlReturn: `${baseApiUrl}/pagos/flow/retorno?order=${orderData.commerceOrder}`
   };
 
   // 1. Intento principal a través del cliente api
@@ -102,7 +106,7 @@ export const requestFlowOrder = async (orderData: FlowOrderRequest): Promise<Flo
 
   // 2. Respaldo directo al Gateway para garantizar entrega
   try {
-    const rawRes = await fetch("http://localhost:8000/api/v1/pagos/flow/crear-orden", {
+    const rawRes = await fetch(`${API_GATEWAY_URL}/pagos/flow/crear-orden`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)

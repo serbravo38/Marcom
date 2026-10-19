@@ -1,3 +1,4 @@
+import os
 import uvicorn
 import httpx
 from fastapi import FastAPI, Request, Response, status
@@ -12,12 +13,9 @@ app = FastAPI(
 )
 
 ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000"
+    origin.strip()
+    for origin in settings.ALLOWED_ORIGINS.split(",")
+    if origin.strip()
 ]
 
 # CORS middleware configuration
@@ -74,8 +72,16 @@ def health_check():
 # Wildcard router to proxy all requests to microservices
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def gateway_proxy(request: Request, path: str):
-    # Control de saturación (Rate Limiting) por IP
-    client_ip = request.client.host if request.client else "127.0.0.1"
+    # Control de saturación (Rate Limiting) por IP real (considerando Reverse Proxy Nginx)
+    forwarded_for = request.headers.get("x-forwarded-for")
+    real_ip = request.headers.get("x-real-ip")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    elif real_ip:
+        client_ip = real_ip.strip()
+    else:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+
     if request.method != "OPTIONS" and _is_rate_limited(client_ip, path):
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -141,4 +147,5 @@ async def gateway_proxy(request: Request, path: str):
         )
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    reload_enabled = os.getenv("UVICORN_RELOAD", "false").lower() == "true"
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, reload=reload_enabled)

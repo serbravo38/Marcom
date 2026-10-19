@@ -116,3 +116,8 @@ postgres_data/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Paquetes de despliegue Docker
+paquete_despliegue_marcomchile/
+*.tar
+*.tar.gz

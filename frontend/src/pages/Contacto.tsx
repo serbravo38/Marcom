@@ -14,7 +14,8 @@ import {
   Database,
   Wrench
 } from "lucide-react";
-import { api } from "../services/api";
+import { api, API_GATEWAY_URL } from "../services/api";
+import ThemeToggle from "../components/ThemeToggle";
 import "./Contacto.css";
 
 export const Contacto: React.FC = () => {
@@ -101,7 +102,7 @@ Favor incluir en la propuesta:
       } catch (backendErr) {
         console.warn("Aviso: Despachando por ruta directa:", backendErr);
         try {
-          await fetch("http://localhost:8000/api/v1/contacto", {
+          await fetch(`${API_GATEWAY_URL}/contacto`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
@@ -156,10 +157,13 @@ Favor incluir en la propuesta:
           </div>
         </Link>
 
-        <Link to="/" className="contacto-btn-back">
-          <ArrowLeft size={16} />
-          <span>Volver a la Portada</span>
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <ThemeToggle />
+          <Link to="/" className="contacto-btn-back">
+            <ArrowLeft size={16} />
+            <span>Volver a la Portada</span>
+          </Link>
+        </div>
       </header>
 
       {/* Main Container */}
@@ -185,10 +189,10 @@ Favor incluir en la propuesta:
               <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#38bdf8" }}>
                 Canales Corporativos
               </span>
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", marginTop: "4px" }}>
+              <h2 className="contacto-info-heading">
                 Mesa Operativa Central
               </h2>
-              <p style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: 1.6, marginTop: "8px" }}>
+              <p className="contacto-info-subtext">
                 Sociedad de Instalaciones Marcom Compañía Limitada coordina despliegues y atenciones técnicas a lo largo de Chile.
               </p>
 
@@ -237,11 +241,11 @@ Favor incluir en la propuesta:
 
             {/* Aviso de trazabilidad de los mensajes */}
             <div className="contacto-storage-notice">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, color: "#38bdf8", marginBottom: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, color: "#0284c7", marginBottom: "4px" }}>
                 <Database size={15} />
                 <span>¿Dónde se almacena tu mensaje?</span>
               </div>
-              <p style={{ margin: 0, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <p className="contacto-storage-text">
                 Cada solicitud genera un número de ticket único, se registra en la base de datos de auditoría de Marcom y se envía por correo a la coordinación de operaciones con copia al cliente.
               </p>
             </div>
@@ -255,10 +259,10 @@ Favor incluir en la propuesta:
                   <CheckCircle2 size={36} />
                 </div>
                 <div className="contacto-ticket-badge">Ticket: {ticketCode}</div>
-                <h3 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", marginBottom: "8px" }}>
+                <h3 className="contacto-form-heading" style={{ marginBottom: "8px" }}>
                   ¡Solicitud Ingresada Exitosamente!
                 </h3>
-                <p style={{ color: "#cbd5e1", fontSize: "0.92rem", lineHeight: 1.6, maxWidth: "420px", margin: "0 auto 24px" }}>
+                <p className="contacto-info-subtext" style={{ maxWidth: "420px", margin: "0 auto 24px" }}>
                   Hemos recibido tu consulta sobre <strong>"{formData.tipoConsulta}"</strong>. El requerimiento quedó registrado y nuestro equipo se contactará a <strong>{formData.correo}</strong>.
                 </p>
                 <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
@@ -266,7 +270,7 @@ Favor incluir en la propuesta:
                     type="button" 
                     className="contacto-btn-back"
                     onClick={handleReset}
-                    style={{ background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}
+                    style={{ background: "rgba(56, 189, 248, 0.15)", color: "#0284c7", borderColor: "rgba(56, 189, 248, 0.3)" }}
                   >
                     <RotateCcw size={15} />
                     <span>Enviar otra consulta</span>
@@ -280,10 +284,10 @@ Favor incluir en la propuesta:
             ) : (
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: "20px" }}>
-                  <h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#fff", margin: "0 0 4px 0" }}>
+                  <h3 className="contacto-form-heading">
                     Datos del Requerimiento
                   </h3>
-                  <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: 0 }}>
+                  <p className="contacto-info-subtext" style={{ margin: 0 }}>
                     Los campos marcados con (*) son obligatorios para gestionar la respuesta.
                   </p>
                 </div>

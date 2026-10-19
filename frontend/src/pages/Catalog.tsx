@@ -36,6 +36,7 @@ import {
   type CustomerData,
   type FlowPaymentOrder
 } from "../services/flowService";
+import ThemeToggle from "../components/ThemeToggle";
 import "./Catalog.css";
 
 // Definición de tipos de soporte VESA comercial
@@ -497,6 +498,8 @@ export const Catalog: React.FC = () => {
                 </Link>
               </>
             )}
+
+            <ThemeToggle />
 
             <Link to="/" className="catalog-btn-secondary">
               <ArrowLeft size={16} /> Volver a Inicio

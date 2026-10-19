@@ -28,6 +28,7 @@ import {
   MessageSquare,
   LogOut
 } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
 import "./Portada.css";
 
 interface TrabajoItem {
@@ -195,7 +196,7 @@ export const Portada: React.FC = () => {
           ==================================================================== */}
       <header className="portada-navbar">
         <div className="portada-navbar-inner">
-          <div className="portada-brand" onClick={() => scrollToSection("hero")}>
+          <div className="portada-brand" onClick={() => scrollToSection("hero")} title="Ir al Inicio">
             <img 
               src="/logo_marcom_transparent.png" 
               alt="Logo Marcom" 
@@ -212,51 +213,37 @@ export const Portada: React.FC = () => {
           </div>
 
           <nav className="portada-nav-links">
-            <a href="#hero" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("hero"); }}>
-              Inicio
-            </a>
-            <Link to="/catalogo" className="portada-nav-link" style={{ color: "#38bdf8", fontWeight: 700 }}>
-              Catálogo Monitores <span style={{ fontSize: "0.7rem", background: "rgba(56, 189, 248, 0.2)", padding: "2px 6px", borderRadius: "4px", marginLeft: "4px" }}>Venta</span>
+            <Link to="/catalogo" className="portada-nav-link portada-nav-link-highlight">
+              <span>Catálogo</span>
+              <span className="portada-nav-badge">Venta</span>
             </Link>
             <a href="#servicios" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("servicios"); }}>
-              Servicios B2B
+              Servicios
             </a>
-            <a href="#trabajos" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("trabajos"); }}>
-              Trabajos Realizados
-            </a>
-            <a href="#estrategia" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("estrategia"); }}>
-              Misión & Objetivos
-            </a>
-            <a href="#clientes" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("clientes"); }}>
-              Convenios
-            </a>
-            <a 
-              href="/contacto" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="portada-nav-link"
-            >
+            <Link to="/contacto" className="portada-nav-link">
               Contacto
-            </a>
+            </Link>
           </nav>
 
           <div className="portada-nav-actions">
+            <ThemeToggle />
             {userProfile ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Link 
                   to="/dashboard"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
-                    background: "rgba(56, 189, 248, 0.12)",
-                    border: "1px solid rgba(56, 189, 248, 0.3)",
+                    background: "rgba(56, 189, 248, 0.14)",
+                    border: "1px solid rgba(56, 189, 248, 0.35)",
                     color: "#38bdf8",
-                    padding: "6px 12px",
+                    padding: "8px 16px",
                     borderRadius: "8px",
-                    fontSize: "0.82rem",
+                    fontSize: "0.86rem",
                     fontWeight: 600,
-                    textDecoration: "none"
+                    textDecoration: "none",
+                    whiteSpace: "nowrap"
                   }}
                   title="Ir al Panel Operacional de Marcom"
                 >
@@ -277,15 +264,16 @@ export const Portada: React.FC = () => {
                     background: "rgba(239, 68, 68, 0.12)",
                     border: "1px solid rgba(239, 68, 68, 0.3)",
                     color: "#f87171",
-                    padding: "6px 12px",
+                    padding: "8px 14px",
                     borderRadius: "8px",
-                    fontSize: "0.82rem",
+                    fontSize: "0.86rem",
                     fontWeight: 600,
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    whiteSpace: "nowrap"
                   }}
                   title="Cerrar Sesión"
                 >
-                  <LogOut size={15} /> Cerrar Sesión
+                  <LogOut size={15} /> Salir
                 </button>
               </div>
             ) : (
@@ -297,11 +285,12 @@ export const Portada: React.FC = () => {
                   gap: "6px",
                   background: "linear-gradient(135deg, #2563eb, #0284c7)",
                   color: "#ffffff",
-                  padding: "6px 14px",
+                  padding: "8px 18px",
                   borderRadius: "8px",
-                  fontSize: "0.82rem",
+                  fontSize: "0.86rem",
                   fontWeight: 600,
-                  textDecoration: "none"
+                  textDecoration: "none",
+                  whiteSpace: "nowrap"
                 }}
               >
                 Iniciar Sesión
@@ -320,36 +309,25 @@ export const Portada: React.FC = () => {
 
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
-          <div style={{
-            background: "rgba(9, 13, 22, 0.98)",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-            padding: "16px 24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px"
-          }}>
-            <a href="#hero" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("hero"); }}>Inicio</a>
+          <div className="portada-mobile-menu">
             <Link 
               to="/catalogo" 
-              className="portada-nav-link" 
-              style={{ color: "#38bdf8", fontWeight: 700 }}
+              className="portada-nav-link portada-nav-link-highlight" 
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Catálogo de Monitores Usados (Samsung)
+              <span>Catálogo</span>
+              <span className="portada-nav-badge">Venta</span>
             </Link>
-            <a href="#servicios" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("servicios"); }}>Servicios B2B</a>
-            <a href="#trabajos" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("trabajos"); }}>Trabajos Realizados</a>
-            <a href="#estrategia" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("estrategia"); }}>Misión & Visión</a>
-            <a href="#clientes" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("clientes"); }}>Convenios y Clientes</a>
-            <a 
-              href="/contacto" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a href="#servicios" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("servicios"); }}>
+              Servicios
+            </a>
+            <Link 
+              to="/contacto" 
               className="portada-nav-link"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Contacto
-            </a>
+            </Link>
             {userProfile && (
               <button
                 type="button"
@@ -374,7 +352,7 @@ export const Portada: React.FC = () => {
                   cursor: "pointer"
                 }}
               >
-                <LogOut size={16} /> Cerrar Sesión ({userProfile.nombre})
+                <LogOut size={16} /> Salir ({userProfile.nombre})
               </button>
             )}
           </div>
@@ -463,7 +441,7 @@ export const Portada: React.FC = () => {
       {/* ====================================================================
           SECCIÓN DEL CARRUSEL: TRABAJOS REALIZADOS (SOLICITUD EXPLÍCITA)
           ==================================================================== */}
-      <section id="trabajos" className="portada-section" style={{ background: "rgba(2, 6, 23, 0.6)" }}>
+      <section id="trabajos" className="portada-section portada-section-alt">
         <div className="portada-section-inner">
           <div className="portada-section-header">
             <div className="portada-section-tag">
@@ -714,7 +692,7 @@ export const Portada: React.FC = () => {
       {/* ====================================================================
           SERVICIOS PRINCIPALES B2B
           ==================================================================== */}
-      <section id="servicios" className="portada-section" style={{ background: "rgba(2, 6, 23, 0.6)" }}>
+      <section id="servicios" className="portada-section portada-section-alt">
         <div className="portada-section-inner">
           <div className="portada-section-header">
             <div className="portada-section-tag">
@@ -816,13 +794,13 @@ export const Portada: React.FC = () => {
       <section id="clientes" className="portada-section">
         <div className="portada-section-inner">
           <div className="portada-clients-banner">
-            <span style={{ fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", color: "#fb7185" }}>
+            <span className="portada-clients-kicker">
               Confianza & Alianzas Estratégicas
             </span>
-            <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)", fontWeight: 800, color: "#fff", margin: "12px 0 16px" }}>
+            <h2 className="portada-clients-title">
               Convenios Corporativos con Grandes Marcas
             </h2>
-            <p style={{ maxWidth: "780px", margin: "0 auto", color: "#cbd5e1", fontSize: "1.05rem", lineHeight: 1.6 }}>
+            <p className="portada-clients-desc">
               Marcom provee servicios continuos en despliegue tecnológico y soporte técnico de campo para las principales
               redes de servicentros y locales de conveniencia del país.
             </p>
@@ -853,9 +831,9 @@ export const Portada: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", background: "rgba(255, 255, 255, 0.05)", padding: "10px 20px", borderRadius: "9999px", border: "1px solid rgba(255, 255, 255, 0.1)" }}>
-              <ShieldCheck size={18} color="#34d399" />
-              <span style={{ fontSize: "0.88rem", color: "#e2e8f0" }}>
+            <div className="portada-clients-protocol-pill">
+              <ShieldCheck size={18} color="#10b981" />
+              <span>
                 Protocolos certificados de seguridad en estaciones de servicio y normativa técnica de telecomunicaciones
               </span>
             </div>
@@ -866,17 +844,17 @@ export const Portada: React.FC = () => {
       {/* ====================================================================
           FICHA CORPORATIVA: RAZÓN SOCIAL Y RUBRO (REQUERIDO)
           ==================================================================== */}
-      <section className="portada-section" style={{ background: "rgba(2, 6, 23, 0.6)" }}>
+      <section className="portada-section portada-section-alt">
         <div className="portada-section-inner">
           <div className="portada-corporate-card">
             <div>
-              <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px", color: "#38bdf8" }}>
+              <span className="portada-corp-kicker">
                 Transparencia & Respaldo Institucional
               </span>
-              <h3 style={{ fontSize: "1.8rem", fontWeight: 800, color: "#fff", margin: "10px 0 16px" }}>
+              <h3 className="portada-corp-heading">
                 Ficha Técnica Corporativa
               </h3>
-              <p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.6 }}>
+              <p className="portada-corp-summary">
                 Sociedad de Instalaciones Marcom Compañía Limitada opera con plena formalidad tributaria y operacional,
                 brindando contratos corporativos de prestación de servicios tecnológicos para clientes de gran envergadura.
               </p>
@@ -885,7 +863,7 @@ export const Portada: React.FC = () => {
             <div>
               <div className="portada-corp-field">
                 <div className="portada-corp-label">Razón Social</div>
-                <div className="portada-corp-value" style={{ fontWeight: 700, color: "#ffffff" }}>
+                <div className="portada-corp-value portada-corp-value-strong">
                   Sociedad de Instalaciones Marcom Compañía Limitada
                 </div>
               </div>
@@ -913,39 +891,17 @@ export const Portada: React.FC = () => {
           ==================================================================== */}
       <section id="contacto" className="portada-section">
         <div className="portada-section-inner" style={{ textAlign: "center" }}>
-          <div style={{
-            background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(37, 99, 235, 0.16) 100%)",
-            border: "1px solid rgba(56, 189, 248, 0.3)",
-            borderRadius: "24px",
-            padding: "54px 36px",
-            maxWidth: "960px",
-            margin: "0 auto",
-            boxShadow: "0 20px 50px -15px rgba(0, 0, 0, 0.7)"
-          }}>
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "5px 14px",
-              borderRadius: "9999px",
-              background: "rgba(14, 165, 233, 0.12)",
-              border: "1px solid rgba(56, 189, 248, 0.3)",
-              color: "#38bdf8",
-              fontSize: "0.82rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.8px",
-              marginBottom: "16px"
-            }}>
+          <div className="portada-cta-card">
+            <div className="portada-cta-badge">
               <MessageSquare size={14} />
               <span>Canal de Atención Directo & Soporte B2B</span>
             </div>
 
-            <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.7rem)", fontWeight: 800, color: "#fff", marginBottom: "16px", lineHeight: 1.2 }}>
+            <h2 className="portada-cta-title">
               ¿Tienes un requerimiento o consulta técnica?
             </h2>
 
-            <p style={{ color: "#cbd5e1", fontSize: "1.08rem", maxWidth: "680px", margin: "0 auto 36px", lineHeight: 1.6 }}>
+            <p className="portada-cta-desc">
               Estamos a tu disposición para evaluar proyectos de cartelería digital, menú boards, equipamiento POS o soporte técnico en terreno.
             </p>
 
@@ -971,17 +927,17 @@ export const Portada: React.FC = () => {
               </Link>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "32px", flexWrap: "wrap", color: "#94a3b8", fontSize: "0.92rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "24px" }}>
+            <div className="portada-cta-contact-strip">
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Mail size={16} color="#38bdf8" />
+                <Mail size={16} className="portada-cta-icon" />
                 <span>contacto@marcomchile.cl</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Phone size={16} color="#38bdf8" />
+                <Phone size={16} className="portada-cta-icon" />
                 <span>+56 9 8450 1200 / Mesa de Ayuda</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <MapPin size={16} color="#38bdf8" />
+                <MapPin size={16} className="portada-cta-icon" />
                 <span>Santiago, Chile (Cobertura Nacional)</span>
               </div>
             </div>

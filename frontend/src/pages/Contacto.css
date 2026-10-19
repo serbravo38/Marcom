@@ -341,3 +341,147 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   CLASES SEMÁNTICAS BASE (CONTACTO - MODO OSCURO POR DEFECTO)
+   ========================================================================== */
+.contacto-info-heading {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-top: 4px;
+}
+
+.contacto-info-subtext {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+.contacto-storage-text {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.contacto-form-heading {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+/* ==========================================================================
+   CONTACTO - CONFIGURACIÓN LIGHT MODE (MEZCLA EJECUTIVA CON BASE BLANCA)
+   ========================================================================== */
+html[data-theme="light"] .contacto-page-wrapper {
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(at 15% 10%, rgba(14, 165, 233, 0.09) 0px, transparent 48%),
+    radial-gradient(at 85% 15%, rgba(79, 70, 229, 0.07) 0px, transparent 45%),
+    linear-gradient(180deg, #ffffff 0%, #f1f5f9 55%, #eff6ff 100%);
+  color: #0f172a;
+}
+
+html[data-theme="light"] .contacto-topbar {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid #dbeafe;
+  box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.07);
+}
+
+html[data-theme="light"] .contacto-topbar-brand img {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 5px 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+html[data-theme="light"] .contacto-topbar-brand {
+  color: #0f172a;
+}
+
+html[data-theme="light"] .contacto-btn-back {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+html[data-theme="light"] .contacto-btn-back:hover {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+html[data-theme="light"] .contacto-badge {
+  background: linear-gradient(90deg, #e0f2fe 0%, #dbeafe 100%);
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+html[data-theme="light"] .contacto-main-title,
+html[data-theme="light"] .contacto-info-heading,
+html[data-theme="light"] .contacto-form-heading {
+  color: #0f172a;
+}
+
+html[data-theme="light"] .contacto-main-subtitle,
+html[data-theme="light"] .contacto-info-subtext,
+html[data-theme="light"] .contacto-storage-text {
+  color: #334155;
+}
+
+html[data-theme="light"] .contacto-card-info {
+  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 65%, #e0f2fe 100%);
+  border: 1px solid #93c5fd;
+  border-top: 4px solid #0284c7;
+  box-shadow: 0 16px 36px -10px rgba(2, 132, 199, 0.12);
+}
+
+html[data-theme="light"] .contacto-channel-value {
+  color: #0f172a;
+}
+
+html[data-theme="light"] .contacto-storage-notice {
+  background: #ffffff;
+  border: 1px solid #7dd3fc;
+  color: #1e293b;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.06);
+}
+
+html[data-theme="light"] .contacto-card-form {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-top: 4px solid #2563eb;
+  box-shadow: 0 20px 44px -12px rgba(15, 23, 42, 0.1);
+}
+
+html[data-theme="light"] .contacto-form-label {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+html[data-theme="light"] .contacto-form-input,
+html[data-theme="light"] .contacto-form-select,
+html[data-theme="light"] .contacto-form-textarea {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+
+html[data-theme="light"] .contacto-form-input:focus,
+html[data-theme="light"] .contacto-form-select:focus,
+html[data-theme="light"] .contacto-form-textarea:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16);
+}
+
+html[data-theme="light"] .contacto-footer {
+  background: #0f172a;
+  border-top: 3px solid #0284c7;
+  color: #cbd5e1;
+}
+
+
