@@ -249,22 +249,101 @@ select option:hover {
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(12, 74, 110, 0.35) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.35);
   flex-shrink: 0;
+  transition: all 0.25s ease;
 }
+
+.sidebar-brand-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sidebar-logo-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #ffffff 0%, #e0f2fe 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.65);
+  box-shadow: 0 4px 14px rgba(0, 194, 255, 0.28), inset 0 1px 0 #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sidebar-brand:hover .sidebar-logo-box {
+  transform: scale(1.04);
+}
+
+.sidebar-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(8, 47, 73, 0.26)) contrast(1.15) saturate(1.16);
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-brand h2,
+.sidebar-brand-title {
+  font-size: 1.18rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 1.1px;
+  line-height: 1.1;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.sidebar-brand-subtitle {
+  font-size: 0.61rem;
+  color: #38bdf8;
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+.login-logo-box {
+  width: 78px;
+  height: 78px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff 0%, #e0f2fe 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 194, 255, 0.28), inset 0 1px 0 #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+.login-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(8, 47, 73, 0.25)) contrast(1.14) saturate(1.16);
+}
+
 .brand-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
   background: hsl(var(--secondary));
   box-shadow: 0 0 10px hsl(var(--secondary));
-}
-.sidebar-brand h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #fff;
 }
 
 .copec-brand-pill {
@@ -2605,10 +2684,49 @@ html[data-theme="light"] .sidebar {
 }
 
 html[data-theme="light"] .sidebar-brand {
-  border-bottom-color: #e2e8f0;
+  background: linear-gradient(135deg, #07192f 0%, #0c3b5e 56%, #0284c7 100%);
+  border: 1px solid #0284c7;
+  box-shadow: 0 10px 22px -4px rgba(8, 47, 73, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+html[data-theme="light"] .sidebar-logo-box {
+  background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(4, 18, 36, 0.32);
+}
+
+html[data-theme="light"] .sidebar-logo-img {
+  filter: drop-shadow(0 2px 3px rgba(8, 47, 73, 0.3)) contrast(1.16) saturate(1.18);
 }
 
 html[data-theme="light"] .sidebar-brand h2,
+html[data-theme="light"] .sidebar-brand-title {
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.32);
+}
+
+html[data-theme="light"] .sidebar-brand-subtitle {
+  color: #7dd3fc !important;
+}
+
+html[data-theme="light"] .sidebar-brand .sidebar-mobile-close-btn {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+html[data-theme="light"] .accent-text-gradient {
+  background: linear-gradient(135deg, #07192f 0%, #0284c7 65%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+html[data-theme="light"] .login-logo-box {
+  background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+  border: 2px solid #7dd3fc;
+  box-shadow: 0 10px 26px -4px rgba(8, 47, 73, 0.18), 0 0 0 4px rgba(2, 132, 199, 0.08);
+}
+
 html[data-theme="light"] .user-name,
 html[data-theme="light"] .header-user-name,
 html[data-theme="light"] .panel-title,

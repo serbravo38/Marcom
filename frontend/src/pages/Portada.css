@@ -84,8 +84,13 @@
   height: 44px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 0 12px rgba(0, 194, 255, 0.4));
-  transition: transform 0.3s ease;
+  background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.55);
+  padding: 5px 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 194, 255, 0.22);
+  filter: drop-shadow(0 1px 2px rgba(8, 47, 73, 0.2)) contrast(1.14) saturate(1.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .portada-brand:hover .portada-brand-logo {
@@ -1508,18 +1513,18 @@
     gap: 8px;
   }
   .portada-brand {
-    gap: 10px;
+    gap: 0;
     min-width: 0;
+    flex-shrink: 0;
   }
   .portada-brand-logo {
-    height: 34px;
-    max-width: 110px;
+    height: 36px;
+    max-width: 128px;
   }
-  .portada-brand-title {
-    font-size: 1.15rem;
-  }
+  .portada-brand-text,
+  .portada-brand-title,
   .portada-brand-subtitle {
-    display: none;
+    display: none !important;
   }
   .portada-nav-links {
     display: none;
@@ -1866,10 +1871,12 @@ html[data-theme="light"] .portada-navbar {
 }
 
 html[data-theme="light"] .portada-brand-logo {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+  border: 1.5px solid #bae6fd;
   padding: 5px 10px;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 4px 12px rgba(8, 47, 73, 0.14);
+  filter: drop-shadow(0 1px 2px rgba(8, 47, 73, 0.22)) contrast(1.15) saturate(1.16);
 }
 
 html[data-theme="light"] .portada-brand-title {

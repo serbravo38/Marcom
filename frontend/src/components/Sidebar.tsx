@@ -52,24 +52,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
 
   return (
     <aside className={`sidebar glass-panel ${isOpen ? "mobile-open" : ""}`}>
-      {/* Logotipo e Identidad de Marca */}
+      {/* Logotipo e Identidad de Marca con Alto Contraste Corporativo */}
       <div className="sidebar-brand" style={{ justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <img 
-            src="/logo_icon.png" 
-            alt="MARCOM" 
-            style={{ 
-              height: "38px", 
-              width: "auto", 
-              objectFit: "contain",
-              filter: "drop-shadow(0 0 10px rgba(0, 194, 255, 0.45))" 
-            }} 
-          />
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, letterSpacing: "1px", lineHeight: 1.1, color: "#fff" }}>
+        <div className="sidebar-brand-identity">
+          <div className="sidebar-logo-box">
+            <img 
+              src="/logo_icon.png" 
+              alt="MARCOM" 
+              className="sidebar-logo-img"
+            />
+          </div>
+          <div className="sidebar-brand-text">
+            <h2 className="sidebar-brand-title">
               MARCOM
             </h2>
-            <span style={{ fontSize: "0.62rem", color: "#38bdf8", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", marginTop: "2px" }}>
+            <span className="sidebar-brand-subtitle">
               Soluciones Digitales
             </span>
           </div>
