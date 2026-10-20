@@ -16,16 +16,17 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, ChevronDown, Building2, LogOut } from "lucide-react";
+import { Search, Bell, ChevronDown, Building2, LogOut, Menu } from "lucide-react";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
   /** Título principal de la sección activa (ej. 'Panel Principal', 'Gestión de Inventario') */
   title: string;
+  onToggleMobileSidebar?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title }) => {
+export const Header: React.FC<HeaderProps> = ({ title, onToggleMobileSidebar }) => {
   const navigate = useNavigate();
   // Estado de apertura del panel flotante de notificaciones
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -50,9 +51,22 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
   return (
     <header className="top-app-header">
       {/* Título de la vista y bajada descriptiva */}
-      <div className="header-title-box">
-        <h1>{title}</h1>
-        <p>Monitoreo y gestión de infraestructura audiovisual</p>
+      <div className="header-title-box" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {onToggleMobileSidebar && (
+          <button
+            type="button"
+            className="mobile-sidebar-toggle-btn"
+            onClick={onToggleMobileSidebar}
+            aria-label="Abrir menú de navegación"
+            title="Menú"
+          >
+            <Menu size={22} />
+          </button>
+        )}
+        <div>
+          <h1>{title}</h1>
+          <p>Monitoreo y gestión de infraestructura audiovisual</p>
+        </div>
       </div>
 
       <div className="header-controls-group">

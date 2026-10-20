@@ -30,12 +30,18 @@ import {
   Monitor,
   TrendingUp,
   Tv,
-  FileSpreadsheet
+  FileSpreadsheet,
+  X
 } from "lucide-react";
 import { ProfileModal } from "./ProfileModal";
 import type { Usuario } from "../services/auth";
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   // Estado de visibilidad del modal de perfil de usuario
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   // Estado del usuario activo recuperado de la sesión local
@@ -45,27 +51,39 @@ export const Sidebar: React.FC = () => {
   });
 
   return (
-    <aside className="sidebar glass-panel">
+    <aside className={`sidebar glass-panel ${isOpen ? "mobile-open" : ""}`}>
       {/* Logotipo e Identidad de Marca */}
-      <div className="sidebar-brand">
-        <img 
-          src="/logo_icon.png" 
-          alt="MARCOM" 
-          style={{ 
-            height: "38px", 
-            width: "auto", 
-            objectFit: "contain",
-            filter: "drop-shadow(0 0 10px rgba(0, 194, 255, 0.45))" 
-          }} 
-        />
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, letterSpacing: "1px", lineHeight: 1.1, color: "#fff" }}>
-            MARCOM
-          </h2>
-          <span style={{ fontSize: "0.62rem", color: "#38bdf8", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", marginTop: "2px" }}>
-            Soluciones Digitales
-          </span>
+      <div className="sidebar-brand" style={{ justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <img 
+            src="/logo_icon.png" 
+            alt="MARCOM" 
+            style={{ 
+              height: "38px", 
+              width: "auto", 
+              objectFit: "contain",
+              filter: "drop-shadow(0 0 10px rgba(0, 194, 255, 0.45))" 
+            }} 
+          />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, letterSpacing: "1px", lineHeight: 1.1, color: "#fff" }}>
+              MARCOM
+            </h2>
+            <span style={{ fontSize: "0.62rem", color: "#38bdf8", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", marginTop: "2px" }}>
+              Soluciones Digitales
+            </span>
+          </div>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            className="sidebar-mobile-close-btn"
+            onClick={onClose}
+            aria-label="Cerrar menú lateral"
+          >
+            <X size={20} />
+          </button>
+        )}
       </div>
 
       {/* Menú de Navegación con Filtrado RBAC Estricto */}

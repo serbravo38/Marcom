@@ -228,9 +228,10 @@ export const Portada: React.FC = () => {
           <div className="portada-nav-actions">
             <ThemeToggle />
             {userProfile ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div className="portada-auth-btns" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Link 
                   to="/dashboard"
+                  className="portada-nav-btn-panel"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -238,7 +239,7 @@ export const Portada: React.FC = () => {
                     background: "rgba(56, 189, 248, 0.14)",
                     border: "1px solid rgba(56, 189, 248, 0.35)",
                     color: "#38bdf8",
-                    padding: "8px 16px",
+                    padding: "8px 14px",
                     borderRadius: "8px",
                     fontSize: "0.86rem",
                     fontWeight: 600,
@@ -247,10 +248,11 @@ export const Portada: React.FC = () => {
                   }}
                   title="Ir al Panel Operacional de Marcom"
                 >
-                  <LayoutDashboard size={15} /> Panel
+                  <LayoutDashboard size={15} /> <span>Panel</span>
                 </Link>
                 <button
                   type="button"
+                  className="portada-nav-btn-logout"
                   onClick={() => {
                     localStorage.removeItem("marcom_token");
                     localStorage.removeItem("marcom_user");
@@ -264,7 +266,7 @@ export const Portada: React.FC = () => {
                     background: "rgba(239, 68, 68, 0.12)",
                     border: "1px solid rgba(239, 68, 68, 0.3)",
                     color: "#f87171",
-                    padding: "8px 14px",
+                    padding: "8px 12px",
                     borderRadius: "8px",
                     fontSize: "0.86rem",
                     fontWeight: 600,
@@ -273,19 +275,20 @@ export const Portada: React.FC = () => {
                   }}
                   title="Cerrar Sesión"
                 >
-                  <LogOut size={15} /> Salir
+                  <LogOut size={15} /> <span className="portada-hide-xs">Salir</span>
                 </button>
               </div>
             ) : (
               <Link
                 to="/login"
+                className="portada-nav-btn-login"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
                   background: "linear-gradient(135deg, #2563eb, #0284c7)",
                   color: "#ffffff",
-                  padding: "8px 18px",
+                  padding: "8px 16px",
                   borderRadius: "8px",
                   fontSize: "0.86rem",
                   fontWeight: 600,
@@ -293,7 +296,7 @@ export const Portada: React.FC = () => {
                   whiteSpace: "nowrap"
                 }}
               >
-                Iniciar Sesión
+                <span>Iniciar Sesión</span>
               </Link>
             )}
 
@@ -321,6 +324,9 @@ export const Portada: React.FC = () => {
             <a href="#servicios" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("servicios"); }}>
               Servicios
             </a>
+            <a href="#trabajos" className="portada-nav-link" onClick={(e) => { e.preventDefault(); scrollToSection("trabajos"); }}>
+              Trabajos Realizados
+            </a>
             <Link 
               to="/contacto" 
               className="portada-nav-link"
@@ -328,32 +334,73 @@ export const Portada: React.FC = () => {
             >
               Contacto
             </Link>
-            {userProfile && (
-              <button
-                type="button"
-                onClick={() => {
-                  localStorage.removeItem("marcom_token");
-                  localStorage.removeItem("marcom_user");
-                  setUserProfile(null);
-                  setIsMobileMenuOpen(false);
-                  window.location.reload();
-                }}
+            {userProfile ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    background: "rgba(56, 189, 248, 0.16)",
+                    border: "1px solid rgba(56, 189, 248, 0.4)",
+                    color: "#38bdf8",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    fontWeight: 600,
+                    textDecoration: "none"
+                  }}
+                >
+                  <LayoutDashboard size={16} /> Ir al Panel Operativo
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem("marcom_token");
+                    localStorage.removeItem("marcom_user");
+                    setUserProfile(null);
+                    setIsMobileMenuOpen(false);
+                    window.location.reload();
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    border: "1px solid rgba(239, 68, 68, 0.35)",
+                    color: "#f87171",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                >
+                  <LogOut size={16} /> Salir ({userProfile.nombre})
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "6px",
-                  background: "rgba(239, 68, 68, 0.15)",
-                  border: "1px solid rgba(239, 68, 68, 0.35)",
-                  color: "#f87171",
-                  padding: "10px",
+                  gap: "8px",
+                  background: "linear-gradient(135deg, #2563eb, #0284c7)",
+                  color: "#ffffff",
+                  padding: "11px",
                   borderRadius: "8px",
                   fontWeight: 600,
-                  cursor: "pointer"
+                  textDecoration: "none",
+                  marginTop: "4px"
                 }}
               >
-                <LogOut size={16} /> Salir ({userProfile.nombre})
-              </button>
+                <ShieldCheck size={16} /> Iniciar Sesión
+              </Link>
             )}
           </div>
         )}

@@ -22,6 +22,12 @@ import Facturacion from "./pages/Facturacion";
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
+
+  // Cerrar drawer móvil al cambiar de ruta
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [location.pathname]);
   
   // Dynamic header title matching routing paths
   const getTitle = () => {
@@ -52,9 +58,22 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="app-container">
-      <Sidebar />
+      {isMobileSidebarOpen && (
+        <div
+          className="sidebar-mobile-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <Sidebar
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
       <main className="main-content">
-        <Header title={getTitle()} />
+        <Header
+          title={getTitle()}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+        />
         <div style={{ marginTop: "24px" }}>
           {children}
         </div>

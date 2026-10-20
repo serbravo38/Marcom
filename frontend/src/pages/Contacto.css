@@ -342,6 +342,22 @@
   }
 }
 
+@media (max-width: 768px) {
+  .contacto-topbar {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .contacto-main {
+    margin: 24px auto 40px;
+    padding: 0 14px;
+  }
+  .contacto-card-info,
+  .contacto-card-form {
+    padding: 22px 16px;
+  }
+}
+
 /* ==========================================================================
    CLASES SEMÁNTICAS BASE (CONTACTO - MODO OSCURO POR DEFECTO)
    ========================================================================== */
