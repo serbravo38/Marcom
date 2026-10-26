@@ -206,10 +206,6 @@ export const Portada: React.FC = () => {
                 (e.currentTarget as HTMLElement).style.display = "none";
               }} 
             />
-            <div className="portada-brand-text">
-              <span className="portada-brand-title">MARCOM</span>
-              <span className="portada-brand-subtitle">Instalaciones & Telecomunicaciones</span>
-            </div>
           </div>
 
           <nav className="portada-nav-links">
@@ -1041,14 +1037,13 @@ export const Portada: React.FC = () => {
         <div className="portada-footer-inner">
           <div className="portada-footer-grid">
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "14px" }}>
                 <img 
                   src="/logo_marcom_transparent.png" 
                   alt="Logo Marcom" 
-                  style={{ height: "36px", width: "auto" }}
+                  className="portada-brand-logo"
                   onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }} 
                 />
-                <span className="portada-footer-brand-title">MARCOM</span>
               </div>
               <p className="portada-footer-desc">
                 Sociedad de Instalaciones Marcom Compañía Limitada. 
