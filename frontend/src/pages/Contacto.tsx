@@ -149,12 +149,6 @@ Favor incluir en la propuesta:
             style={{ height: "36px", width: "auto" }}
             onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }}
           />
-          <div className="contacto-topbar-brand-text">
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "1px", lineHeight: 1.1 }}>MARCOM</div>
-            <div style={{ fontSize: "0.65rem", color: "#38bdf8", fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase" }}>
-              Módulo de Solicitudes y Consultas
-            </div>
-          </div>
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

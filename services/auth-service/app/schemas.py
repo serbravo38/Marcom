@@ -1,8 +1,21 @@
+import re
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 from app.models import RolUsuario
+
+RUT_REGEX = re.compile(r"^\d{7,8}-[\dKk]$")
+
+def validar_formato_rut(v: str) -> str:
+    if not v or not v.strip():
+        raise ValueError("El RUT no puede estar vacío.")
+    limpio = v.strip().upper()
+    if "." in limpio:
+        raise ValueError("El RUT debe ingresarse sin puntos y con guion (ejemplo: 12345678-9).")
+    if not RUT_REGEX.match(limpio):
+        raise ValueError("Formato de RUT inválido. Debe ser sin puntos y con guion (ejemplo: 12345678-9).")
+    return limpio
 
 COMMON_WEAK_PASSWORDS = {
     "123456", "12345678", "123456789", "password", "password123", 
@@ -59,6 +72,11 @@ class UsuarioBase(BaseModel):
 class UsuarioCrear(UsuarioBase):
     clave: str = Field(..., min_length=8, description="Contraseña segura alfanumérica con carácter especial (mínimo 8 caracteres)")
 
+    @field_validator("rut")
+    @classmethod
+    def validar_rut_crear(cls, v: str) -> str:
+        return validar_formato_rut(v)
+
     @field_validator("clave")
     @classmethod
     def validar_clave(cls, v: str) -> str:
@@ -74,6 +92,13 @@ class UsuarioActualizar(BaseModel):
     correo: Optional[EmailStr] = None
     intentos_fallidos: Optional[int] = None
     bloqueado_hasta: Optional[datetime] = None
+
+    @field_validator("rut")
+    @classmethod
+    def validar_rut_opcional(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.strip() != "":
+            return validar_formato_rut(v)
+        return v
 
     @field_validator("clave")
     @classmethod
@@ -121,7 +146,10 @@ class ConvenioBase(BaseModel):
     activo: bool = True
 
 class ConvenioCrear(ConvenioBase):
-    pass
+    @field_validator("rut")
+    @classmethod
+    def validar_rut_convenio(cls, v: str) -> str:
+        return validar_formato_rut(v)
 
 class ConvenioActualizar(BaseModel):
     nombre_empresa: Optional[str] = None
@@ -129,6 +157,13 @@ class ConvenioActualizar(BaseModel):
     limite_credito: Optional[float] = None
     credito_usado: Optional[float] = None
     activo: Optional[bool] = None
+
+    @field_validator("rut")
+    @classmethod
+    def validar_rut_convenio_opcional(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.strip() != "":
+            return validar_formato_rut(v)
+        return v
 
 class ConvenioRespuesta(ConvenioBase):
     convenio_id: UUID

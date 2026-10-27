@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Plus, X, Loader2, CreditCard, AlertCircle, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { authService } from "../services/auth";
+import { sanitizeRutInput, formatRutSinPuntosConGuion, validateRutSinPuntosConGuion } from "../utils/rutValidation";
 
 type Agreement = {
   convenio_id: string | number;
@@ -85,12 +86,20 @@ export const Agreements: React.FC = () => {
     setModalLoading(true);
     setModalError(null);
 
+    const rutCheck = validateRutSinPuntosConGuion(rut, "RUT de la Empresa");
+    if (!rutCheck.isValid) {
+      setModalError(rutCheck.errorMessage || "Formato de RUT inválido. Ingresa sin puntos y con guion (ej: 76123456-7).");
+      setModalLoading(false);
+      return;
+    }
+    const cleanRut = rutCheck.formatted;
+
     try {
       if (editingAgreement) {
         // Modo Edición (Solo ADMIN)
         await authService.updateAgreement(editingAgreement.convenio_id, {
           nombre_empresa: companyName.trim(),
-          rut: rut.trim(),
+          rut: cleanRut,
           limite_credito: Number(creditLimit),
           credito_usado: Number(usedCredit),
           activo: isActive
@@ -99,7 +108,7 @@ export const Agreements: React.FC = () => {
         // Modo Creación
         await authService.createAgreement({
           nombre_empresa: companyName.trim(),
-          rut: rut.trim(),
+          rut: cleanRut,
           limite_credito: Number(creditLimit),
           credito_usado: 0,
           activo: true
@@ -305,15 +314,20 @@ export const Agreements: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>RUT de la Empresa</label>
+                <label>RUT de la Empresa (sin puntos y con guion)</label>
                 <input
                   type="text"
                   className="glass-input"
-                  placeholder="99.888.777-6"
+                  placeholder="76123456-7"
+                  maxLength={10}
                   value={rut}
-                  onChange={(e) => setRut(e.target.value)}
+                  onChange={(e) => setRut(sanitizeRutInput(e.target.value))}
+                  onBlur={() => setRut((prev) => formatRutSinPuntosConGuion(prev))}
                   required
                 />
+                <span style={{ fontSize: "0.72rem", color: "hsl(var(--text-muted))", marginTop: "3px", display: "block" }}>
+                  Formato requerido: sin puntos y con guion (ej: 76123456-7)
+                </span>
               </div>
 
               <div className="form-group">

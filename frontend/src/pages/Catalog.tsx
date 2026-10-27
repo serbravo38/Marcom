@@ -37,6 +37,7 @@ import {
   type FlowPaymentOrder
 } from "../services/flowService";
 import ThemeToggle from "../components/ThemeToggle";
+import { sanitizeRutInput, formatRutSinPuntosConGuion, validateRutSinPuntosConGuion } from "../utils/rutValidation";
 import "./Catalog.css";
 
 // Definición de tipos de soporte VESA comercial
@@ -413,9 +414,23 @@ export const Catalog: React.FC = () => {
       return;
     }
 
+    const buyerRutCheck = validateRutSinPuntosConGuion(customerData.rut, "RUT del Comprador");
+    if (!buyerRutCheck.isValid) {
+      setCheckoutError(buyerRutCheck.errorMessage || "El RUT del comprador debe ingresarse sin puntos y con guion (ej: 12345678-9).");
+      return;
+    }
+
     if (customerData.tipoDocumento === "FACTURA" && (!customerData.rutEmpresa || !customerData.razonSocial)) {
       setCheckoutError("Para emitir Factura Electrónica debes ingresar el RUT de la empresa y Razón Social.");
       return;
+    }
+
+    if (customerData.tipoDocumento === "FACTURA" && customerData.rutEmpresa) {
+      const companyRutCheck = validateRutSinPuntosConGuion(customerData.rutEmpresa, "RUT de la Empresa");
+      if (!companyRutCheck.isValid) {
+        setCheckoutError(companyRutCheck.errorMessage || "El RUT de la empresa debe ingresarse sin puntos y con guion (ej: 76123456-7).");
+        return;
+      }
     }
 
     setCheckoutError(null);
@@ -471,10 +486,6 @@ export const Catalog: React.FC = () => {
         <div className="catalog-header-container">
           <Link to="/" className="catalog-logo-wrap">
             <img src="/logo_marcom.png" alt="Marcom Logo" className="catalog-logo-img" />
-            <div className="catalog-logo-text">
-              <span className="catalog-logo-title">MARCOM SpA</span>
-              <span className="catalog-logo-sub">Catálogo de Equipamiento</span>
-            </div>
           </Link>
 
           <div className="catalog-nav-actions">
@@ -797,14 +808,8 @@ export const Catalog: React.FC = () => {
 
             return (
               <div key={item.id} className="catalog-card">
-                {/* Imagen y badges */}
+                {/* Imagen limpia del producto */}
                 <div className="catalog-card-image-wrap" onClick={() => openModal(item)} style={{ cursor: "pointer" }}>
-                  <div className="catalog-card-badge-top">
-                    <span className="catalog-pill-badge green">Grado A Reacondicionado</span>
-                    {item.badge && <span className="catalog-pill-badge blue">{item.badge}</span>}
-                  </div>
-                  <div className="catalog-card-inches-tag">{item.inchesLabel}</div>
-
                   <img
                     src={currentImg}
                     alt={`Samsung ${item.model}`}
@@ -831,7 +836,7 @@ export const Catalog: React.FC = () => {
                 {/* Cuerpo de la Tarjeta */}
                 <div className="catalog-card-body">
                   <div className="catalog-card-brand-model">
-                    <h3 className="catalog-card-model">{item.brand} {item.model}</h3>
+                    <h3 className="catalog-card-model">{item.brand} {item.model} ({item.inchesLabel})</h3>
                   </div>
 
                   <p className="catalog-card-desc">{item.description}</p>
@@ -1293,13 +1298,15 @@ export const Catalog: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>RUT Comprador *</label>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>RUT Comprador (sin puntos y con guion) *</label>
                     <input
                       type="text"
                       className="contacto-form-input"
-                      placeholder="12.345.678-9"
+                      placeholder="12345678-9"
+                      maxLength={10}
                       value={customerData.rut}
-                      onChange={(e) => setCustomerData({ ...customerData, rut: e.target.value })}
+                      onChange={(e) => setCustomerData({ ...customerData, rut: sanitizeRutInput(e.target.value) })}
+                      onBlur={() => setCustomerData((prev) => ({ ...prev, rut: formatRutSinPuntosConGuion(prev.rut) }))}
                       required
                     />
                   </div>
@@ -1379,9 +1386,11 @@ export const Catalog: React.FC = () => {
                       <input
                         type="text"
                         className="contacto-form-input"
-                        placeholder="RUT Empresa *"
+                        placeholder="RUT Empresa (ej: 76123456-7) *"
+                        maxLength={10}
                         value={customerData.rutEmpresa || ""}
-                        onChange={(e) => setCustomerData({ ...customerData, rutEmpresa: e.target.value })}
+                        onChange={(e) => setCustomerData({ ...customerData, rutEmpresa: sanitizeRutInput(e.target.value) })}
+                        onBlur={() => setCustomerData((prev) => ({ ...prev, rutEmpresa: formatRutSinPuntosConGuion(prev.rutEmpresa || "") }))}
                       />
                     </div>
                     <input

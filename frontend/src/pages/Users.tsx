@@ -3,6 +3,7 @@ import { Plus, X, Loader2, Users as UsersIcon, Edit2, Trash2, AlertCircle, Searc
 import { authService } from "../services/auth";
 import type { Usuario } from "../services/auth";
 import { validateStrongPassword, PasswordRequirementsChecklist } from "../utils/passwordValidation";
+import { sanitizeRutInput, formatRutSinPuntosConGuion, validateRutSinPuntosConGuion } from "../utils/rutValidation";
 
 export const Users: React.FC = () => {
   const [users, setUsers] = useState<Usuario[]>([]);
@@ -83,6 +84,15 @@ export const Users: React.FC = () => {
     setModalLoading(true);
     setModalError(null);
 
+    // Validación de formato de RUT: sin puntos y con guion (ej: 12345678-9)
+    const rutCheck = validateRutSinPuntosConGuion(rut, "RUT");
+    if (!rutCheck.isValid) {
+      setModalError(rutCheck.errorMessage || "Formato de RUT inválido. Ingresa sin puntos y con guion (ej: 12345678-9).");
+      setModalLoading(false);
+      return;
+    }
+    const cleanRut = rutCheck.formatted;
+
     // Basic Validations
     if (modalType === "create" && !password) {
       setModalError("La contraseña es requerida para nuevos usuarios.");
@@ -102,7 +112,7 @@ export const Users: React.FC = () => {
     try {
       if (modalType === "create") {
         await authService.createUser({
-          rut,
+          rut: cleanRut,
           correo: email,
           clave: password,
           nombre: firstName,
@@ -113,7 +123,7 @@ export const Users: React.FC = () => {
         setSuccessMessage(`Usuario ${firstName} ${lastName} creado exitosamente.`);
       } else if (modalType === "edit" && selectedUser) {
         const updatePayload: any = {
-          rut,
+          rut: cleanRut,
           correo: email,
           nombre: firstName,
           apellido: lastName,
@@ -353,15 +363,20 @@ export const Users: React.FC = () => {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>RUT</label>
+                  <label>RUT (sin puntos y con guion)</label>
                   <input
                     type="text"
                     className="glass-input"
-                    placeholder="12.345.678-9"
+                    placeholder="12345678-9"
+                    maxLength={10}
                     value={rut}
-                    onChange={(e) => setRut(e.target.value)}
+                    onChange={(e) => setRut(sanitizeRutInput(e.target.value))}
+                    onBlur={() => setRut((prev) => formatRutSinPuntosConGuion(prev))}
                     required
                   />
+                  <span style={{ fontSize: "0.72rem", color: "hsl(var(--text-muted))", marginTop: "3px", display: "block" }}>
+                    Formato requerido: sin puntos y con guion (ej: 12345678-9)
+                  </span>
                 </div>
 
                 <div className="form-group">

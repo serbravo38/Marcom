@@ -53,7 +53,7 @@ const SEED_ORDERS: SalesOrder[] = [
     dateFormatted: "06/10/2026 18:45",
     customer: {
       nombre: "Rodrigo Morales Silva",
-      rut: "15.482.910-3",
+      rut: "15482910-3",
       email: "rmorales@santiago-retail.cl",
       telefono: "+56 9 8451 2290",
       direccion: "Av. Providencia 1240, Of. 602",
@@ -61,7 +61,7 @@ const SEED_ORDERS: SalesOrder[] = [
       region: "Región Metropolitana",
       tipoDocumento: "FACTURA",
       razonSocial: "Comercializadora Retail Santiago SpA",
-      rutEmpresa: "76.892.401-K",
+      rutEmpresa: "76892401-K",
       giroEmpresa: "Comercio de Electrónica y Retail"
     },
     items: [
@@ -88,7 +88,7 @@ const SEED_ORDERS: SalesOrder[] = [
     dateFormatted: "05/10/2026 14:20",
     customer: {
       nombre: "Camila Andrea Valenzuela",
-      rut: "16.782.341-2",
+      rut: "16782341-2",
       email: "cvalenzuela@disenovisual.cl",
       telefono: "+56 9 7120 4455",
       direccion: "Nueva Costanera 3900",
@@ -96,7 +96,7 @@ const SEED_ORDERS: SalesOrder[] = [
       region: "Región Metropolitana",
       tipoDocumento: "FACTURA",
       razonSocial: "Estudio Diseño Visual y Señalética Ltda.",
-      rutEmpresa: "77.120.304-8",
+      rutEmpresa: "77120304-8",
       giroEmpresa: "Diseño Publicitario y Vitrinismo"
     },
     items: [
@@ -123,7 +123,7 @@ const SEED_ORDERS: SalesOrder[] = [
     dateFormatted: "04/10/2026 11:15",
     customer: {
       nombre: "Felipe Ignacio Santander",
-      rut: "18.334.901-5",
+      rut: "18334901-5",
       email: "fsantander@cafedoc.cl",
       telefono: "+56 9 6223 8899",
       direccion: "Paseo Huérfanos 810",
@@ -155,7 +155,7 @@ const SEED_ORDERS: SalesOrder[] = [
     dateFormatted: "03/10/2026 16:50",
     customer: {
       nombre: "Ignacio Soto Carvallo",
-      rut: "14.205.776-9",
+      rut: "14205776-9",
       email: "isoto@gastronomiaexpress.cl",
       telefono: "+56 9 9331 0022",
       direccion: "Av. Las Condes 11200",
@@ -163,7 +163,7 @@ const SEED_ORDERS: SalesOrder[] = [
       region: "Región Metropolitana",
       tipoDocumento: "FACTURA",
       razonSocial: "Gastronomía Rápida Express SpA",
-      rutEmpresa: "76.441.902-3",
+      rutEmpresa: "76441902-3",
       giroEmpresa: "Restaurantes y Menú Boards"
     },
     items: [
@@ -190,7 +190,7 @@ const SEED_ORDERS: SalesOrder[] = [
     dateFormatted: "02/10/2026 09:30",
     customer: {
       nombre: "María José Henríquez",
-      rut: "17.112.449-1",
+      rut: "17112449-1",
       email: "mjhenriquez@corpclinicas.cl",
       telefono: "+56 9 5554 1122",
       direccion: "Av. Manquehue Norte 1410",
