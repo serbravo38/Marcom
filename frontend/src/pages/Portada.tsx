@@ -26,9 +26,18 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
-  LogOut
+  LogOut,
+  Edit3,
+  Plus,
+  Trash2,
+  Upload,
+  Save,
+  RotateCcw,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
+import { api } from "../services/api";
 import "./Portada.css";
 
 interface TrabajoItem {
@@ -42,7 +51,18 @@ interface TrabajoItem {
   badgeColor: string;
 }
 
-const TRABAJOS_DATA: TrabajoItem[] = [
+const STORAGE_KEY_TRABAJOS = "marcom_trabajos_carousel";
+
+const BADGE_COLOR_PRESETS = [
+  "#e11d48",
+  "#0284c7",
+  "#f59e0b",
+  "#10b981",
+  "#8b5cf6",
+  "#06b6d4",
+];
+
+const DEFAULT_TRABAJOS_DATA: TrabajoItem[] = [
   {
     id: 1,
     image: "/trabajos/22.jpeg",
@@ -130,6 +150,21 @@ const TRABAJOS_DATA: TrabajoItem[] = [
 ];
 
 export const Portada: React.FC = () => {
+  const [trabajosList, setTrabajosList] = useState<TrabajoItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_TRABAJOS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // Fallback to default
+    }
+    return DEFAULT_TRABAJOS_DATA;
+  });
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [lightboxImage, setLightboxImage] = useState<TrabajoItem | null>(null);
@@ -137,7 +172,17 @@ export const Portada: React.FC = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const autoPlayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Check if user is logged in
+  // Admin Carousel Editor Modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [draftTrabajos, setDraftTrabajos] = useState<TrabajoItem[]>([]);
+  const [selectedEditIndex, setSelectedEditIndex] = useState(0);
+  const [isSavingTrabajos, setIsSavingTrabajos] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const isAdmin = userProfile?.rol === "ADMIN";
+
+  // Check if user is logged in & fetch saved trabajos from backend
   useEffect(() => {
     const token = localStorage.getItem("marcom_token");
     const rawUser = localStorage.getItem("marcom_user");
@@ -148,26 +193,40 @@ export const Portada: React.FC = () => {
         setUserProfile(null);
       }
     }
+
+    api
+      .get<{ items: TrabajoItem[] | null }>("/auth/trabajos-portada")
+      .then((res) => {
+        if (res && Array.isArray(res.items) && res.items.length > 0) {
+          setTrabajosList(res.items);
+          localStorage.setItem(STORAGE_KEY_TRABAJOS, JSON.stringify(res.items));
+        }
+      })
+      .catch(() => {
+        // Fallback to localStorage / default silently
+      });
   }, []);
 
   // Carousel autoplay timer
   useEffect(() => {
-    if (isPlaying) {
+    if (isPlaying && !isEditModalOpen && trabajosList.length > 0) {
       autoPlayTimerRef.current = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % TRABAJOS_DATA.length);
+        setCurrentIndex((prev) => (prev + 1) % trabajosList.length);
       }, 5000);
     }
     return () => {
       if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, isEditModalOpen, trabajosList.length]);
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % TRABAJOS_DATA.length);
+    if (trabajosList.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % trabajosList.length);
   };
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + TRABAJOS_DATA.length) % TRABAJOS_DATA.length);
+    if (trabajosList.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + trabajosList.length) % trabajosList.length);
   };
 
   const togglePlay = () => {
@@ -182,7 +241,192 @@ export const Portada: React.FC = () => {
     }
   };
 
-  const currentSlide = TRABAJOS_DATA[currentIndex];
+  const safeIndex = currentIndex < trabajosList.length ? currentIndex : 0;
+  const currentSlide = trabajosList[safeIndex] || DEFAULT_TRABAJOS_DATA[0];
+
+  // --- ADMIN EDITOR HANDLERS ---
+  const openEditorModal = (indexToEdit: number = safeIndex) => {
+    const cloned = trabajosList.map((item) => ({
+      ...item,
+      features: [...item.features],
+    }));
+    setDraftTrabajos(cloned);
+    setSelectedEditIndex(Math.min(indexToEdit, Math.max(0, cloned.length - 1)));
+    setSaveMessage(null);
+    setIsEditModalOpen(true);
+  };
+
+  const openEditorWithNewSlide = () => {
+    const cloned = trabajosList.map((item) => ({
+      ...item,
+      features: [...item.features],
+    }));
+    const nextId = cloned.reduce((max, it) => Math.max(max, it.id), 0) + 1;
+    const newSlide: TrabajoItem = {
+      id: nextId,
+      image: "/trabajos/22.jpeg",
+      title: "Nuevo Trabajo de Instalación en Terreno",
+      category: "Cartelería Digital & Soporte",
+      client: "Convenio Corporativo Marcom",
+      description: "Descripción detallada del montaje, equipamiento instalado y estándares aplicados en terreno.",
+      features: [
+        "Instalación certificada bajo estándares de seguridad",
+        "Pruebas de conectividad y calibración de imagen",
+        "Registro y trazabilidad de serie en plataforma Marcom",
+      ],
+      badgeColor: "#0284c7",
+    };
+    const updated = [...cloned, newSlide];
+    setDraftTrabajos(updated);
+    setSelectedEditIndex(updated.length - 1);
+    setSaveMessage(null);
+    setIsEditModalOpen(true);
+  };
+
+  const updateSelectedDraftField = (field: keyof TrabajoItem, value: any) => {
+    setDraftTrabajos((prev) =>
+      prev.map((item, idx) => (idx === selectedEditIndex ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const handleFeatureChange = (featIdx: number, value: string) => {
+    setDraftTrabajos((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== selectedEditIndex) return item;
+        const nextFeatures = [...item.features];
+        nextFeatures[featIdx] = value;
+        return { ...item, features: nextFeatures };
+      })
+    );
+  };
+
+  const handleAddFeature = () => {
+    setDraftTrabajos((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== selectedEditIndex) return item;
+        return { ...item, features: [...item.features, "Nuevo detalle técnico o estándar operativo"] };
+      })
+    );
+  };
+
+  const handleRemoveFeature = (featIdx: number) => {
+    setDraftTrabajos((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== selectedEditIndex) return item;
+        if (item.features.length <= 1) return item;
+        return { ...item, features: item.features.filter((_, i) => i !== featIdx) };
+      })
+    );
+  };
+
+  const handleAddSlideInModal = () => {
+    const nextId = draftTrabajos.reduce((max, it) => Math.max(max, it.id), 0) + 1;
+    const newSlide: TrabajoItem = {
+      id: nextId,
+      image: "/trabajos/22.jpeg",
+      title: "Nuevo Trabajo en Terreno",
+      category: "Montaje Técnico Especializado",
+      client: "Cliente Corporativo",
+      description: "Descripción técnica de la instalación o mantenimiento realizado por el equipo de Marcom.",
+      features: [
+        "Montaje estructural seguro y cableado oculto",
+        "Validación de operatividad 24/7 con el cliente",
+      ],
+      badgeColor: "#0284c7",
+    };
+    const nextList = [...draftTrabajos, newSlide];
+    setDraftTrabajos(nextList);
+    setSelectedEditIndex(nextList.length - 1);
+  };
+
+  const handleDeleteSlideInModal = (idxToDelete: number) => {
+    if (draftTrabajos.length <= 1) return;
+    const nextList = draftTrabajos.filter((_, idx) => idx !== idxToDelete);
+    setDraftTrabajos(nextList);
+    setSelectedEditIndex((prev) => Math.min(prev, nextList.length - 1));
+  };
+
+  const handleMoveSlide = (idx: number, direction: -1 | 1) => {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= draftTrabajos.length) return;
+    const nextList = [...draftTrabajos];
+    const temp = nextList[idx];
+    nextList[idx] = nextList[targetIdx];
+    nextList[targetIdx] = temp;
+    setDraftTrabajos(nextList);
+    setSelectedEditIndex(targetIdx);
+  };
+
+  const handleRestoreDefaults = () => {
+    const defaults = DEFAULT_TRABAJOS_DATA.map((item) => ({
+      ...item,
+      features: [...item.features],
+    }));
+    setDraftTrabajos(defaults);
+    setSelectedEditIndex(0);
+    setSaveMessage("Se han cargado los trabajos predeterminados. Presiona «Guardar Cambios» para aplicar.");
+  };
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const rawDataUrl = ev.target?.result as string;
+      if (!rawDataUrl) return;
+      // Compress/resize image via canvas so it stores cleanly in localStorage & DB
+      const img = new Image();
+      img.onload = () => {
+        const MAX_W = 1400;
+        const MAX_H = 1000;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_W || height > MAX_H) {
+          const ratio = Math.min(MAX_W / width, MAX_H / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          updateSelectedDraftField("image", compressedDataUrl);
+        } else {
+          updateSelectedDraftField("image", rawDataUrl);
+        }
+      };
+      img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleSaveTrabajos = async () => {
+    setIsSavingTrabajos(true);
+    setSaveMessage(null);
+    try {
+      setTrabajosList(draftTrabajos);
+      localStorage.setItem(STORAGE_KEY_TRABAJOS, JSON.stringify(draftTrabajos));
+      if (currentIndex >= draftTrabajos.length) {
+        setCurrentIndex(0);
+      }
+      try {
+        await api.put("/auth/trabajos-portada", { items: draftTrabajos });
+      } catch (err) {
+        // Guardado local garantizado aunque el contenedor aún no se haya reiniciado
+      }
+      setSaveMessage("¡Cambios guardados y publicados en el carrusel exitosamente!");
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+        setSaveMessage(null);
+      }, 900);
+    } finally {
+      setIsSavingTrabajos(false);
+    }
+  };
 
   return (
     <div className="portada-container">
@@ -498,6 +742,55 @@ export const Portada: React.FC = () => {
               Conoce una muestra real de los montajes de cartelería digital, alineación de monitores profesionales,
               pantallas de placa y equipamiento tecnológico desplegados en tiendas de retail y servicentros.
             </p>
+
+            {/* Barra de Administración Exclusiva para Usuarios con Rol ADMIN */}
+            {isAdmin && (
+              <div className="portada-admin-toolbar">
+                <span className="portada-admin-toolbar-label">
+                  Modo Administrador:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openEditorModal(safeIndex)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "7px 14px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(56, 189, 248, 0.5)",
+                    background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                    color: "#ffffff",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Edit3 size={14} />
+                  <span>Editar este Trabajo ({safeIndex + 1}/{trabajosList.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={openEditorWithNewSlide}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "7px 14px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(16, 185, 129, 0.45)",
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    color: "#ffffff",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Plus size={14} />
+                  <span>Agregar Nuevo Trabajo</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Carousel Main Container */}
@@ -513,7 +806,7 @@ export const Portada: React.FC = () => {
                   src={currentSlide.image} 
                   alt={currentSlide.title} 
                   className="portada-carousel-img"
-                  key={currentSlide.id}
+                  key={`${currentSlide.id}-${safeIndex}`}
                 />
                 <div className="portada-carousel-zoom-hint">
                   <Maximize2 size={14} />
@@ -524,8 +817,21 @@ export const Portada: React.FC = () => {
               {/* Info & Specifications Card */}
               <div className="portada-carousel-info">
                 <div>
-                  <div className="portada-slide-badge" style={{ borderColor: currentSlide.badgeColor, color: currentSlide.badgeColor }}>
-                    <span>{currentSlide.category}</span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap", marginBottom: "6px" }}>
+                    <div className="portada-slide-badge" style={{ borderColor: currentSlide.badgeColor, color: currentSlide.badgeColor, marginBottom: 0 }}>
+                      <span>{currentSlide.category}</span>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => openEditorModal(safeIndex)}
+                        className="portada-admin-inline-btn"
+                        title="Modificar texto e imagen de esta diapositiva"
+                      >
+                        <Edit3 size={13} />
+                        <span>Editar Texto e Imagen</span>
+                      </button>
+                    )}
                   </div>
 
                   <h3 className="portada-slide-title">
@@ -557,9 +863,9 @@ export const Portada: React.FC = () => {
                 {/* Controls and Navigation */}
                 <div className="portada-carousel-actions-row">
                   <div className="portada-carousel-counter">
-                    <span className="portada-carousel-counter-current">0{currentIndex + 1}</span>
+                    <span className="portada-carousel-counter-current">{String(safeIndex + 1).padStart(2, "0")}</span>
                     <span>/</span>
-                    <span>0{TRABAJOS_DATA.length}</span>
+                    <span>{String(trabajosList.length).padStart(2, "0")}</span>
                   </div>
 
                   <div className="portada-carousel-controls">
@@ -595,10 +901,10 @@ export const Portada: React.FC = () => {
 
           {/* Quick Select Thumbnails Strip */}
           <div className="portada-thumbnails-strip">
-            {TRABAJOS_DATA.map((item, idx) => (
+            {trabajosList.map((item, idx) => (
               <button
-                key={item.id}
-                className={`portada-thumb-btn ${idx === currentIndex ? "active" : ""}`}
+                key={`${item.id}-${idx}`}
+                className={`portada-thumb-btn ${idx === safeIndex ? "active" : ""}`}
                 onClick={() => setCurrentIndex(idx)}
                 title={item.title}
               >
@@ -1025,6 +1331,410 @@ export const Portada: React.FC = () => {
               >
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          MODAL DE EDICIÓN DEL CARRUSEL (EXCLUSIVO PARA ROL ADMIN)
+          ==================================================================== */}
+      {isAdmin && isEditModalOpen && draftTrabajos[selectedEditIndex] && (
+        <div
+          className="portada-modal-overlay"
+          style={{ zIndex: 10000, padding: "20px", overflowY: "auto" }}
+          onClick={() => setIsEditModalOpen(false)}
+        >
+          <div
+            className="portada-editor-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del Modal */}
+            <div className="portada-editor-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit3 size={18} color="#0284c7" />
+                <h3 className="portada-editor-title">
+                  Editor de Trabajos Realizados
+                </h3>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={handleRestoreDefaults}
+                  className="portada-editor-btn-secondary"
+                  title="Restaurar los 6 trabajos originales de fábrica"
+                >
+                  <RotateCcw size={14} />
+                  <span>Restaurar Originales</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="portada-editor-btn-icon"
+                  aria-label="Cerrar editor"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Cuerpo Principal del Modal */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                gap: "22px",
+                padding: "22px 24px",
+              }}
+            >
+              {/* Columna Izquierda: Lista de Diapositivas + Imagen */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                {/* Selector de Diapositivas */}
+                <div className="portada-editor-section-card">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <span className="portada-editor-section-kicker">
+                      Trabajos en el Carrusel ({draftTrabajos.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAddSlideInModal}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid rgba(16, 185, 129, 0.45)",
+                        background: "linear-gradient(135deg, #059669, #10b981)",
+                        color: "#ffffff",
+                        fontSize: "0.76rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Plus size={13} />
+                      <span>Nuevo Trabajo</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "230px", overflowY: "auto" }}>
+                    {draftTrabajos.map((item, idx) => {
+                      const isSelected = idx === selectedEditIndex;
+                      return (
+                        <div
+                          key={`${item.id}-${idx}`}
+                          onClick={() => setSelectedEditIndex(idx)}
+                          className={`portada-editor-slide-row ${isSelected ? "selected" : ""}`}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
+                            <img
+                              src={item.image}
+                              alt={item.title}
+                              style={{
+                                width: "44px",
+                                height: "32px",
+                                objectFit: "cover",
+                                borderRadius: "5px",
+                                border: "1px solid rgba(148, 163, 184, 0.3)",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div className="portada-editor-slide-name">
+                                {idx + 1}. {item.title}
+                              </div>
+                              <div className="portada-editor-slide-client">{item.client}</div>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSlide(idx, -1)}
+                              disabled={idx === 0}
+                              className="portada-editor-mini-btn"
+                              title="Subir orden"
+                            >
+                              <ArrowUp size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSlide(idx, 1)}
+                              disabled={idx === draftTrabajos.length - 1}
+                              className="portada-editor-mini-btn"
+                              title="Bajar orden"
+                            >
+                              <ArrowDown size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSlideInModal(idx)}
+                              disabled={draftTrabajos.length <= 1}
+                              style={{
+                                padding: "4px",
+                                borderRadius: "5px",
+                                border: "1px solid rgba(239, 68, 68, 0.35)",
+                                background: "rgba(239, 68, 68, 0.14)",
+                                color: draftTrabajos.length <= 1 ? "#94a3b8" : "#ef4444",
+                                cursor: draftTrabajos.length <= 1 ? "not-allowed" : "pointer",
+                              }}
+                              title="Eliminar este trabajo"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Sección de Fotografía del Trabajo Seleccionado */}
+                <div
+                  className="portada-editor-section-card"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                  }}
+                >
+                  <span className="portada-editor-section-kicker">
+                    Fotografía del Trabajo #{selectedEditIndex + 1}
+                  </span>
+
+                  <div className="portada-editor-preview-box">
+                    <img
+                      src={draftTrabajos[selectedEditIndex].image}
+                      alt="Vista previa"
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    />
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleImageFileUpload}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(56, 189, 248, 0.45)",
+                      background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                      color: "#ffffff",
+                      fontSize: "0.84rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Upload size={16} />
+                    <span>Subir Imagen</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Columna Derecha: Formulario de Textos y Especificaciones */}
+              <div
+                className="portada-editor-section-card"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                }}
+              >
+                <span className="portada-editor-section-kicker">
+                  Textos y Especificaciones del Trabajo #{selectedEditIndex + 1}
+                </span>
+
+                <div>
+                  <label className="portada-editor-label">
+                    Título Principal del Trabajo
+                  </label>
+                  <input
+                    type="text"
+                    className="portada-editor-input"
+                    style={{ fontWeight: 600 }}
+                    value={draftTrabajos[selectedEditIndex].title}
+                    onChange={(e) => updateSelectedDraftField("title", e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "12px", alignItems: "end" }}>
+                  <div>
+                    <label className="portada-editor-label">
+                      Categoría / Etiqueta Superior
+                    </label>
+                    <input
+                      type="text"
+                      className="portada-editor-input"
+                      value={draftTrabajos[selectedEditIndex].category}
+                      onChange={(e) => updateSelectedDraftField("category", e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="portada-editor-sublabel">
+                      Color Etiqueta
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      {BADGE_COLOR_PRESETS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => updateSelectedDraftField("badgeColor", c)}
+                          style={{
+                            width: "22px",
+                            height: "22px",
+                            borderRadius: "999px",
+                            background: c,
+                            border:
+                              draftTrabajos[selectedEditIndex].badgeColor === c
+                                ? "2px solid #0284c7"
+                                : "1px solid rgba(148,163,184,0.4)",
+                            boxShadow:
+                              draftTrabajos[selectedEditIndex].badgeColor === c
+                                ? "0 0 0 2px #ffffff"
+                                : "none",
+                            cursor: "pointer",
+                          }}
+                          title={c}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="portada-editor-label">
+                    Cliente / Convenio Asociado
+                  </label>
+                  <input
+                    type="text"
+                    className="portada-editor-input"
+                    value={draftTrabajos[selectedEditIndex].client}
+                    onChange={(e) => updateSelectedDraftField("client", e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="portada-editor-label">
+                    Descripción del Trabajo Realizado
+                  </label>
+                  <textarea
+                    rows={3}
+                    className="portada-editor-input"
+                    style={{ lineHeight: 1.5, resize: "vertical" }}
+                    value={draftTrabajos[selectedEditIndex].description}
+                    onChange={(e) => updateSelectedDraftField("description", e.target.value)}
+                  />
+                </div>
+
+                {/* Lista de Detalles Técnicos (Features) */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <label className="portada-editor-label" style={{ marginBottom: 0 }}>
+                      Detalles Técnicos & Estándares (Viñetas)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddFeature}
+                      className="portada-admin-inline-btn"
+                    >
+                      <Plus size={12} />
+                      <span>Agregar Viñeta</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {draftTrabajos[selectedEditIndex].features.map((feat, fIdx) => (
+                      <div key={fIdx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <input
+                          type="text"
+                          className="portada-editor-input"
+                          style={{ flex: 1, padding: "7px 10px", fontSize: "0.82rem" }}
+                          value={feat}
+                          onChange={(e) => handleFeatureChange(fIdx, e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFeature(fIdx)}
+                          disabled={draftTrabajos[selectedEditIndex].features.length <= 1}
+                          style={{
+                            padding: "7px",
+                            borderRadius: "7px",
+                            border: "1px solid rgba(239, 68, 68, 0.35)",
+                            background: "rgba(239, 68, 68, 0.12)",
+                            color: draftTrabajos[selectedEditIndex].features.length <= 1 ? "#94a3b8" : "#ef4444",
+                            cursor: draftTrabajos[selectedEditIndex].features.length <= 1 ? "not-allowed" : "pointer",
+                          }}
+                          title="Quitar viñeta"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer de Guardado del Modal */}
+            <div className="portada-editor-footer">
+              <div style={{ fontSize: "0.84rem", color: saveMessage ? "#10b981" : "#64748b", fontWeight: saveMessage ? 600 : 500 }}>
+                {saveMessage || "Los cambios se reflejarán de inmediato en el carrusel de la portada."}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="portada-editor-btn-secondary"
+                  style={{ padding: "9px 16px", fontSize: "0.85rem" }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveTrabajos}
+                  disabled={isSavingTrabajos}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(16, 185, 129, 0.5)",
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    color: "#ffffff",
+                    fontSize: "0.86rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Save size={16} />
+                  <span>{isSavingTrabajos ? "Guardando..." : "Guardar Cambios del Carrusel"}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

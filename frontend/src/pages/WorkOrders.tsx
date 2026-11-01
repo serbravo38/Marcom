@@ -12,7 +12,9 @@ import {
   Maximize2,
   Image as ImageIcon,
   FileText,
-  ArrowLeft
+  ArrowLeft,
+  Edit2,
+  RotateCcw
 } from "lucide-react";
 import { workOrdersService, type OrdenTrabajo, type EvidenciaTerreno } from "../services/workOrders";
 import { authService, type Usuario, type Convenio } from "../services/auth";
@@ -89,17 +91,26 @@ export const WorkOrders: React.FC = () => {
 
   // Modals Open State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingWo, setEditingWo] = useState<OrdenTrabajo | null>(null);
 
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  // Work Order Form Fields
+  // Work Order Form Fields (Create)
   const [woNumber, setWoNumber] = useState("");
   const [woAgreementId, setWoAgreementId] = useState("");
   const [woLocationId, setWoLocationId] = useState("");
   const [woTechId, setWoTechId] = useState("");
   const [woScheduledDate, setWoScheduledDate] = useState("");
   const [woNotes, setWoNotes] = useState("");
+
+  // Work Order Form Fields (Edit / Reopen)
+  const [editStatus, setEditStatus] = useState<OrdenTrabajo["estado"]>("PENDIENTE");
+  const [editScheduledDate, setEditScheduledDate] = useState("");
+  const [editLocationId, setEditLocationId] = useState("");
+  const [editAgreementId, setEditAgreementId] = useState("");
+  const [editTechId, setEditTechId] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   // Link Asset Form Fields
   const [linkInstalledId, setLinkInstalledId] = useState("");
@@ -162,7 +173,7 @@ export const WorkOrders: React.FC = () => {
         tecnico_asignado_id: woTechId || null,
         estado: "PENDIENTE",
         fecha_programada: new Date(woScheduledDate).toISOString(),
-        notes: woNotes || null
+        notas: woNotes || null
       });
       setIsCreateOpen(false);
       // Reset form
@@ -172,6 +183,55 @@ export const WorkOrders: React.FC = () => {
       fetchData(false);
     } catch (err: any) {
       setModalError(err?.message || "No se pudo crear la orden de trabajo.");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const toDatetimeLocalValue = (isoStr?: string) => {
+    if (!isoStr) return "";
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const handleOpenEditWo = (wo: OrdenTrabajo) => {
+    setEditingWo(wo);
+    setEditStatus(wo.estado);
+    setEditScheduledDate(toDatetimeLocalValue(wo.fecha_programada));
+    setEditLocationId(wo.ubicacion_id || "");
+    setEditAgreementId(wo.convenio_cliente_id || "");
+    setEditTechId(wo.tecnico_asignado_id || "");
+    setEditNotes(wo.notas || wo.notes || "");
+    setModalError(null);
+  };
+
+  const handleSaveEditWorkOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWo) return;
+    setModalLoading(true);
+    setModalError(null);
+    try {
+      const updated = await workOrdersService.updateWorkOrder(editingWo.orden_trabajo_id, {
+        estado: editStatus,
+        fecha_programada: editScheduledDate ? new Date(editScheduledDate).toISOString() : editingWo.fecha_programada,
+        ubicacion_id: editLocationId,
+        convenio_cliente_id: editAgreementId || null,
+        tecnico_asignado_id: editTechId || null,
+        notas: editNotes || null,
+        fecha_termino: editStatus === "COMPLETADA" ? (editingWo.fecha_termino || new Date().toISOString()) : null
+      });
+
+      setEditingWo(null);
+      if (selectedWo && selectedWo.orden_trabajo_id === updated.orden_trabajo_id) {
+        setSelectedWo(updated);
+      }
+      setSuccessMessage(`Orden de trabajo ${updated.numero_orden} actualizada exitosamente (Estado: ${updated.estado}).`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      fetchData(false);
+    } catch (err: any) {
+      setModalError(err?.message || "No se pudo actualizar la orden de trabajo.");
     } finally {
       setModalLoading(false);
     }
@@ -390,19 +450,34 @@ export const WorkOrders: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <button 
-                          className="btn-secondary" 
-                          style={{ padding: "6px 12px", fontSize: "0.8rem" }}
-                          onClick={() => {
-                            setSelectedWo(wo);
-                            setModalView("DETALLE");
-                            setModalError(null);
-                            setDetailSuccessMessage(null);
-                          }}
-                        >
-                          <Eye size={14} />
-                          <span>{isTech ? "Atender / Ver" : "Ver"}</span>
-                        </button>
+                        <div style={{ display: "inline-flex", gap: "8px", alignItems: "center" }}>
+                          <button 
+                            className="btn-secondary" 
+                            style={{ padding: "6px 12px", fontSize: "0.8rem" }}
+                            onClick={() => {
+                              setSelectedWo(wo);
+                              setModalView("DETALLE");
+                              setModalError(null);
+                              setDetailSuccessMessage(null);
+                            }}
+                          >
+                            <Eye size={14} />
+                            <span>{isTech ? "Atender / Ver" : "Ver"}</span>
+                          </button>
+
+                          {isAdminOrJefe && (
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: "6px 12px", fontSize: "0.8rem" }}
+                              title="Editar o reabrir Orden de Trabajo"
+                              onClick={() => handleOpenEditWo(wo)}
+                            >
+                              <Edit2 size={14} />
+                              <span>Editar</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -463,6 +538,75 @@ export const WorkOrders: React.FC = () => {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button type="button" className="btn-secondary" onClick={() => setIsCreateOpen(false)}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={modalLoading}>Programar OT</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit / Reopen Work Order Modal */}
+      {editingWo && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel">
+            <button className="modal-close" onClick={() => setEditingWo(null)}><X size={20} /></button>
+            <h3 style={{ marginBottom: "6px", fontWeight: 600 }} className="accent-text-gradient">
+              Editar Orden de Trabajo: {editingWo.numero_orden}
+            </h3>
+            <p style={{ fontSize: "0.84rem", color: "hsl(var(--text-muted))", marginBottom: "20px" }}>
+              Modifica los datos de la orden o cambia su estado a <strong>PENDIENTE</strong> / <strong>EN_PROCESO</strong> para reabrirla.
+            </p>
+            {modalError && <p className="badge error" style={{ width: "100%", padding: "10px", marginBottom: "15px" }}>{modalError}</p>}
+            <form onSubmit={handleSaveEditWorkOrder}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Estado de la Orden (Permite Reabrir OT)</label>
+                  <select className="glass-input" value={editStatus} onChange={e => setEditStatus(e.target.value as OrdenTrabajo["estado"])} required>
+                    <option value="PENDIENTE">PENDIENTE (Reabrir / Por iniciar)</option>
+                    <option value="ASIGNADA">ASIGNADA</option>
+                    <option value="EN_PROCESO">EN_PROCESO (Reabrir en terreno)</option>
+                    <option value="COMPLETADA">COMPLETADA</option>
+                    <option value="CANCELADA">CANCELADA</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Fecha Programada</label>
+                  <input type="datetime-local" className="glass-input" value={editScheduledDate} onChange={e => setEditScheduledDate(e.target.value)} required />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Ubicación / Bodega / Tienda Cliente</label>
+                <select className="glass-input" value={editLocationId} onChange={e => setEditLocationId(e.target.value)} required>
+                  <option value="">Selecciona ubicación...</option>
+                  {locations.map(l => (
+                    <option key={l.ubicacion_id} value={l.ubicacion_id}>
+                      {l.codigo_local ? `[${l.codigo_local}] ` : ""}{l.nombre} {l.comuna ? `(${l.comuna}) ` : ""}- {l.direccion}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Convenio Asociado (Opcional)</label>
+                  <select className="glass-input" value={editAgreementId} onChange={e => setEditAgreementId(e.target.value)}>
+                    <option value="">Ninguno / Cliente Estándar</option>
+                    {agreements.map(a => <option key={a.convenio_id} value={a.convenio_id}>{a.nombre_empresa}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Asignar Técnico</label>
+                  <select className="glass-input" value={editTechId} onChange={e => setEditTechId(e.target.value)}>
+                    <option value="">Sin asignar / Pendiente</option>
+                    {technicians.map(t => <option key={t.usuario_id} value={t.usuario_id}>{t.nombre} {t.apellido}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: "25px" }}>
+                <label>Notas de Programación</label>
+                <textarea className="glass-input" placeholder="Instrucciones especiales o motivo de reapertura..." value={editNotes} onChange={e => setEditNotes(e.target.value)} style={{ minHeight: "80px", resize: "vertical" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setEditingWo(null)}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={modalLoading}>Guardar Cambios</button>
               </div>
             </form>
           </div>
@@ -543,7 +687,30 @@ export const WorkOrders: React.FC = () => {
 
                   {/* Operational status buttons */}
                   {!isClient && (
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {isAdminOrJefe && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: "6px 12px", fontSize: "0.8rem" }}
+                          onClick={() => handleOpenEditWo(selectedWo)}
+                        >
+                          <Edit2 size={14} />
+                          <span>Editar Orden</span>
+                        </button>
+                      )}
+                      {isAdminOrJefe && (selectedWo.estado === "COMPLETADA" || selectedWo.estado === "CANCELADA") && (
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          style={{ padding: "6px 12px", fontSize: "0.8rem" }}
+                          onClick={() => handleUpdateStatus("EN_PROCESO")}
+                          title="Reabrir orden de trabajo en terreno"
+                        >
+                          <RotateCcw size={14} />
+                          <span>Reabrir Orden</span>
+                        </button>
+                      )}
                       {isTech && selectedWo.estado !== "EN_PROCESO" && selectedWo.estado !== "COMPLETADA" && (
                         <button className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderColor: "#38bdf8", color: "#38bdf8" }} onClick={() => handleUpdateStatus("EN_PROCESO")}>
                           Iniciar Trabajo
@@ -555,7 +722,7 @@ export const WorkOrders: React.FC = () => {
                         </button>
                       )}
                       {isAdminOrJefe && selectedWo.estado !== "CANCELADA" && (
-                        <button className="btn-logout" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => handleUpdateStatus("CANCELADA")}>
+                        <button className="btn-logout" style={{ padding: "6px 12px", fontSize: "0.8rem", width: "auto" }} onClick={() => handleUpdateStatus("CANCELADA")}>
                           Cancelar
                         </button>
                       )}

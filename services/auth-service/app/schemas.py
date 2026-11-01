@@ -250,4 +250,20 @@ class RespuestaContacto(BaseModel):
     destino: str
 
 
+# --- CARRUSEL DE TRABAJOS REALIZADOS (PORTADA) ---
+class TrabajoPortadaItem(BaseModel):
+    id: int
+    image: str
+    title: str
+    category: str
+    client: str
+    description: str
+    features: List[str]
+    badgeColor: str = "#0284c7"
+
+class ActualizarTrabajosPortada(BaseModel):
+    items: List[TrabajoPortadaItem]
+
+
+
 

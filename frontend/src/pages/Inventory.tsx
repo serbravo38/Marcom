@@ -551,21 +551,24 @@ export const Inventory: React.FC = () => {
             className={`tab-btn ${activeTab === "assets" ? "active" : ""}`}
             onClick={() => setActiveTab("assets")}
           >
-            Activos Seriados
+            <Warehouse size={16} />
+            <span>Activos Seriados</span>
           </button>
         )}
         <button 
           className={`tab-btn ${activeTab === "locations" ? "active" : ""}`}
           onClick={() => setActiveTab("locations")}
         >
-          {isClient ? "Mis Locales y Pantallas" : "Bodegas y Locales"}
+          <MapPin size={16} />
+          <span>{isClient ? "Mis Locales y Pantallas" : "Bodegas y Locales"}</span>
         </button>
         {!isClient && (
           <button 
             className={`tab-btn ${activeTab === "products" ? "active" : ""}`}
             onClick={() => setActiveTab("products")}
           >
-            Catálogo
+            <Store size={16} />
+            <span>Catálogo</span>
           </button>
         )}
         {isAdminOrJefe && (
@@ -573,7 +576,8 @@ export const Inventory: React.FC = () => {
             className={`tab-btn ${activeTab === "movements" ? "active" : ""}`}
             onClick={() => setActiveTab("movements")}
           >
-            Movimientos de Stock
+            <Shuffle size={16} />
+            <span>Movimientos de Stock</span>
           </button>
         )}
       </div>

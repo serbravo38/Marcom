@@ -34,7 +34,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     switch (location.pathname) {
       case "/":
       case "/dashboard":
-        return "Panel Principal (Dashboard)";
+        return "Panel Principal";
       case "/agreements":
         return "Convenios de Clientes";
       case "/quotations":
@@ -46,7 +46,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       case "/work-orders":
         return "Órdenes de Trabajo y Evidencias";
       case "/admin/monitores":
-        return "Gestión de Monitores a la Venta";
+        return "Gestión de Monitores";
       case "/ventas":
         return "Control de Ventas";
       case "/facturacion":

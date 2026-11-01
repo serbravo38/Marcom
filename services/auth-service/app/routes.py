@@ -668,3 +668,53 @@ def handle_contact_form(
     )
 
 
+# --- CARRUSEL DE TRABAJOS REALIZADOS (PORTADA) ---
+import json
+from sqlalchemy import text as sql_text
+
+def _ensure_portada_table(db: Session):
+    db.execute(sql_text("""
+        CREATE TABLE IF NOT EXISTS esquema_auth_clientes.configuracion_portada (
+            clave VARCHAR(100) PRIMARY KEY,
+            contenido_json TEXT NOT NULL,
+            actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+    """))
+    db.commit()
+
+@router.get("/auth/trabajos-portada")
+def get_trabajos_portada(db: Session = Depends(get_db)):
+    try:
+        _ensure_portada_table(db)
+        row = db.execute(
+            sql_text("SELECT contenido_json FROM esquema_auth_clientes.configuracion_portada WHERE clave = 'trabajos_carrusel'")
+        ).fetchone()
+        if row and row[0]:
+            return {"items": json.loads(row[0])}
+    except Exception as e:
+        logger.warning(f"No se pudo leer trabajos_carrusel desde DB: {e}")
+    return {"items": None}
+
+@router.put("/auth/trabajos-portada")
+def update_trabajos_portada(
+    payload: schemas.ActualizarTrabajosPortada,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    _ensure_portada_table(db)
+    serialized = json.dumps([item.model_dump() for item in payload.items], ensure_ascii=False)
+    db.execute(
+        sql_text("""
+            INSERT INTO esquema_auth_clientes.configuracion_portada (clave, contenido_json, actualizado_en)
+            VALUES ('trabajos_carrusel', :contenido, CURRENT_TIMESTAMP)
+            ON CONFLICT (clave) DO UPDATE
+            SET contenido_json = EXCLUDED.contenido_json,
+                actualizado_en = CURRENT_TIMESTAMP;
+        """),
+        {"contenido": serialized}
+    )
+    db.commit()
+    return {"status": "ok", "items": payload.items}
+
+
+

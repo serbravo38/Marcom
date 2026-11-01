@@ -65,7 +65,9 @@ export const Header: React.FC<HeaderProps> = ({ title, onToggleMobileSidebar }) 
         )}
         <div>
           <h1>{title}</h1>
-          <p>Monitoreo y gestión de infraestructura audiovisual</p>
+          {title !== "Gestión de Monitores" && (
+            <p>Monitoreo y gestión de infraestructura audiovisual</p>
+          )}
         </div>
       </div>
 

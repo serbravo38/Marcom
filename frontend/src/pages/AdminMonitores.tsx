@@ -4,7 +4,7 @@
  * Permite al Administrador dar de alta nuevos equipos, modificar características/precios y eliminar ítems con confirmación de seguridad.
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { 
   Tv, 
@@ -18,7 +18,10 @@ import {
   X, 
   Save, 
   TrendingUp,
-  ArrowLeft
+  ArrowLeft,
+  Upload,
+  Image as ImageIcon,
+  Star
 } from "lucide-react";
 import { 
   getMonitores, 
@@ -72,7 +75,166 @@ export const AdminMonitores: React.FC = () => {
   // Texto auxiliar para inputs de arrays
   const [connectivityInput, setConnectivityInput] = useState("");
   const [specialFeaturesInput, setSpecialFeaturesInput] = useState("");
-  const [imagesInput, setImagesInput] = useState("");
+
+  // Referencias para subida y reemplazo de imágenes sin eliminar las demás
+  const quickReplaceInputRef = useRef<HTMLInputElement | null>(null);
+  const [quickReplaceMonitor, setQuickReplaceMonitor] = useState<MonitorProduct | null>(null);
+  const modalAddImageInputRef = useRef<HTMLInputElement | null>(null);
+  const modalReplaceImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [replaceImageIndex, setReplaceImageIndex] = useState<number | null>(null);
+
+  // Compresión de imagen a DataURL para almacenamiento ágil
+  const compressImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const rawDataUrl = ev.target?.result as string;
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_DIM = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", 0.85));
+          } else {
+            resolve(rawDataUrl);
+          }
+        };
+        img.onerror = () => resolve(rawDataUrl);
+        img.src = rawDataUrl;
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Reemplazar imagen principal directamente desde la fila de la tabla
+  const handleTriggerQuickImageReplace = (monitor: MonitorProduct) => {
+    setQuickReplaceMonitor(monitor);
+    if (quickReplaceInputRef.current) {
+      quickReplaceInputRef.current.value = "";
+      quickReplaceInputRef.current.click();
+    }
+  };
+
+  const handleQuickImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !quickReplaceMonitor) return;
+    if (!file.type.startsWith("image/")) {
+      showNotification("Selecciona un archivo de imagen válido (JPG, PNG, WEBP, AVIF).", "error");
+      return;
+    }
+    try {
+      const dataUrl = await compressImageFile(file);
+      const updatedImages = [...(quickReplaceMonitor.images || [])];
+      if (updatedImages.length > 0) {
+        updatedImages[0] = dataUrl;
+      } else {
+        updatedImages.push(dataUrl);
+      }
+      updateMonitor(quickReplaceMonitor.id, { images: updatedImages });
+      refreshMonitores();
+      showNotification(`Imagen de ${quickReplaceMonitor.model} actualizada sin perder sus demás datos.`);
+    } catch {
+      showNotification("No se pudo procesar la imagen seleccionada.", "error");
+    } finally {
+      setQuickReplaceMonitor(null);
+      e.target.value = "";
+    }
+  };
+
+  // Reemplazar una sola imagen específica dentro del modal
+  const handleTriggerModalReplaceImage = (index: number) => {
+    setReplaceImageIndex(index);
+    if (modalReplaceImageInputRef.current) {
+      modalReplaceImageInputRef.current.value = "";
+      modalReplaceImageInputRef.current.click();
+    }
+  };
+
+  const handleModalReplaceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || replaceImageIndex === null) return;
+    if (!file.type.startsWith("image/")) {
+      showNotification("Selecciona un archivo de imagen válido.", "error");
+      return;
+    }
+    try {
+      const dataUrl = await compressImageFile(file);
+      setFormData((prev) => {
+        const nextImages = [...prev.images];
+        nextImages[replaceImageIndex] = dataUrl;
+        return { ...prev, images: nextImages };
+      });
+    } catch {
+      showNotification("No se pudo cargar la imagen.", "error");
+    } finally {
+      setReplaceImageIndex(null);
+      e.target.value = "";
+    }
+  };
+
+  // Agregar nueva(s) imagen(es) dentro del modal sin borrar las existentes
+  const handleModalAddImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.type.startsWith("image/")) {
+          const dataUrl = await compressImageFile(file);
+          uploadedUrls.push(dataUrl);
+        }
+      }
+      if (uploadedUrls.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, ...uploadedUrls]
+        }));
+      }
+    } catch {
+      showNotification("No se pudo agregar la imagen.", "error");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  // Establecer una imagen como principal (mover a la posición 0)
+  const handleSetPrimaryImage = (index: number) => {
+    if (index === 0) return;
+    setFormData((prev) => {
+      const nextImages = [...prev.images];
+      const [selected] = nextImages.splice(index, 1);
+      nextImages.unshift(selected);
+      return { ...prev, images: nextImages };
+    });
+  };
+
+  // Eliminar una sola imagen de la galería sin borrar las demás
+  const handleRemoveSingleImage = (index: number) => {
+    if (formData.images.length <= 1) {
+      showNotification("El monitor debe mantener al menos una imagen. Usa 'Cambiar' para reemplazarla.", "error");
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
 
   const refreshMonitores = () => {
     setMonitores(getMonitores());
@@ -136,17 +298,18 @@ export const AdminMonitores: React.FC = () => {
     });
     setConnectivityInput("HDMI, USB, RJ45");
     setSpecialFeaturesInput("Uso intensivo continuo 24/7, Antirreflejo");
-    setImagesInput("/monitores/QM43R/1.avif");
     setIsModalOpen(true);
   };
 
   // Abrir modal para Editar
   const handleOpenEditModal = (monitor: MonitorProduct) => {
     setEditingMonitor(monitor);
-    setFormData({ ...monitor });
+    setFormData({
+      ...monitor,
+      images: monitor.images && monitor.images.length > 0 ? [...monitor.images] : ["/monitores/QM43R/1.avif"]
+    });
     setConnectivityInput(monitor.connectivity.join(", "));
     setSpecialFeaturesInput(monitor.specialFeatures.join(", "));
-    setImagesInput(monitor.images.join(", "));
     setIsModalOpen(true);
   };
 
@@ -163,8 +326,8 @@ export const AdminMonitores: React.FC = () => {
       inchesLabel: `${formData.inches}''`,
       connectivity: connectivityInput.split(",").map((s) => s.trim()).filter(Boolean),
       specialFeatures: specialFeaturesInput.split(",").map((s) => s.trim()).filter(Boolean),
-      images: imagesInput.split(",").map((s) => s.trim()).filter(Boolean).length > 0
-        ? imagesInput.split(",").map((s) => s.trim()).filter(Boolean)
+      images: formData.images.filter(Boolean).length > 0
+        ? formData.images.filter(Boolean)
         : ["/monitores/QM43R/1.avif"],
       marketPriceUF: parseFloat((formData.marketPriceCLP / 38000).toFixed(1))
     };
@@ -201,6 +364,30 @@ export const AdminMonitores: React.FC = () => {
 
   return (
     <div style={{ paddingBottom: "40px" }}>
+      {/* INPUTS OCULTOS PARA REEMPLAZAR O SUBIR IMÁGENES SIN ELIMINAR EL MONITOR */}
+      <input
+        ref={quickReplaceInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        onChange={handleQuickImageFileChange}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={modalReplaceImageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        onChange={handleModalReplaceImageChange}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={modalAddImageInputRef}
+        type="file"
+        multiple
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        onChange={handleModalAddImagesChange}
+        style={{ display: "none" }}
+      />
+
       {/* NOTIFICACIÓN TOAST */}
       {notification && (
         <div style={{
@@ -224,17 +411,13 @@ export const AdminMonitores: React.FC = () => {
         </div>
       )}
 
-      {/* BARRA SUPERIOR DE ACCIONES Y DESCRIPCIÓN */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
-        <p style={{ color: "#94a3b8", fontSize: "0.95rem", margin: 0, maxWidth: "600px" }}>
-          Controla el inventario de pantallas reacondicionadas disponibles en la tienda pública, ajusta precios y actualiza especificaciones.
-        </p>
-
+      {/* BARRA SUPERIOR DE ACCIONES */}
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
           <button
             onClick={handleResetCatalog}
             className="catalog-btn-secondary"
-            style={{ fontSize: "0.85rem", padding: "8px 14px", color: "#94a3b8" }}
+            style={{ fontSize: "0.85rem", padding: "8px 14px" }}
             title="Restaurar monitores oficiales iniciales"
           >
             <RotateCcw size={15} /> Restaurar Catálogo
@@ -327,14 +510,37 @@ export const AdminMonitores: React.FC = () => {
                   <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s" }}>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <img
-                          src={item.images[0] || "/placeholder_monitor.png"}
-                          alt={item.model}
-                          style={{ width: "48px", height: "48px", objectFit: "contain", borderRadius: "6px", background: "#0b1329", padding: "4px" }}
-                        />
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerQuickImageReplace(item)}
+                          title="Clic para cambiar la imagen principal sin eliminar nada"
+                          style={{
+                            position: "relative",
+                            width: "52px",
+                            height: "52px",
+                            borderRadius: "8px",
+                            background: "#0b1329",
+                            border: "1px solid rgba(56, 189, 248, 0.35)",
+                            padding: "4px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            overflow: "hidden"
+                          }}
+                        >
+                          <img
+                            src={item.images[0] || "/placeholder_monitor.png"}
+                            alt={item.model}
+                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                          />
+                        </button>
                         <div>
                           <strong style={{ color: "#ffffff", fontSize: "0.95rem" }}>{item.brand} {item.model}</strong>
-                          <div style={{ color: "#64748b", fontSize: "0.75rem" }}>Ref: {formatCLP(item.originalPriceReferenceCLP)}</div>
+                          <div style={{ color: "#64748b", fontSize: "0.75rem" }}>
+                            Ref: {formatCLP(item.originalPriceReferenceCLP)} · {item.images.length} {item.images.length === 1 ? "foto" : "fotos"}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -369,19 +575,71 @@ export const AdminMonitores: React.FC = () => {
                       {item.condition}
                     </td>
                     <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: "8px" }}>
+                      <div style={{ display: "inline-flex", gap: "8px", alignItems: "center", flexWrap: "nowrap" }}>
                         <button
+                          type="button"
+                          onClick={() => handleTriggerQuickImageReplace(item)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "7px 12px",
+                            borderRadius: "8px",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                            color: "#ffffff",
+                            background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                            border: "1px solid #059669",
+                            boxShadow: "0 2px 8px rgba(5, 150, 105, 0.32)",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease"
+                          }}
+                          title="Cambiar imagen directamente sin abrir ni eliminar nada"
+                        >
+                          <ImageIcon size={14} /> Cambiar Imagen
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleOpenEditModal(item)}
-                          className="catalog-btn-secondary"
-                          style={{ padding: "6px 10px", fontSize: "0.8rem", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "7px 12px",
+                            borderRadius: "8px",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                            color: "#ffffff",
+                            background: "linear-gradient(135deg, #0284c7 0%, #2563eb 100%)",
+                            border: "1px solid #0284c7",
+                            boxShadow: "0 2px 8px rgba(2, 132, 199, 0.32)",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease"
+                          }}
                           title="Modificar monitor"
                         >
                           <Edit3 size={14} /> Editar
                         </button>
                         <button
+                          type="button"
                           onClick={() => setMonitorToDelete(item)}
-                          className="catalog-btn-secondary"
-                          style={{ padding: "6px 10px", fontSize: "0.8rem", color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "7px 10px",
+                            borderRadius: "8px",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            color: "#ffffff",
+                            background: "linear-gradient(135deg, #dc2626 0%, #e11d48 100%)",
+                            border: "1px solid #dc2626",
+                            boxShadow: "0 2px 8px rgba(220, 38, 38, 0.32)",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease"
+                          }}
                           title="Eliminar monitor"
                         >
                           <Trash2 size={14} />
@@ -538,17 +796,163 @@ export const AdminMonitores: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-                  Rutas de Imágenes (separadas por coma)
-                </label>
-                <input
-                  type="text"
-                  className="contacto-form-input"
-                  placeholder="/monitores/QM43R/1.avif, /monitores/QM43R/2.avif"
-                  value={imagesInput}
-                  onChange={(e) => setImagesInput(e.target.value)}
-                />
+              <div style={{ marginBottom: "18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                  <label style={{ fontSize: "0.82rem", color: "#94a3b8", fontWeight: 700 }}>
+                    Imágenes del Monitor ({formData.images.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => modalAddImageInputRef.current?.click()}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(56, 189, 248, 0.45)",
+                      background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                      color: "#ffffff",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      cursor: "pointer"
+                    }}
+                  >
+                    <Upload size={14} />
+                    <span>Agregar Nueva Imagen</span>
+                  </button>
+                </div>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                  gap: "12px",
+                  padding: "12px",
+                  borderRadius: "10px",
+                  background: "rgba(15, 23, 42, 0.45)",
+                  border: "1px solid rgba(148, 163, 184, 0.2)"
+                }}>
+                  {formData.images.map((imgSrc, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                        padding: "8px",
+                        borderRadius: "10px",
+                        background: idx === 0 ? "rgba(2, 132, 199, 0.12)" : "rgba(15, 23, 42, 0.65)",
+                        border: idx === 0 ? "1.5px solid #38bdf8" : "1px solid rgba(148, 163, 184, 0.22)",
+                        position: "relative"
+                      }}
+                    >
+                      <div style={{
+                        width: "100%",
+                        height: "92px",
+                        borderRadius: "8px",
+                        background: "#090f20",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        position: "relative"
+                      }}>
+                        <img
+                          src={imgSrc}
+                          alt={`Vista ${idx + 1}`}
+                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                        />
+                        {idx === 0 && (
+                          <span style={{
+                            position: "absolute",
+                            top: "6px",
+                            left: "6px",
+                            padding: "2px 7px",
+                            borderRadius: "999px",
+                            background: "#0284c7",
+                            color: "#ffffff",
+                            fontSize: "0.66rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px"
+                          }}>
+                            <Star size={10} /> Principal
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerModalReplaceImage(idx)}
+                          style={{
+                            flex: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "6px 8px",
+                            borderRadius: "6px",
+                            border: "1px solid #0284c7",
+                            background: "linear-gradient(135deg, #0284c7 0%, #2563eb 100%)",
+                            color: "#ffffff",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            cursor: "pointer"
+                          }}
+                          title="Subir otra imagen para reemplazar únicamente esta fotografía"
+                        >
+                          <Upload size={12} /> Cambiar
+                        </button>
+
+                        {idx !== 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimaryImage(idx)}
+                            style={{
+                              padding: "6px 8px",
+                              borderRadius: "6px",
+                              border: "1px solid #d97706",
+                              background: "linear-gradient(135deg, #d97706 0%, #f59e0b 100%)",
+                              color: "#ffffff",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center"
+                            }}
+                            title="Establecer como imagen principal"
+                          >
+                            <Star size={12} />
+                          </button>
+                        )}
+
+                        {formData.images.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSingleImage(idx)}
+                            style={{
+                              padding: "6px 8px",
+                              borderRadius: "6px",
+                              border: "1px solid #dc2626",
+                              background: "linear-gradient(135deg, #dc2626 0%, #e11d48 100%)",
+                              color: "#ffffff",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center"
+                            }}
+                            title="Quitar solo esta imagen"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>

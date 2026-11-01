@@ -744,37 +744,46 @@ select option:hover {
 
 /* Interactive Tabs */
 .tabs-header {
-  display: flex;
-  gap: 10px;
-  border-bottom: 1px solid hsl(var(--border));
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 12px;
   margin-bottom: 25px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
 }
 .tab-btn {
-  background: none;
-  border: none;
-  padding: 12px 20px;
-  color: hsl(var(--text-muted));
-  font-size: 0.95rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: #cbd5e1;
+  font-size: 0.92rem;
   cursor: pointer;
-  transition: var(--transition-smooth);
-  font-weight: 500;
+  transition: all 0.22s ease;
+  font-weight: 600;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.tab-btn:hover {
-  color: #fff;
+.tab-btn:hover:not(.active) {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.38);
+  transform: translateY(-1px);
 }
 .tab-btn.active {
-  color: #fff;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  border-color: rgba(56, 189, 248, 0.55);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.42);
 }
 .tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: hsl(var(--primary));
-  box-shadow: 0 0 10px hsl(var(--primary));
+  display: none;
 }
 
 /* Modals */
@@ -2831,6 +2840,152 @@ html[data-theme="light"] .notif-filter-tabs,
 html[data-theme="light"] .notif-dropdown-footer {
   background: #f8fafc;
   border-color: #e2e8f0;
+}
+
+/* Pestañas interactivas (Inventario, Bodegas, Catálogo, Movimientos) en Light Mode */
+html[data-theme="light"] .tabs-header {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme="light"] .tab-btn {
+  color: #334155;
+  font-weight: 600;
+}
+
+html[data-theme="light"] .tab-btn:hover:not(.active) {
+  color: #0369a1;
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.14);
+}
+
+html[data-theme="light"] .tab-btn.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  border-color: #0284c7;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.32);
+}
+
+/* Hovers y contraste ejecutivo en Light Mode para botones, badges y tablas */
+html[data-theme="light"] .header-pill-btn:hover,
+html[data-theme="light"] .header-icon-circle:hover,
+html[data-theme="light"] .sidebar-client-dropdown:hover {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+html[data-theme="light"] .eco-refresh-btn {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+html[data-theme="light"] .eco-refresh-btn:hover {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+html[data-theme="light"] .btn-logout {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+html[data-theme="light"] .btn-logout:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+html[data-theme="light"] .modal-close {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+html[data-theme="light"] .modal-close:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+html[data-theme="light"] .premium-table th {
+  color: #334155;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+html[data-theme="light"] .premium-table tr:hover td {
+  background: #f0f9ff;
+}
+
+html[data-theme="light"] .badge.primary {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+html[data-theme="light"] .badge.secondary,
+html[data-theme="light"] .badge.cyan {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
+
+html[data-theme="light"] .badge.success {
+  background: #d1fae5;
+  color: #047857;
+  border-color: #6ee7b7;
+}
+
+html[data-theme="light"] .badge.warning,
+html[data-theme="light"] .badge.pronto {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fcd34d;
+}
+
+html[data-theme="light"] .badge.error,
+html[data-theme="light"] .badge.copec {
+  background: #ffe4e6;
+  color: #be123c;
+  border-color: #fda4af;
+}
+
+html[data-theme="light"] .badge.voltex {
+  background: #e0e7ff;
+  color: #3730a3;
+  border-color: #a5b4fc;
+}
+
+html[data-theme="light"] .segmented-toggle-pills {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+html[data-theme="light"] .seg-pill-btn {
+  color: #475569;
+}
+
+html[data-theme="light"] .seg-pill-btn:hover:not(.active) {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+html[data-theme="light"] .notif-tab-btn:hover {
+  color: #0284c7;
+}
+
+html[data-theme="light"] .notif-tab-btn.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
 }
 
 /* ==========================================================================
