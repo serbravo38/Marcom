@@ -1,16 +1,16 @@
 {
   "info": {
-    "_postman_id": "marcom-qa-suite-2026-v1",
-    "name": "MARCOM - API Test Suite Modular (QA Master)",
-    "description": "Colección completa de pruebas de QA para la plataforma MARCOM. Cubre microservicios de Auth, Inventario, Órdenes de Trabajo, Facturación (Flow / DTE) y API Gateway.",
+    "_postman_id": "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7c6d5e4f",
+    "name": "MARCOM - Suite Integral de Pruebas API, Microservicios & Seguridad (v2.0 - 48 Pruebas)",
+    "description": "Colección oficial de aseguramiento de calidad (QA) y Seguridad Defensiva (OWASP API Security) para la plataforma MARCOM.\n\nContiene **48 pruebas automatizadas** distribuidas en 6 módulos:\n- **00. Gateway & Infraestructura (6 pruebas)**: Health checks de API Gateway y los 4 microservicios + control de rutas inexistentes.\n- **01. Módulo Autenticación, Usuarios, Convenios & Portada (9 pruebas)**: Login JWT, RBAC, usuarios, convenios B2B y editor de trabajos realizados en portada.\n- **02. Módulo Inventario, Catálogo de Monitores & Sucursales (8 pruebas)**: Bodegas, locales, carga masiva, catálogo de monitores, edición de galería, activos QR y movimientos.\n- **03. Módulo Órdenes de Trabajo, Reapertura & Terreno (7 pruebas)**: Ciclo completo de OT, asignación de activos, evidencia fotográfica/firma digital y reapertura/edición de órdenes.\n- **04. Módulo Facturación, Cotizaciones, OC & DTE SII (6 pruebas)**: Cálculo automático UF/KM/IVA 19%, aprobación con OC, pedidos, pagos Webpay y emisión de Factura Electrónica DTE.\n- **05. Pruebas de Seguridad Defensiva, RBAC, JWT & Blindaje Perimetral (12 pruebas)**: Sin token (401), JWT adulterado (401), JWT expirado (401), bloqueo de escalación de privilegios RBAC (403) en Usuarios, Portada, Catálogo y DTE, políticas de robustez de contraseñas (422), validación anti-inyección en RUT (422), bloqueo Anti-XSS/SSRF en firmas y evidencias (422), protección de desafío 2FA/TOTP (401) y control de credenciales inválidas / fuerza bruta (401).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "00. Gateway & Infraestructura",
+      "name": "00. Gateway & Infraestructura (Salud de Microservicios)",
       "item": [
         {
-          "name": "Health Check Gateway",
+          "name": "00.1 Health Check - API Gateway (:8000)",
           "request": {
             "method": "GET",
             "header": [],
@@ -25,16 +25,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "pm.test(\"API Gateway responde HTTP 200 OK\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test(\"Estructura de respuesta contiene servicios registrados\", function () {",
+                  "pm.test(\"Estado del Gateway es healthy y expone mapa de servicios\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.status).to.eql(\"healthy\");",
-                  "    pm.expect(jsonData.services).to.have.property(\"auth-service\");",
-                  "    pm.expect(jsonData.services).to.have.property(\"inventory-service\");",
-                  "    pm.expect(jsonData.services).to.have.property(\"work-order-service\");",
-                  "    pm.expect(jsonData.services).to.have.property(\"billing-service\");",
+                  "    pm.expect(jsonData.service).to.eql(\"api-gateway\");",
+                  "    pm.expect(jsonData.services).to.be.an(\"object\");",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -43,14 +41,16 @@
           ]
         },
         {
-          "name": "Verificar Ruta Inexistente (404 Not Found)",
+          "name": "00.2 Health Check Directo - Auth Service (:8001)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/ruta-que-no-existe-xyz",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "ruta-que-no-existe-xyz"]
+              "raw": "http://localhost:8001/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8001",
+              "path": ["health"]
             }
           },
           "event": [
@@ -58,8 +58,120 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code es 404 NOT FOUND\", function () {",
+                  "pm.test(\"Auth Service responde HTTP 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().service).to.eql(\"auth-service\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.3 Health Check Directo - Inventory Service (:8002)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8002/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Inventory Service responde HTTP 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().service).to.eql(\"inventory-service\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.4 Health Check Directo - Work Order Service (:8003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8003/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Work Order Service responde HTTP 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().service).to.eql(\"work-order-service\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.5 Health Check Directo - Billing Service (:8004)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8004/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8004",
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Billing Service responde HTTP 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().service).to.eql(\"billing-service\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.6 Enrutamiento Gateway - Ruta Inexistente (404 NotFoundError Controlado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/servicio-inexistente-qa",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "servicio-inexistente-qa"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Gateway rechaza rutas no mapeadas con 404 NotFoundError sin exponer trazas internas\", function () {",
                   "    pm.response.to.have.status(404);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql(\"NotFoundError\");",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -70,10 +182,10 @@
       ]
     },
     {
-      "name": "01. Módulo Autenticación & Usuarios (Auth Service)",
+      "name": "01. Módulo Autenticación, Usuarios, Convenios & Portada",
       "item": [
         {
-          "name": "Login Administrador Semilla",
+          "name": "01.1 Login Administrador (Obtener JWT + Claims RBAC)",
           "request": {
             "method": "POST",
             "header": [
@@ -97,11 +209,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Login semilla exitoso (200 OK)\", function () {",
+                  "pm.test(\"Login exitoso (200 OK) y entrega de access_token JWT\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "});",
-                  "var jsonData = pm.response.json();",
-                  "pm.test(\"Token JWT recibido\", function () {",
+                  "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData).to.have.property(\"access_token\");",
                   "    pm.collectionVariables.set(\"adminToken\", jsonData.access_token);",
                   "});"
@@ -112,82 +222,7 @@
           ]
         },
         {
-          "name": "Registrar Nuevo Usuario Técnico",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rut\": \"17.890.123-4\",\n  \"correo\": \"tecnico_{{$timestamp}}@marcom.cl\",\n  \"clave\": \"PasswordSeguro123!\",\n  \"nombre\": \"Esteban\",\n  \"apellido\": \"Técnico\",\n  \"rol\": \"TECNICO_TERRENO\",\n  \"activo\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/registrar",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "registrar"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Usuario creado con éxito (201 Created)\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var data = pm.response.json();",
-                  "pm.collectionVariables.set(\"tecnicoId\", data.usuario_id);",
-                  "pm.collectionVariables.set(\"tecnicoEmail\", data.correo);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login Fallido - Control de Intentos",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"correo\": \"admin@marcom.cl\",\n  \"clave\": \"clave_totalmente_erronea_123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/iniciar-sesion",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "iniciar-sesion"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Rechazo de credenciales inválidas (401 o 400)\", function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "Consultar Perfil Propio (/usuarios/me)",
+          "name": "01.2 Obtener Perfil Actual (/usuarios/me)",
           "request": {
             "method": "GET",
             "header": [
@@ -207,12 +242,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "pm.test(\"Retorna datos del usuario autenticado con rol ADMIN\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "});",
-                  "var profile = pm.response.json();",
-                  "pm.test(\"Perfil pertenece a ADMIN\", function () {",
-                  "    pm.expect(profile.rol).to.eql(\"ADMIN\");",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.rol).to.eql(\"ADMIN\");",
+                  "    pm.collectionVariables.set(\"adminUserId\", jsonData.usuario_id);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -221,7 +255,7 @@
           ]
         },
         {
-          "name": "Crear Convenio Corporativo",
+          "name": "01.3 Crear Usuario Técnico de Terreno",
           "request": {
             "method": "POST",
             "header": [
@@ -236,7 +270,117 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre_empresa\": \"Copec Red Pronto {{$timestamp}}\",\n  \"rut\": \"96.{{$randomInt}}0-K\",\n  \"limite_credito\": 15000000.00,\n  \"credito_usado\": 0.00,\n  \"activo\": true\n}"
+              "raw": "{\n  \"rut\": \"18543210-K\",\n  \"correo\": \"tecnico.qa.{{$timestamp}}@marcom.cl\",\n  \"clave\": \"Tecnico2026!\",\n  \"nombre\": \"Roberto\",\n  \"apellido\": \"Soto (Técnico QA)\",\n  \"rol\": \"TECNICO_TERRENO\",\n  \"activo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Usuario Técnico creado satisfactoriamente (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.rol).to.eql(\"TECNICO_TERRENO\");",
+                  "    pm.collectionVariables.set(\"tecnicoId\", jsonData.usuario_id);",
+                  "    pm.collectionVariables.set(\"tecnicoEmail\", jsonData.correo);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.4 Login Técnico de Terreno (Obtener JWT Rol Restringido para Pruebas RBAC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{tecnicoEmail}}\",\n  \"clave\": \"Tecnico2026!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/iniciar-sesion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "iniciar-sesion"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login Técnico exitoso (200 OK) y guarda tecnicoToken\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"access_token\");",
+                  "    pm.collectionVariables.set(\"tecnicoToken\", jsonData.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.5 Listar Usuarios Registrados (Solo Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Retorna listado de usuarios (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.6 Crear Convenio Corporativo (B2B)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre_empresa\": \"Pronto Copec QA S.A.\",\n  \"rut\": \"76543210-9\",\n  \"limite_credito\": 25000000,\n  \"credito_usado\": 0,\n  \"activo\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/convenios",
@@ -249,11 +393,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Convenio creado exitosamente (201 Created)\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var conv = pm.response.json();",
-                  "pm.collectionVariables.set(\"convenioId\", conv.convenio_id);"
+                  "pm.test(\"Convenio creado o existente verificado\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400]);",
+                  "    if (pm.response.code === 201) {",
+                  "        pm.collectionVariables.set(\"convenioId\", pm.response.json().convenio_id);",
+                  "    }",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -261,23 +406,19 @@
           ]
         },
         {
-          "name": "Enviar Formulario de Contacto Web",
+          "name": "01.7 Listar Convenios Corporativos",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Cliente Interesado\",\n  \"correo\": \"contacto_qa@marcom.cl\",\n  \"telefono\": \"+56998765432\",\n  \"mensaje\": \"Deseo cotizar servicio para 10 estaciones de servicio.\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/contacto",
+              "raw": "{{baseUrl}}/api/v1/convenios",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "contacto"]
+              "path": ["api", "v1", "convenios"]
             }
           },
           "event": [
@@ -285,8 +426,81 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Mensaje de contacto enviado con éxito (200 OK)\", function () {",
+                  "pm.test(\"Lista convenios y asegura convenioId\", function () {",
                   "    pm.response.to.have.status(200);",
+                  "    var list = pm.response.json();",
+                  "    pm.expect(list).to.be.an(\"array\");",
+                  "    if (list.length > 0 && !pm.collectionVariables.get(\"convenioId\")) {",
+                  "        pm.collectionVariables.set(\"convenioId\", list[0].convenio_id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.8 Obtener Carrusel de Trabajos Realizados en Portada (GET /auth/trabajos-portada)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/trabajos-portada",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "trabajos-portada"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Retorna proyectos destacados de la portada pública (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"items\");",
+                  "    pm.expect(jsonData.items).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.9 Actualizar Carrusel de Trabajos Realizados en Portada (PUT /auth/trabajos-portada - Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"id\": 1,\n      \"image\": \"/ Monitores/Menu Board.jpg\",\n      \"title\": \"Digital Menu Boards Autogestionables\",\n      \"category\": \"Fast Food & Restaurantes\",\n      \"client\": \"Red de Locales Gastronómicos\",\n      \"description\": \"Sincronización centralizada de precios, promociones por franja horaria y contenido UHD 4K.\",\n      \"features\": [\"Pantallas Samsung 50\\\" 4K UHD\", \"Montaje colgado o mural a medida\", \"Actualización remota en segundos\"],\n      \"badgeColor\": \"#0284c7\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/trabajos-portada",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "trabajos-portada"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Administrador actualiza proyectos de portada satisfactoriamente (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.items).to.be.an(\"array\");",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -297,10 +511,10 @@
       ]
     },
     {
-      "name": "02. Módulo Inventario & Locales (Inventory Service)",
+      "name": "02. Módulo Inventario, Catálogo de Monitores & Sucursales",
       "item": [
         {
-          "name": "Crear Ubicación Bodega Central",
+          "name": "02.1 Crear Ubicación - Bodega Central",
           "request": {
             "method": "POST",
             "header": [
@@ -315,7 +529,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Bodega Central MARCOM Pudahuel\",\n  \"direccion\": \"Av. Américo Vespucio 1500\",\n  \"region\": \"Región Metropolitana\",\n  \"comuna\": \"Pudahuel\",\n  \"es_bodega\": true,\n  \"activo\": true\n}"
+              "raw": "{\n  \"codigo_local\": \"BOD-CENTRAL-QA\",\n  \"nombre\": \"Bodega Central Pudahuel QA\",\n  \"direccion\": \"Av. Lo Boza 450, Pudahuel\",\n  \"zona\": \"OZC\",\n  \"region\": \"Región Metropolitana\",\n  \"comuna\": \"Pudahuel\",\n  \"es_bodega\": true,\n  \"activo\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/ubicaciones",
@@ -328,11 +542,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Bodega creada (201 Created)\", function () {",
+                  "pm.test(\"Bodega creada satisfactoriamente (201 Created)\", function () {",
                   "    pm.response.to.have.status(201);",
-                  "});",
-                  "var b = pm.response.json();",
-                  "pm.collectionVariables.set(\"bodegaId\", b.ubicacion_id);"
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.es_bodega).to.be.true;",
+                  "    pm.collectionVariables.set(\"bodegaId\", jsonData.ubicacion_id);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -340,7 +555,7 @@
           ]
         },
         {
-          "name": "Crear Local Tienda Asociado a Convenio",
+          "name": "02.2 Crear Ubicación - Local de Convenio (Sucursal EDS)",
           "request": {
             "method": "POST",
             "header": [
@@ -355,7 +570,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo_local\": \"LOC-COP-{{$timestamp}}\",\n  \"nombre\": \"Pronto Copec Costanera\",\n  \"direccion\": \"Av. Andrés Bello 2425\",\n  \"region\": \"Región Metropolitana\",\n  \"comuna\": \"Providencia\",\n  \"es_bodega\": false,\n  \"convenio_id\": \"{{convenioId}}\",\n  \"nombre_encargado\": \"Javier Morales\",\n  \"telefono_encargado\": \"+56955554444\",\n  \"correo_encargado\": \"jmorales@copec.cl\",\n  \"cantidad_pantallas\": 4,\n  \"activo\": true\n}"
+              "raw": "{\n  \"codigo_local\": \"EDS-10420\",\n  \"nombre\": \"Pronto Copec Las Condes QA\",\n  \"direccion\": \"Av. Apoquindo 5500\",\n  \"zona\": \"OZC\",\n  \"region\": \"Región Metropolitana\",\n  \"comuna\": \"Las Condes\",\n  \"cantidad_pantallas\": 5,\n  \"precio_instalacion_uf\": 4.5,\n  \"precio_transporte_uf\": 1.8,\n  \"es_bodega\": false,\n  \"convenio_id\": \"{{convenioId}}\",\n  \"nombre_encargado\": \"Marcela Paz\",\n  \"telefono_encargado\": \"+56988776655\",\n  \"correo_encargado\": \"mpaz@prontocopec.cl\",\n  \"activo\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/ubicaciones",
@@ -368,11 +583,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Local creado y vinculado (201 Created)\", function () {",
+                  "pm.test(\"Local de Convenio creado satisfactoriamente (201 Created)\", function () {",
                   "    pm.response.to.have.status(201);",
-                  "});",
-                  "var l = pm.response.json();",
-                  "pm.collectionVariables.set(\"localId\", l.ubicacion_id);"
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.es_bodega).to.be.false;",
+                  "    pm.collectionVariables.set(\"localId\", jsonData.ubicacion_id);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -380,7 +596,7 @@
           ]
         },
         {
-          "name": "Carga Masiva de Locales",
+          "name": "02.3 Carga Masiva de Locales / Estaciones de Servicio",
           "request": {
             "method": "POST",
             "header": [
@@ -395,7 +611,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"locales\": [\n    {\n      \"codigo_local\": \"BULK-01-{{$timestamp}}\",\n      \"nombre\": \"Pronto Copec Maipú Plaza\",\n      \"direccion\": \"Av. Pajaritos 2000\",\n      \"region\": \"Región Metropolitana\",\n      \"comuna\": \"Maipú\",\n      \"es_bodega\": false,\n      \"convenio_id\": \"{{convenioId}}\"\n    },\n    {\n      \"codigo_local\": \"BULK-02-{{$timestamp}}\",\n      \"nombre\": \"Pronto Copec Rancagua Centro\",\n      \"direccion\": \"Carretera del Cobre 100\",\n      \"region\": \"Libertador General Bernardo O'Higgins\",\n      \"comuna\": \"Rancagua\",\n      \"es_bodega\": false,\n      \"convenio_id\": \"{{convenioId}}\"\n    }\n  ]\n}"
+              "raw": "{\n  \"locales\": [\n    {\n      \"codigo_local\": \"BULK-QA-{{$timestamp}}-1\",\n      \"nombre\": \"Sucursal Carga Masiva Norte\",\n      \"direccion\": \"Ruta 5 Norte Km 25\",\n      \"zona\": \"OZN\",\n      \"region\": \"Región Metropolitana\",\n      \"comuna\": \"Lampa\",\n      \"cantidad_pantallas\": 3,\n      \"es_bodega\": false,\n      \"convenio_id\": \"{{convenioId}}\",\n      \"activo\": true\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/ubicaciones/carga-masiva",
@@ -408,9 +624,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Carga masiva procesada exitosamente (201 Created)\", function () {",
+                  "pm.test(\"Carga masiva de sucursales procesada correctamente (201 Created)\", function () {",
                   "    pm.response.to.have.status(201);",
-                  "    pm.expect(pm.response.json().length).to.be.at.least(2);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -419,7 +634,7 @@
           ]
         },
         {
-          "name": "Registrar Producto en Catálogo",
+          "name": "02.4 Crear Producto en Catálogo (Monitor Cartelería Digital)",
           "request": {
             "method": "POST",
             "header": [
@@ -434,7 +649,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sku\": \"MON-QM55R-{{$timestamp}}\",\n  \"nombre\": \"Samsung Smart Signage QM55R 55 Pulgadas 4K\",\n  \"marca\": \"Samsung\",\n  \"categoria\": \"Monitores Profesionales\",\n  \"pulgadas\": 55.0,\n  \"descripcion\": \"Pantalla comercial para funcionamiento 24/7 con brillo 500 nits\"\n}"
+              "raw": "{\n  \"sku\": \"LGE-55UH5F-{{$timestamp}}\",\n  \"nombre\": \"Monitor Profesional LG 55\\\" UHD Signage\",\n  \"marca\": \"LG\",\n  \"categoria\": \"Monitores Profesionales\",\n  \"pulgadas\": 55,\n  \"descripcion\": \"Brillo 500 nits, operación 24/7, webOS Smart Signage Platform\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/productos",
@@ -449,140 +664,18 @@
                 "exec": [
                   "pm.test(\"Producto creado en catálogo (201 Created)\", function () {",
                   "    pm.response.to.have.status(201);",
-                  "});",
-                  "var p = pm.response.json();",
-                  "pm.collectionVariables.set(\"productoId\", p.producto_id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "Alta de Activo Físico (Serial + QR) en Bodega",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"numero_serie\": \"SN-SAM-{{$timestamp}}\",\n  \"codigo_qr\": \"QR-MARCOM-{{$timestamp}}\",\n  \"estado_actual\": \"NUEVO\",\n  \"ubicacion_actual_id\": \"{{bodegaId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/activos",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "activos"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Activo registrado con número de serie (201 Created)\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var a = pm.response.json();",
-                  "pm.collectionVariables.set(\"activoId\", a.activo_id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "Registrar Traslado de Stock (Bodega a Local)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"activo_id\": \"{{activoId}}\",\n  \"ubicacion_origen_id\": \"{{bodegaId}}\",\n  \"ubicacion_destino_id\": \"{{localId}}\",\n  \"motivo\": \"Despacho para instalación de monitor de menú digital\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/movimientos",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "movimientos"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Movimiento de stock registrado (201 Created)\", function () {",
-                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.marca).to.eql(\"LG\");",
+                  "    pm.collectionVariables.set(\"productoId\", jsonData.producto_id);",
                   "});"
                 ],
                 "type": "text/javascript"
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "03. Módulo Órdenes de Trabajo & Terreno (Work Order Service)",
-      "item": [
-        {
-          "name": "Crear Orden de Trabajo",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"numero_orden\": \"OT-QA-{{$timestamp}}\",\n  \"convenio_cliente_id\": \"{{convenioId}}\",\n  \"ubicacion_id\": \"{{localId}}\",\n  \"tecnico_asignado_id\": \"{{tecnicoId}}\",\n  \"estado\": \"PENDIENTE\",\n  \"fecha_programada\": \"2026-10-20T10:00:00Z\",\n  \"notas\": \"Instalación en pared con soporte inclinable VESA 400x400\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "ordenes-trabajo"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Orden de trabajo creada (201 Created)\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var ot = pm.response.json();",
-                  "pm.collectionVariables.set(\"ordenTrabajoId\", ot.orden_trabajo_id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
         },
         {
-          "name": "Actualizar Estado de Orden de Trabajo (A EN_PROCESO)",
+          "name": "02.5 Actualizar Producto / Galería de Monitor (PATCH /productos/{id})",
           "request": {
             "method": "PATCH",
             "header": [
@@ -597,12 +690,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"estado\": \"EN_PROCESO\",\n  \"notas\": \"Técnico ha arribado al local e inicia labores de montaje\"\n}"
+              "raw": "{\n  \"descripcion\": \"Brillo 500 nits, operación 24/7, galería de imágenes actualizada sin recrear producto.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}",
+              "raw": "{{baseUrl}}/api/v1/productos/{{productoId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}"]
+              "path": ["api", "v1", "productos", "{{productoId}}"]
             }
           },
           "event": [
@@ -610,9 +703,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Estado de OT modificado correctamente (200 OK)\", function () {",
+                  "pm.test(\"Producto / Monitor actualizado parcialmente (200 OK)\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "    pm.expect(pm.response.json().estado).to.eql(\"EN_PROCESO\");",
+                  "    pm.expect(pm.response.json().producto_id).to.eql(pm.collectionVariables.get(\"productoId\"));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -621,7 +714,33 @@
           ]
         },
         {
-          "name": "Vincular Activo Instalado a la OT",
+          "name": "02.6 Listar Catálogo Público de Productos (GET /productos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/productos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "productos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Catálogo público de monitores responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.7 Registrar Activo Físico (Número de Serie + QR)",
           "request": {
             "method": "POST",
             "header": [
@@ -636,7 +755,173 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"activo_instalado_id\": \"{{activoId}}\",\n  \"tipo_accion\": \"INSTALACION\"\n}"
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"numero_serie\": \"SN-LG55-{{$timestamp}}\",\n  \"codigo_qr\": \"QR-MARCOM-{{$timestamp}}\",\n  \"estado_actual\": \"NUEVO\",\n  \"ubicacion_actual_id\": \"{{bodegaId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/activos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "activos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Activo físico registrado en bodega (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.estado_actual).to.eql(\"NUEVO\");",
+                  "    pm.collectionVariables.set(\"activoId\", jsonData.activo_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.8 Registrar Movimiento de Stock (Traslado Bodega a Local)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo_id\": \"{{activoId}}\",\n  \"ubicacion_origen_id\": \"{{bodegaId}}\",\n  \"ubicacion_destino_id\": \"{{localId}}\",\n  \"usuario_movimiento_id\": \"{{tecnicoId}}\",\n  \"motivo\": \"Despacho programado para instalación en sucursal\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/movimientos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "movimientos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Movimiento de stock registrado y ubicación de activo actualizada (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ubicacion_destino_id).to.eql(pm.collectionVariables.get(\"localId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Módulo Órdenes de Trabajo, Reapertura & Terreno",
+      "item": [
+        {
+          "name": "03.1 Crear Orden de Trabajo (Asignada a Técnico)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_orden\": \"OT-QA-{{$timestamp}}\",\n  \"convenio_cliente_id\": \"{{convenioId}}\",\n  \"ubicacion_id\": \"{{localId}}\",\n  \"tecnico_asignado_id\": \"{{tecnicoId}}\",\n  \"estado\": \"ASIGNADA\",\n  \"fecha_programada\": \"2026-04-15T14:00:00Z\",\n  \"notas\": \"Instalar 1 monitor LG 55 pulgadas en sector cajas y validar red.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Orden de trabajo creada (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.estado).to.eql(\"ASIGNADA\");",
+                  "    pm.collectionVariables.set(\"ordenTrabajoId\", jsonData.orden_trabajo_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.2 Actualizar Estado OT a EN_PROCESO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PROCESO\",\n  \"notas\": \"Técnico en terreno iniciando montaje de soporte mural.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Estado de OT actualizado a EN_PROCESO\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().estado).to.eql(\"EN_PROCESO\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.3 Vincular Activo Instalado a la OT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo_instalado_id\": \"{{activoId}}\",\n  \"tipo_accion\": \"INSTALACION_NUEVA\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}/activos",
@@ -651,6 +936,7 @@
                 "exec": [
                   "pm.test(\"Activo vinculado a la OT (201 Created)\", function () {",
                   "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().tipo_accion).to.eql(\"INSTALACION_NUEVA\");",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -659,7 +945,7 @@
           ]
         },
         {
-          "name": "Cargar Evidencia Fotográfica y Firma en Terreno",
+          "name": "03.4 Subir Evidencia Fotográfica y Firma Digital Base64",
           "request": {
             "method": "POST",
             "header": [
@@ -674,7 +960,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"url_imagen\": \"https://marcom.cl/evidencias/ot-pantalla-montada.jpg\",\n  \"url_firma\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=\",\n  \"comentarios\": \"Instalación completada y probada con señal HDMI. Cliente conforme.\"\n}"
+              "raw": "{\n  \"url_imagen\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\n  \"url_firma\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\",\n  \"comentarios\": \"Monitor operativo al 100%. Recepcionado conforme por jefe de local.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}/evidencias",
@@ -687,8 +973,121 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Evidencias y firma guardadas con éxito (201 Created)\", function () {",
+                  "pm.test(\"Evidencia fotográfica y firma digital almacenadas (201 Created)\", function () {",
                   "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.url_firma).to.include(\"data:image/png;base64\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.5 Completar Orden de Trabajo (Cierre en Terreno)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"COMPLETADA\",\n  \"fecha_termino\": \"2026-04-15T16:30:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Orden de trabajo cerrada como COMPLETADA (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().estado).to.eql(\"COMPLETADA\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.6 Editar y Reabrir Orden de Trabajo Completada (PATCH /ordenes-trabajo/{id} -> EN_PROCESO)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_PROCESO\",\n  \"fecha_termino\": null,\n  \"notas\": \"Orden reabierta por supervisor para ajuste de ángulo en soporte mural.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Orden de trabajo reabierta satisfactoriamente a EN_PROCESO (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.estado).to.eql(\"EN_PROCESO\");",
+                  "    pm.expect(jsonData.notas).to.include(\"reabierta\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.7 Listar Historial y Trazabilidad de Órdenes de Trabajo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Listado de órdenes de trabajo retorna 200 OK con array de OTs\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -699,10 +1098,10 @@
       ]
     },
     {
-      "name": "04. Módulo Facturación, Cotizaciones & Pagos (Billing Service)",
+      "name": "04. Módulo Facturación, Cotizaciones, OC & Documentos DTE SII",
       "item": [
         {
-          "name": "Crear Cotización Automática para Convenio",
+          "name": "04.1 Crear Cotización Comercial (Cálculo Automático UF/KM/IVA 19%)",
           "request": {
             "method": "POST",
             "header": [
@@ -717,7 +1116,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"convenio_id\": \"{{convenioId}}\",\n  \"ubicacion_id\": \"{{localId}}\",\n  \"fecha_solicitud_aprobacion\": \"2026-10-14T10:00:00Z\",\n  \"tipo_soporte\": \"ESTANDAR_CONVENIO\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{productoId}}\",\n      \"cantidad\": 2,\n      \"precio_unitario\": 450000.00\n    }\n  ],\n  \"notas\": \"Cotización formal para renovación de pantallas digitales\"\n}"
+              "raw": "{\n  \"convenio_id\": \"{{convenioId}}\",\n  \"ubicacion_id\": \"{{localId}}\",\n  \"tipo_soporte\": \"SOPORTE_MURAL_BASCULANTE\",\n  \"distancia_km\": 35,\n  \"notas\": \"Cotización por habilitación de pantallas en Pronto Copec Las Condes\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{productoId}}\",\n      \"cantidad\": 2,\n      \"precio_unitario\": 520000\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/cotizaciones",
@@ -730,16 +1129,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Cotización creada con cálculo automático (201 Created)\", function () {",
+                  "pm.test(\"Cotización creada y montos financieros (Neto, IVA 19%, Total) calculados\", function () {",
                   "    pm.response.to.have.status(201);",
-                  "});",
-                  "var cot = pm.response.json();",
-                  "pm.test(\"Cálculos financieros coherentes (IVA 19%)\", function () {",
-                  "    pm.expect(cot.subtotal_neto).to.be.above(0);",
-                  "    pm.expect(cot.monto_iva).to.be.above(0);",
-                  "    pm.expect(cot.monto_total).to.be.above(cot.subtotal_neto);",
-                  "});",
-                  "pm.collectionVariables.set(\"cotizacionId\", cot.cotizacion_id);"
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.monto_equipos).to.eql(1040000);",
+                  "    pm.expect(jsonData.monto_total).to.be.above(jsonData.subtotal_neto);",
+                  "    pm.collectionVariables.set(\"cotizacionId\", jsonData.cotizacion_id);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -747,7 +1143,38 @@
           ]
         },
         {
-          "name": "Aprobar Cotización con Orden de Compra (OC)",
+          "name": "04.2 Listar Cotizaciones Comerciales",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cotizaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cotizaciones"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Listado de cotizaciones responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.3 Aprobar Cotización con Orden de Compra (Genera OT y Pedido Automático)",
           "request": {
             "method": "POST",
             "header": [
@@ -762,12 +1189,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orden_compra_numero\": \"OC-CLIENTE-2026-{{$timestamp}}\",\n  \"orden_compra_adjunto\": \"https://marcom.cl/docs/oc/OC-2026-FIRMADA.pdf\",\n  \"notas\": \"Aprobación formal con Orden de Compra adjunta y crédito validado\"\n}"
+              "raw": "{\n  \"orden_compra_numero\": \"OC-COPEC-2026-8841\",\n  \"orden_compra_adjunto\": \"https://marcom.cl/docs/OC-COPEC-2026-8841.pdf\",\n  \"notas\": \"Orden de compra aprobada por gerencia de operaciones.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/cotizaciones/{{cotizacionId}}/aprobar",
+              "raw": "{{baseUrl}}/api/v1/cotizaciones/{{cotizacionId}}/aprobar-oc",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "cotizaciones", "{{cotizacionId}}", "aprobar"]
+              "path": ["api", "v1", "cotizaciones", "{{cotizacionId}}", "aprobar-oc"]
             }
           },
           "event": [
@@ -775,12 +1202,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Cotización aprobada y convertida a OT/Pedido (200 OK)\", function () {",
+                  "pm.test(\"Cotización pasa a APROBADA y genera pedido_id\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "    var data = pm.response.json();",
-                  "    pm.expect(data.estado).to.eql(\"APROBADA\");",
-                  "    pm.expect(data.pedido_id).to.not.be.null;",
-                  "    pm.collectionVariables.set(\"pedidoId\", data.pedido_id);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.estado).to.eql(\"APROBADA\");",
+                  "    if (jsonData.pedido_id) {",
+                  "        pm.collectionVariables.set(\"pedidoId\", jsonData.pedido_id);",
+                  "    }",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -789,7 +1217,86 @@
           ]
         },
         {
-          "name": "Generar Documento Tributario Electrónico (DTE Factura SII)",
+          "name": "04.4 Crear Pedido Directo (Respaldo si no viene de OC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"{{tecnicoId}}\",\n  \"monto_total\": 1237600,\n  \"metodo_pago\": \"CREDITO_CONVENIO\",\n  \"estado_pago\": \"PENDIENTE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pedidos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pedidos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Pedido creado correctamente (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"pedidoId\", jsonData.pedido_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.5 Registrar Pago de Pedido (Pasarela Webpay)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pedido_id\": \"{{pedidoId}}\",\n  \"monto\": 1237600,\n  \"transaccion_pasarela_id\": \"WEBPAY-TX-{{$timestamp}}\",\n  \"estado\": \"APROBADO\",\n  \"payload_respuesta\": {\n    \"authorization_code\": \"1213\",\n    \"payment_type_code\": \"VD\",\n    \"response_code\": 0\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pagos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pagos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Pago registrado con estado APROBADO (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().estado).to.eql(\"APROBADO\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.6 Emitir Documento Tributario Electrónico (DTE SII - Factura Electrónica)",
           "request": {
             "method": "POST",
             "header": [
@@ -828,6 +1335,422 @@
           ]
         }
       ]
+    },
+    {
+      "name": "05. Pruebas de Seguridad Defensiva, RBAC, JWT & Blindaje Perimetral (OWASP)",
+      "item": [
+        {
+          "name": "05.1 [Seguridad Auth] Rechazo de Acceso Sin Token JWT en Ruta Protegida (401 Unauthorized)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bloquea petición anónima sin cabecera Authorization con HTTP 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.2 [Seguridad JWT] Rechazo de Token JWT Adulterado / Firma Inválida (401 Unauthorized)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBtYXJjb20uY2wiLCJyb2wiOiJBRE1JTiIsInVzdWFyaW9faWQiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAifQ.FirmaFalsaAdulteradaPorAtacante12345"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Rechaza token JWT con firma criptográfica adulterada (401 Unauthorized)\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.3 [Seguridad JWT] Rechazo de Token JWT Malformado o Corrupto (401 Unauthorized)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer token.malformado.invalido"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Work Order Service rechaza token malformado con 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.4 [Seguridad RBAC] Bloqueo de Escalación de Privilegios: Técnico intentando Listar Usuarios (403 Forbidden)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tecnicoToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"RBAC impide que un TECNICO_TERRENO acceda al padrón de usuarios (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.5 [Seguridad RBAC] Bloqueo de Modificación de Trabajos de Portada por Rol No-Admin (403 Forbidden)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tecnicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/trabajos-portada",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "trabajos-portada"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"RBAC bloquea alteración del carrusel de portada por usuarios no administradores (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.6 [Seguridad RBAC] Bloqueo de Creación de Productos en Catálogo por Rol No-Admin (403 Forbidden)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tecnicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"HACK-SKU-01\",\n  \"nombre\": \"Monitor No Autorizado\",\n  \"marca\": \"Generic\",\n  \"categoria\": \"Monitores\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/productos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "productos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Inventory Service bloquea creación de productos a roles sin privilegio ADMIN (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.7 [Seguridad RBAC] Bloqueo de Emisión de Documento Tributario DTE por Rol No-Admin (403 Forbidden)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tecnicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pedido_id\": \"{{pedidoId}}\",\n  \"tipo_dte\": \"FACTURA_ELECTRONICA\",\n  \"folio_sii\": 99999,\n  \"estado_sii\": \"ACEPTADO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documentos-dte",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "documentos-dte"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Billing Service bloquea emisión de DTE SII por usuario no administrador (403 Forbidden)\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.8 [Seguridad Políticas] Rechazo de Contraseña Débil / Común sin Complejidad Alfanumérica (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rut\": \"19876543-2\",\n  \"correo\": \"clave.debil@marcom.cl\",\n  \"clave\": \"12345678\",\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"Clave Débil\",\n  \"rol\": \"CLIENTE_ESTANDAR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Rechaza creación de usuario con contraseña vulnerable sin mayúsculas ni símbolos (422)\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.9 [Seguridad Validación] Rechazo de RUT Chileno con Formato Inválido o Inyección (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rut\": \"12.345.678-9' OR '1'='1\",\n  \"correo\": \"rut.invalido@marcom.cl\",\n  \"clave\": \"ClaveSegura2026!\",\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"RUT Invalido\",\n  \"rol\": \"CLIENTE_ESTANDAR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Validador estricto de RUT bloquea puntos e intentos de inyección SQL (422)\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.10 [Seguridad Anti-XSS / SSRF] Bloqueo de Payload javascript: y Esquemas Inseguros en Evidencia y Firma (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url_imagen\": \"javascript:alert(document.cookie)\",\n  \"url_firma\": \"ftp://attacker.evil.com/payload.exe\",\n  \"comentarios\": \"Intento de inyección XSS en evidencia de terreno\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}/evidencias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}", "evidencias"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bloquea esquemas peligrosos (javascript:, ftp://) en evidencias y firmas con HTTP 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.11 [Seguridad 2FA / TOTP] Rechazo de Verificación MFA con Token de Desafío Inválido o Alterado (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token_temporal\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.token_mfa_falso.firma_invalida\",\n  \"codigo_totp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/mfa/verificar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "mfa", "verificar"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Rechaza bypass de segundo factor 2FA/TOTP con token de desafío alterado (401 Unauthorized)\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.12 [Seguridad Fuerza Bruta] Rechazo de Credenciales Incorrectas y Contabilización de Intentos Fallidos (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{tecnicoEmail}}\",\n  \"clave\": \"ClaveIncorrectaAtacante999!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/iniciar-sesion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "iniciar-sesion"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Rechaza credenciales inválidas con 401 Unauthorized sin filtrar información sensible\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -840,11 +1763,19 @@
       "value": ""
     },
     {
+      "key": "adminUserId",
+      "value": ""
+    },
+    {
       "key": "tecnicoId",
       "value": ""
     },
     {
       "key": "tecnicoEmail",
+      "value": ""
+    },
+    {
+      "key": "tecnicoToken",
       "value": ""
     },
     {

@@ -38,9 +38,22 @@ def test_orden_trabajo_estados_enum():
         estado_enum = EstadoOTEnum(estado_str)
         assert estado_enum.value == estado_str
 
+def test_orden_trabajo_reapertura_y_edicion():
+    """Valida el schema de edición y reapertura de una orden de trabajo completada o cancelada"""
+    nuevo_tecnico_id = uuid.uuid4()
+    reapertura = schemas.OrdenTrabajoActualizar(
+        estado=EstadoOTEnum.EN_PROCESO,
+        tecnico_asignado_id=nuevo_tecnico_id,
+        fecha_termino=None,
+        notas="Orden reabierta para revisión de cableado HDMI y calibración de brillo."
+    )
+    assert reapertura.estado == EstadoOTEnum.EN_PROCESO
+    assert reapertura.fecha_termino is None
+    assert reapertura.tecnico_asignado_id == nuevo_tecnico_id
+    assert "reabierta" in reapertura.notas
+
 def test_evidencia_firma_digital_validador_seguro():
     """Valida que el campo url_firma solo acepte esquemas seguros (data:image, https, etc.)"""
-    # Firma en Base64 válida proveniente del canvas táctil
     firma_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
     
     payload_valido = {
@@ -51,7 +64,6 @@ def test_evidencia_firma_digital_validador_seguro():
     evidencia = schemas.EvidenciaTerrenoCrear(**payload_valido)
     assert evidencia.url_firma.startswith("data:image/")
     
-    # Firma con esquema no permitido debe lanzar ValidationError
     payload_invalido = {
         "url_imagen": "javascript:alert(1)",
         "url_firma": "ftp://untrusted-server.com/malware.exe"
@@ -72,3 +84,13 @@ def test_activos_orden_trabajo():
     activo_ot = schemas.ActivoOrdenTrabajoCrear(**payload)
     assert activo_ot.activo_instalado_id == instalado_id
     assert activo_ot.tipo_accion == "REEMPLAZO_POR_FALLA"
+
+def test_evidencia_ruta_local_permitida():
+    """Valida que rutas locales relativas (/uploads/...) e imágenes data:image sean aceptadas"""
+    evidencia = schemas.EvidenciaTerrenoCrear(
+        url_imagen="/Monitores/Menu Board.jpg",
+        url_firma="/firmas/recepcion_ot_102.png",
+        comentarios="Instalación validada en local"
+    )
+    assert evidencia.url_imagen.startswith("/")
+    assert evidencia.url_firma.startswith("/")

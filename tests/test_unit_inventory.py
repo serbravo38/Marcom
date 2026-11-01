@@ -83,6 +83,15 @@ def test_catalogo_productos():
     assert prod.sku == "SAM-QM43R"
     assert prod.pulgadas == 43.0
 
+def test_catalogo_productos_actualizacion_parcial_galeria():
+    """Valida la edición parcial de un monitor (ej. reemplazo individual de imagen en galería sin eliminar producto)"""
+    update_payload = {
+        "descripcion": "Panel 4K UHD 24/7<!-- MARCOM_META:{\"imagenes\":[\"data:image/jpeg;base64,/9j/4AAQ\"]} -->"
+    }
+    prod_upd = schemas.CatalogoProductosActualizar(**update_payload)
+    assert prod_upd.sku is None
+    assert "MARCOM_META" in prod_upd.descripcion
+
 def test_activo_fisico_estados():
     """Valida la asignación y enum de estados para activos tecnológicos"""
     prod_id = uuid.uuid4()
@@ -116,3 +125,14 @@ def test_movimiento_stock():
     mov = schemas.MovimientoStockCrear(**payload)
     assert mov.activo_id == activo_id
     assert mov.ubicacion_destino_id == destino_id
+
+def test_ubicacion_actualizacion_tarifas_uf():
+    """Valida la actualización de tarifas de instalación y transporte en UF para locales"""
+    upd = schemas.UbicacionActualizar(
+        precio_instalacion_uf=4.5,
+        precio_transporte_uf=2.25,
+        cantidad_pantallas=8
+    )
+    assert upd.precio_instalacion_uf == 4.5
+    assert upd.precio_transporte_uf == 2.25
+    assert upd.cantidad_pantallas == 8
