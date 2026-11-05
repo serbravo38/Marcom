@@ -214,6 +214,17 @@ def get_assets(
 ):
     return crud.obtener_activos(db, skip, limit)
 
+@router.get("/activos/publico/{activo_id}", response_model=schemas.ActivoRespuesta)
+def get_public_asset_details(
+    activo_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """Ficha pública de consulta rápida mediante escaneo de Código QR en terreno."""
+    asset = crud.obtener_activo_por_id(db, activo_id=activo_id)
+    if not asset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activo no encontrado.")
+    return asset
+
 @router.get("/activos/{activo_id}", response_model=schemas.ActivoRespuesta)
 def get_asset_details(
     activo_id: UUID,

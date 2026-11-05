@@ -5,7 +5,6 @@ import {
   Loader2, 
   Eye, 
   Link2,
-  UploadCloud,
   Camera,
   CheckCircle2,
   Trash2,
@@ -289,11 +288,10 @@ export const WorkOrders: React.FC = () => {
     }
   };
 
-  const handleUploadEvidence = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitEvidenceAndOptionallyFinish = async (finalizeWorkOrder: boolean) => {
     if (!selectedWo) return;
     if (!evImageUrl) {
-      setModalError("Por favor selecciona un archivo de imagen JPG.");
+      setModalError("Por favor toma una foto con la cámara o selecciona una imagen de la galería.");
       return;
     }
     setModalLoading(true);
@@ -305,12 +303,22 @@ export const WorkOrders: React.FC = () => {
         comentarios: evComments || null
       });
 
+      let updatedWoState: OrdenTrabajo | null = null;
+      if (finalizeWorkOrder && selectedWo.estado !== "COMPLETADA") {
+        updatedWoState = await workOrdersService.updateWorkOrder(selectedWo.orden_trabajo_id, {
+          estado: "COMPLETADA",
+          fecha_termino: new Date().toISOString()
+        });
+      }
+
       // Update selected work order state directly for instant feedback
       setSelectedWo(prev => {
         if (!prev) return null;
         const currentEvidencias = prev.evidencias || [];
         return {
           ...prev,
+          estado: updatedWoState ? updatedWoState.estado : prev.estado,
+          fecha_termino: updatedWoState ? updatedWoState.fecha_termino : prev.fecha_termino,
           evidencias: [createdEvidence, ...currentEvidencias]
         };
       });
@@ -321,6 +329,8 @@ export const WorkOrders: React.FC = () => {
           const currentEvidencias = wo.evidencias || [];
           return {
             ...wo,
+            estado: updatedWoState ? updatedWoState.estado : wo.estado,
+            fecha_termino: updatedWoState ? updatedWoState.fecha_termino : wo.fecha_termino,
             evidencias: [createdEvidence, ...currentEvidencias]
           };
         }
@@ -338,8 +348,11 @@ export const WorkOrders: React.FC = () => {
       setModalError(null);
 
       // Display feedback notifications
-      setSuccessMessage("Evidencia fotográfica actualizada con éxito.");
-      setDetailSuccessMessage("Evidencia fotográfica registrada y actualizada con éxito.");
+      const msg = finalizeWorkOrder
+        ? `Evidencia guardada y Orden ${selectedWo.numero_orden} marcada como FINALIZADA (COMPLETADA).`
+        : "Evidencia fotográfica actualizada con éxito.";
+      setSuccessMessage(msg);
+      setDetailSuccessMessage(msg);
       setTimeout(() => {
         setSuccessMessage(null);
         setDetailSuccessMessage(null);
@@ -352,6 +365,11 @@ export const WorkOrders: React.FC = () => {
     } finally {
       setModalLoading(false);
     }
+  };
+
+  const handleUploadEvidence = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitEvidenceAndOptionallyFinish(false);
   };
 
   const handleUpdateStatus = async (status: string) => {
@@ -450,7 +468,7 @@ export const WorkOrders: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: "inline-flex", gap: "8px", alignItems: "center" }}>
+                        <div style={{ display: "inline-flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
                           <button 
                             className="btn-secondary" 
                             style={{ padding: "6px 12px", fontSize: "0.8rem" }}
@@ -464,6 +482,31 @@ export const WorkOrders: React.FC = () => {
                             <Eye size={14} />
                             <span>{isTech ? "Atender / Ver" : "Ver"}</span>
                           </button>
+
+                          {!isClient && wo.estado !== "COMPLETADA" && wo.estado !== "CANCELADA" && (
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{
+                                padding: "6px 12px",
+                                fontSize: "0.8rem",
+                                background: "#059669",
+                                borderColor: "#047857",
+                                color: "#ffffff",
+                                fontWeight: 700
+                              }}
+                              title="Tomar foto desde el celular o galería y finalizar orden"
+                              onClick={() => {
+                                setSelectedWo(wo);
+                                setModalView("SUBIR_EVIDENCIA");
+                                setModalError(null);
+                                setDetailSuccessMessage(null);
+                              }}
+                            >
+                              <Camera size={14} />
+                              <span>Foto / Finalizar</span>
+                            </button>
+                          )}
 
                           {isAdminOrJefe && (
                             <button
@@ -871,15 +914,23 @@ export const WorkOrders: React.FC = () => {
                   ) : (
                     <div 
                       style={{ 
-                        border: "2px dashed rgba(255,255,255,0.18)", 
-                        borderRadius: "10px", 
-                        padding: "24px 16px", 
+                        border: "2px dashed rgba(56, 189, 248, 0.35)", 
+                        borderRadius: "12px", 
+                        padding: "20px 16px", 
                         textAlign: "center",
-                        background: "rgba(255,255,255,0.015)",
-                        cursor: "pointer"
+                        background: "rgba(15, 23, 42, 0.35)"
                       }}
-                      onClick={() => document.getElementById("evidence-file-input")?.click()}
                     >
+                      {/* Input 1: Cámara directa del celular */}
+                      <input 
+                        id="evidence-camera-input"
+                        type="file" 
+                        accept="image/*"
+                        capture="environment"
+                        style={{ display: "none" }}
+                        onChange={handleEvidenceImageFileChange}
+                      />
+                      {/* Input 2: Galería de fotos del celular o computador */}
                       <input 
                         id="evidence-file-input"
                         type="file" 
@@ -887,13 +938,54 @@ export const WorkOrders: React.FC = () => {
                         style={{ display: "none" }}
                         onChange={handleEvidenceImageFileChange}
                       />
-                      <UploadCloud size={34} style={{ color: "hsl(var(--accent-primary))", margin: "0 auto 8px auto" }} />
-                      <h5 style={{ margin: "0 0 4px 0", fontSize: "0.9rem", color: "#fff" }}>
-                        Haz clic para seleccionar o tomar una foto JPG
+
+                      <Camera size={32} style={{ color: "hsl(var(--accent-primary))", margin: "0 auto 8px auto" }} />
+                      <h5 style={{ margin: "0 0 6px 0", fontSize: "0.95rem", fontWeight: 700 }}>
+                        Captura o sube la evidencia del monitor instalado
                       </h5>
-                      <p style={{ margin: 0, fontSize: "0.75rem", color: "hsl(var(--text-muted))" }}>
-                        Soporta fotos desde el computador o cámara móvil
+                      <p style={{ margin: "0 0 14px 0", fontSize: "0.78rem", color: "hsl(var(--text-muted))" }}>
+                        Puedes abrir directamente la cámara de tu celular o elegir una foto desde tu galería
                       </p>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          style={{
+                            padding: "11px 14px",
+                            fontSize: "0.84rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            background: "#0284c7",
+                            color: "#ffffff"
+                          }}
+                          onClick={() => document.getElementById("evidence-camera-input")?.click()}
+                        >
+                          <Camera size={16} />
+                          <span>Tomar Foto (Cámara)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{
+                            padding: "11px 14px",
+                            fontSize: "0.84rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px"
+                          }}
+                          onClick={() => document.getElementById("evidence-file-input")?.click()}
+                        >
+                          <ImageIcon size={16} />
+                          <span>Subir de Galería</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -956,11 +1048,11 @@ export const WorkOrders: React.FC = () => {
                   />
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
                   <button type="button" className="btn-secondary" onClick={() => { setModalView("DETALLE"); setModalError(null); }}>
                     Cancelar / Volver
                   </button>
-                  <button type="submit" className="btn-primary" disabled={modalLoading || !evImageUrl}>
+                  <button type="submit" className="btn-secondary" disabled={modalLoading || !evImageUrl} style={{ fontWeight: 700 }}>
                     {modalLoading ? (
                       <>
                         <Loader2 size={16} className="spin" style={{ animation: "spin 1s linear infinite" }} />
@@ -969,10 +1061,30 @@ export const WorkOrders: React.FC = () => {
                     ) : (
                       <>
                         <Camera size={15} />
-                        <span>Registrar Evidencia</span>
+                        <span>Guardar Solo Foto</span>
                       </>
                     )}
                   </button>
+                  {selectedWo.estado !== "COMPLETADA" && (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={modalLoading || !evImageUrl}
+                      style={{
+                        background: "#059669",
+                        borderColor: "#047857",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                      onClick={() => submitEvidenceAndOptionallyFinish(true)}
+                    >
+                      <CheckCircle2 size={16} />
+                      <span>Subir Foto y Finalizar Trabajo</span>
+                    </button>
+                  )}
                 </div>
               </form>
             )}

@@ -18,11 +18,15 @@ import {
   Trash2,
   Edit2,
   AlertTriangle,
-  AlertCircle
+  AlertCircle,
+  QrCode,
+  Printer,
+  ExternalLink
 } from "lucide-react";
 import { inventoryService } from "../services/inventory";
 import { authService, type Convenio } from "../services/auth";
 import { LocationWeatherBadge } from "../components/LocationWeatherBadge";
+import { generateQrMatrix } from "../utils/qrGenerator";
 
 const REGIONES_MAP_JS: Record<number, string> = {
   1: "Región de Tarapacá",
@@ -139,6 +143,8 @@ export const Inventory: React.FC = () => {
   const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
   const [deleteAssetLoading, setDeleteAssetLoading] = useState(false);
   const [deleteAssetError, setDeleteAssetError] = useState<string | null>(null);
+  const [qrPreviewAsset, setQrPreviewAsset] = useState<Asset | null>(null);
+  const [qrPayloadMode, setQrPayloadMode] = useState<"url" | "text">("url");
 
   // Form Fields
   // Location Form
@@ -478,10 +484,12 @@ export const Inventory: React.FC = () => {
     setModalLoading(true);
     setModalError(null);
     try {
+      const normalizedSerial = assetSerial.trim();
+      const autoQr = assetQrCode.trim() || `QR-MC-${normalizedSerial.toUpperCase()}`;
       const assetData = {
         producto_id: assetProductId,
-        numero_serie: assetSerial,
-        codigo_qr: assetQrCode || null,
+        numero_serie: normalizedSerial,
+        codigo_qr: autoQr,
         estado_actual: assetStatus,
         ubicacion_actual_id: assetLocationId
       };
@@ -497,6 +505,135 @@ export const Inventory: React.FC = () => {
     } finally {
       setModalLoading(false);
     }
+  };
+
+  const getAssetPublicUrl = (asset: Asset) => {
+    const prod = asset.producto || products.find(p => p.producto_id === asset.producto_id);
+    const loc = asset.ubicacion_actual || locations.find(l => l.ubicacion_id === asset.ubicacion_actual_id);
+    const params = new URLSearchParams();
+    if (prod?.nombre) params.set("m", prod.nombre);
+    if (prod?.marca) params.set("br", prod.marca);
+    if (prod?.sku) params.set("sku", prod.sku);
+    if (prod?.pulgadas) params.set("in", String(prod.pulgadas));
+    if (asset.numero_serie) params.set("sn", asset.numero_serie);
+    if (asset.codigo_qr) params.set("qr", asset.codigo_qr);
+    if (asset.estado_actual) params.set("est", asset.estado_actual);
+    if (loc?.nombre) params.set("loc", loc.nombre);
+    if (loc?.codigo_local) params.set("cod", loc.codigo_local);
+    if (loc?.direccion) params.set("dir", loc.direccion);
+    if (loc?.comuna) params.set("com", loc.comuna);
+    if (loc?.region) params.set("reg", loc.region);
+    if (loc?.nombre_encargado) params.set("resp", loc.nombre_encargado);
+    if (loc?.telefono_encargado) params.set("tel", loc.telefono_encargado);
+    if (loc?.correo_encargado) params.set("mail", loc.correo_encargado);
+    return `${window.location.origin}/ficha-equipo/${asset.activo_id}?${params.toString()}`;
+  };
+
+  const getAssetDirectTextPayload = (asset: Asset) => {
+    const prod = asset.producto || products.find(p => p.producto_id === asset.producto_id);
+    const loc = asset.ubicacion_actual || locations.find(l => l.ubicacion_id === asset.ubicacion_actual_id);
+    const lines = [
+      "MARCOM CHILE - FICHA DE EQUIPO",
+      `Modelo: ${prod?.nombre || "Monitor Profesional"} (${prod?.marca || "MARCOM"})`,
+      `SKU: ${prod?.sku || "S/N"}`,
+      `Serie: ${asset.numero_serie}`,
+      `Ubicacion: ${loc?.codigo_local ? `[${loc.codigo_local}] ` : ""}${loc?.nombre || "Por asignar"}`,
+      `Direccion: ${loc?.direccion || "-"}, ${loc?.comuna || ""}`,
+      `Responsable: ${loc?.nombre_encargado || "Operaciones MARCOM"}${loc?.telefono_encargado ? ` (${loc.telefono_encargado})` : ""}`
+    ];
+    return lines.join("\n");
+  };
+
+  const handlePrintAssetQrLabel = (asset: Asset, mode: "url" | "text") => {
+    const prod = asset.producto || products.find(p => p.producto_id === asset.producto_id);
+    const loc = asset.ubicacion_actual || locations.find(l => l.ubicacion_id === asset.ubicacion_actual_id);
+    const payload = mode === "url" ? getAssetPublicUrl(asset) : getAssetDirectTextPayload(asset);
+    const matrix = generateQrMatrix(payload);
+    const size = matrix.length;
+    const quiet = 3;
+    const total = size + quiet * 2;
+
+    let rects = "";
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (matrix[r][c]) {
+          rects += `<rect x="${c + quiet}" y="${r + quiet}" width="1" height="1" fill="#000000" />`;
+        }
+      }
+    }
+
+    const svgHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" width="210" height="210" shape-rendering="crispEdges"><rect width="${total}" height="${total}" fill="#ffffff"/>${rects}</svg>`;
+    const printWin = window.open("", "_blank", "width=680,height=640");
+    if (!printWin) return;
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Etiqueta QR - ${asset.numero_serie}</title>
+        <style>
+          body { font-family: Arial, Helvetica, sans-serif; margin: 24px; color: #0f172a; background: #fff; }
+          .sticker {
+            width: 520px;
+            border: 3px solid #0f172a;
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: grid;
+            grid-template-columns: 215px 1fr;
+            gap: 18px;
+            align-items: center;
+          }
+          .header-bar {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+          }
+          .brand { font-size: 18px; font-weight: 900; letter-spacing: 0.5px; }
+          .qr-tag { font-family: monospace; font-size: 13px; font-weight: 700; background: #e2e8f0; padding: 3px 8px; border-radius: 6px; }
+          .info-col { font-size: 12.5px; line-height: 1.5; }
+          .info-col .model { font-size: 15px; font-weight: 800; margin-bottom: 6px; color: #000; }
+          .field { margin-bottom: 5px; }
+          .field strong { color: #000; }
+          .mono { font-family: monospace; font-weight: 800; font-size: 13.5px; }
+          @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print" style="margin-bottom: 16px;">
+          <button onclick="window.print()" style="padding: 10px 18px; font-weight: 700; background: #0284c7; color: #fff; border: none; border-radius: 8px; cursor: pointer;">
+            🖨️ Imprimir Etiqueta Ahora
+          </button>
+        </div>
+        <div class="sticker">
+          <div class="header-bar">
+            <span class="brand">MARCOM CHILE — IDENTIFICACIÓN DE EQUIPO</span>
+            <span class="qr-tag">${asset.codigo_qr || `QR-MC-${asset.numero_serie}`}</span>
+          </div>
+          <div style="text-align: center;">
+            ${svgHtml}
+            <div style="font-size: 10px; font-weight: 700; margin-top: 4px;">ESCANEAR CON CÁMARA DEL CELULAR</div>
+          </div>
+          <div class="info-col">
+            <div class="model">${prod?.nombre || "Monitor Profesional"} (${prod?.marca || "MARCOM"})</div>
+            <div class="field"><strong>SKU:</strong> <span class="mono">${prod?.sku || "S/N"}</span></div>
+            <div class="field"><strong>N° de Serie:</strong> <span class="mono">${asset.numero_serie}</span></div>
+            <hr style="border: none; border-top: 1px dashed #94a3b8; margin: 8px 0;" />
+            <div class="field"><strong>Ubicación / Sucursal:</strong><br/>${loc?.codigo_local ? `[${loc.codigo_local}] ` : ""}${loc?.nombre || "Por asignar"}</div>
+            <div class="field"><strong>Dirección / Sala:</strong><br/>${loc?.direccion || "-"}${loc?.comuna ? `, ${loc.comuna}` : ""}</div>
+            <div class="field"><strong>Responsable / Área:</strong><br/>${loc?.nombre_encargado || "Operaciones MARCOM"}${loc?.telefono_encargado ? ` · Tel: ${loc.telefono_encargado}` : ""}</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWin.document.close();
   };
 
   const handleConfirmDeleteAsset = async () => {
@@ -612,60 +749,123 @@ export const Inventory: React.FC = () => {
                   <table className="premium-table">
                     <thead>
                       <tr>
-                        <th>Modelo / Producto</th>
+                        <th>Modelo / SKU</th>
                         <th>N° Serie</th>
-                        <th>Código QR</th>
-                        <th>Ubicación Actual</th>
+                        <th>Código QR (Impresión)</th>
+                        <th>Ubicación Exacta</th>
+                        <th>Responsable / Área</th>
                         <th>Estado Físico</th>
                         {!isClient && <th>Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
-                      {assets.map((asset) => (
-                        <tr key={asset.activo_id}>
-                          <td style={{ fontWeight: 600 }}>{asset.producto?.nombre} ({asset.producto?.marca})</td>
-                          <td>{asset.numero_serie}</td>
-                          <td><code>{asset.codigo_qr || "Sin QR"}</code></td>
-                          <td>{asset.ubicacion_actual?.nombre}</td>
-                          <td>
-                            <span className={`badge ${
-                              asset.estado_actual === "NUEVO" ? "primary" : 
-                              asset.estado_actual === "USADO_BUEN_ESTADO" ? "success" : 
-                              asset.estado_actual === "DEFECTUOSO" ? "error" : "warning"
-                            }`}>
-                              {asset.estado_actual}
-                            </span>
-                          </td>
-                          {!isClient && (
+                      {assets.map((asset) => {
+                        const prod = asset.producto || products.find(p => p.producto_id === asset.producto_id);
+                        const loc = asset.ubicacion_actual || locations.find(l => l.ubicacion_id === asset.ubicacion_actual_id);
+                        return (
+                          <tr key={asset.activo_id}>
                             <td>
-                              <div style={{ display: "flex", gap: "6px" }}>
-                                {(isAdminOrJefe || isTech) && (
+                              <div style={{ fontWeight: 700 }}>{prod?.nombre || "Monitor Profesional"} ({prod?.marca || "MARCOM"})</div>
+                              <div style={{ fontSize: "0.76rem", color: "hsl(var(--text-muted))" }}>
+                                SKU: <code style={{ fontWeight: 700 }}>{prod?.sku || "S/N"}</code>
+                              </div>
+                            </td>
+                            <td style={{ fontFamily: "monospace", fontWeight: 700 }}>{asset.numero_serie}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                style={{
+                                  padding: "6px 10px",
+                                  fontSize: "0.78rem",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  background: "#0284c7",
+                                  color: "#ffffff",
+                                  border: "1px solid #0369a1",
+                                  fontWeight: 700
+                                }}
+                                title="Generar e imprimir etiqueta QR para pegar en el televisor"
+                                onClick={() => setQrPreviewAsset(asset)}
+                              >
+                                <QrCode size={14} />
+                                <span>{asset.codigo_qr || `QR-MC-${asset.numero_serie}`}</span>
+                              </button>
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600 }}>
+                                {loc?.codigo_local ? `[${loc.codigo_local}] ` : ""}{loc?.nombre || "Por asignar"}
+                              </div>
+                              {loc?.direccion && (
+                                <div style={{ fontSize: "0.75rem", color: "hsl(var(--text-muted))" }}>
+                                  📍 {loc.direccion}{loc.comuna ? `, ${loc.comuna}` : ""}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              {loc?.nombre_encargado ? (
+                                <div>
+                                  <div style={{ fontWeight: 600 }}>{loc.nombre_encargado}</div>
+                                  {loc.telefono_encargado && (
+                                    <div style={{ fontSize: "0.75rem", color: "hsl(var(--text-muted))" }}>
+                                      📞 {loc.telefono_encargado}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: "0.78rem", color: "hsl(var(--text-muted))" }}>Operaciones MARCOM</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className={`badge ${
+                                asset.estado_actual === "NUEVO" ? "primary" : 
+                                asset.estado_actual === "USADO_BUEN_ESTADO" ? "success" : 
+                                asset.estado_actual === "DEFECTUOSO" ? "error" : "warning"
+                              }`}>
+                                {asset.estado_actual}
+                              </span>
+                            </td>
+                            {!isClient && (
+                              <td>
+                                <div style={{ display: "flex", gap: "6px" }}>
                                   <button
                                     type="button"
                                     className="btn-secondary"
                                     style={{ padding: "6px 8px" }}
-                                    title="Editar Activo"
-                                    onClick={() => handleEditAsset(asset)}
+                                    title="Ver e Imprimir Código QR"
+                                    onClick={() => setQrPreviewAsset(asset)}
                                   >
-                                    <Edit2 size={14} />
+                                    <QrCode size={14} />
                                   </button>
-                                )}
-                                {isAdminOrJefe && (
-                                  <button
-                                    type="button"
-                                    className="btn-secondary"
-                                    style={{ padding: "6px 8px", color: "#f87171" }}
-                                    title="Eliminar Activo"
-                                    onClick={() => setAssetToDelete(asset)}
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
+                                  {(isAdminOrJefe || isTech) && (
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      style={{ padding: "6px 8px" }}
+                                      title="Editar Activo"
+                                      onClick={() => handleEditAsset(asset)}
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                  )}
+                                  {isAdminOrJefe && (
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      style={{ padding: "6px 8px", color: "#f87171" }}
+                                      title="Eliminar Activo"
+                                      onClick={() => setAssetToDelete(asset)}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -1701,8 +1901,25 @@ export const Inventory: React.FC = () => {
                   <input type="text" className="glass-input" placeholder="SN-888999" value={assetSerial} onChange={e=>setAssetSerial(e.target.value)} required />
                 </div>
                 <div className="form-group">
-                  <label>Código QR / Código Barras</label>
-                  <input type="text" className="glass-input" placeholder="QR-MARCOM-101" value={assetQrCode} onChange={e=>setAssetQrCode(e.target.value)} />
+                  <label>Código QR / Etiqueta (Se autogenera si queda vacío)</label>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <input
+                      type="text"
+                      className="glass-input"
+                      placeholder={assetSerial ? `QR-MC-${assetSerial.toUpperCase()}` : "QR-MC-SN888999"}
+                      value={assetQrCode}
+                      onChange={e => setAssetQrCode(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ padding: "0 12px", fontSize: "0.78rem", whiteSpace: "nowrap" }}
+                      onClick={() => setAssetQrCode(`QR-MC-${(assetSerial || Math.floor(100000 + Math.random() * 900000)).toString().trim().toUpperCase()}`)}
+                    >
+                      <QrCode size={14} />
+                      <span>Generar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="form-group">
@@ -2072,6 +2289,258 @@ export const Inventory: React.FC = () => {
         document.body
       )}
       
+      {/* Modal Generador e Impresión de Etiqueta QR para Televisor / Monitor */}
+      {qrPreviewAsset && createPortal(
+        (() => {
+          const prod = qrPreviewAsset.producto || products.find(p => p.producto_id === qrPreviewAsset.producto_id);
+          const loc = qrPreviewAsset.ubicacion_actual || locations.find(l => l.ubicacion_id === qrPreviewAsset.ubicacion_actual_id);
+          const payload = qrPayloadMode === "url" ? getAssetPublicUrl(qrPreviewAsset) : getAssetDirectTextPayload(qrPreviewAsset);
+          const matrix = generateQrMatrix(payload);
+          const size = matrix.length;
+          const quiet = 3;
+          const total = size + quiet * 2;
+
+          return (
+            <div className="modal-overlay">
+              <div className="modal-content glass-panel" style={{ maxWidth: "660px", width: "95vw", padding: "26px" }}>
+                <button className="modal-close" onClick={() => setQrPreviewAsset(null)}>
+                  <X size={20} />
+                </button>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                  <div
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      borderRadius: "10px",
+                      background: "linear-gradient(135deg, #0284c7, #0ea5e9)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff"
+                    }}
+                  >
+                    <QrCode size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontWeight: 700, fontSize: "1.15rem" }} className="accent-text-gradient">
+                      Generador de Etiqueta QR para Televisor / Monitor
+                    </h3>
+                    <p style={{ margin: "2px 0 0 0", fontSize: "0.8rem", color: "hsl(var(--text-muted))" }}>
+                      Imprime y adhiere esta etiqueta al equipo para que cualquier celular consulte su ficha al instante.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Selector de Modo de Escaneo */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "8px",
+                    margin: "14px 0",
+                    background: "rgba(15, 23, 42, 0.55)",
+                    padding: "6px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255,255,255,0.08)"
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setQrPayloadMode("url")}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: qrPayloadMode === "url" ? "1px solid #0ea5e9" : "1px solid transparent",
+                      background: qrPayloadMode === "url" ? "#0284c7" : "transparent",
+                      color: qrPayloadMode === "url" ? "#ffffff" : "hsl(var(--text-muted))",
+                      fontWeight: 700,
+                      fontSize: "0.78rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    📱 Modo Ficha Web Móvil (URL Interactiva)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQrPayloadMode("text")}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: qrPayloadMode === "text" ? "1px solid #0ea5e9" : "1px solid transparent",
+                      background: qrPayloadMode === "text" ? "#0284c7" : "transparent",
+                      color: qrPayloadMode === "text" ? "#ffffff" : "hsl(var(--text-muted))",
+                      fontWeight: 700,
+                      fontSize: "0.78rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    📋 Modo Lectura Directa en Cámara (Sin Internet)
+                  </button>
+                </div>
+
+                {/* Vista previa de la Etiqueta Adhesiva */}
+                <div
+                  style={{
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    borderRadius: "14px",
+                    border: "3px solid #0284c7",
+                    padding: "18px",
+                    display: "grid",
+                    gridTemplateColumns: "200px 1fr",
+                    gap: "18px",
+                    alignItems: "center",
+                    boxShadow: "0 12px 30px rgba(0,0,0,0.35)"
+                  }}
+                >
+                  {/* Columna Izquierda: Gráfico QR Vectorial */}
+                  <div style={{ textAlign: "center" }}>
+                    <svg
+                      viewBox={`0 0 ${total} ${total}`}
+                      width="190"
+                      height="190"
+                      shapeRendering="crispEdges"
+                      style={{ border: "1px solid #cbd5e1", borderRadius: "8px", display: "block", margin: "0 auto" }}
+                    >
+                      <rect width={total} height={total} fill="#ffffff" />
+                      {matrix.map((row, r) =>
+                        row.map((dark, c) =>
+                          dark ? (
+                            <rect
+                              key={`${r}-${c}`}
+                              x={c + quiet}
+                              y={r + quiet}
+                              width={1}
+                              height={1}
+                              fill="#000000"
+                            />
+                          ) : null
+                        )
+                      )}
+                    </svg>
+                    <div
+                      style={{
+                        marginTop: "6px",
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        color: "#0284c7",
+                        letterSpacing: "0.4px"
+                      }}
+                    >
+                      ESCANEAR CON CÁMARA DEL CELULAR
+                    </div>
+                  </div>
+
+                  {/* Columna Derecha: Datos de Equipo, Ubicación y Responsable */}
+                  <div style={{ fontSize: "0.84rem", lineHeight: 1.48, color: "#0f172a" }}>
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        color: "#0284c7",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.6px",
+                        marginBottom: "2px"
+                      }}
+                    >
+                      MARCOM CHILE — ETIQUETA DE ACTIVO
+                    </div>
+                    <div style={{ fontSize: "1.02rem", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>
+                      {prod?.nombre || "Monitor Profesional"} ({prod?.marca || "MARCOM"})
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+                      <div style={{ background: "#f1f5f9", padding: "6px 8px", borderRadius: "6px" }}>
+                        <div style={{ fontSize: "0.66rem", fontWeight: 700, color: "#475569" }}>CÓDIGO SKU</div>
+                        <div style={{ fontFamily: "monospace", fontWeight: 800, fontSize: "0.88rem", color: "#0284c7" }}>
+                          {prod?.sku || "S/N"}
+                        </div>
+                      </div>
+                      <div style={{ background: "#f1f5f9", padding: "6px 8px", borderRadius: "6px" }}>
+                        <div style={{ fontSize: "0.66rem", fontWeight: 700, color: "#475569" }}>N° DE SERIE</div>
+                        <div style={{ fontFamily: "monospace", fontWeight: 800, fontSize: "0.88rem", color: "#059669" }}>
+                          {qrPreviewAsset.numero_serie}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: "6px", marginBottom: "5px" }}>
+                      <strong style={{ color: "#0f172a" }}>📍 Ubicación Exacta:</strong>
+                      <div style={{ fontWeight: 700, color: "#1e293b" }}>
+                        {loc?.codigo_local ? `[${loc.codigo_local}] ` : ""}{loc?.nombre || "Por asignar"}
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#475569" }}>
+                        {loc?.direccion || "Dirección registrada"}{loc?.comuna ? `, ${loc.comuna}` : ""}
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: "6px" }}>
+                      <strong style={{ color: "#0f172a" }}>👤 Persona / Área Responsable:</strong>
+                      <div style={{ fontWeight: 700, color: "#1e293b" }}>
+                        {loc?.nombre_encargado || "Operaciones y Soporte MARCOM"}
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#475569" }}>
+                        {loc?.telefono_encargado ? `Tel: ${loc.telefono_encargado}` : "Contacto central MARCOM"}
+                        {loc?.correo_encargado ? ` · ${loc.correo_encargado}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones de Acción */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "18px", gap: "10px", flexWrap: "wrap" }}>
+                  <a
+                    href={getAssetPublicUrl(qrPreviewAsset)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "9px 14px",
+                      fontSize: "0.82rem",
+                      textDecoration: "none",
+                      fontWeight: 700
+                    }}
+                  >
+                    <ExternalLink size={15} />
+                    <span>Probar Vista Móvil al Escanear</span>
+                  </a>
+
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setQrPreviewAsset(null)}
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "9px 18px",
+                        fontWeight: 700
+                      }}
+                      onClick={() => handlePrintAssetQrLabel(qrPreviewAsset, qrPayloadMode)}
+                    >
+                      <Printer size={16} />
+                      <span>Imprimir Etiqueta QR</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })(),
+        document.body
+      )}
+
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }

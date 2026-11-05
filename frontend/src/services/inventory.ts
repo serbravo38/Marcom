@@ -108,6 +108,9 @@ export const inventoryService = {
   getAssetDetails: async (activoId: string): Promise<Activo> => {
     return api.get<Activo>(`/activos/${activoId}`);
   },
+  getPublicAssetDetails: async (activoId: string): Promise<Activo> => {
+    return api.get<Activo>(`/activos/publico/${activoId}`);
+  },
   createAsset: async (data: any): Promise<Activo> => {
     return api.post<Activo>("/activos", data);
   },

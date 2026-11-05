@@ -18,6 +18,7 @@ import Catalog from "./pages/Catalog";
 import AdminMonitores from "./pages/AdminMonitores";
 import SalesControl from "./pages/SalesControl";
 import Facturacion from "./pages/Facturacion";
+import FichaEquipoQR from "./pages/FichaEquipoQR";
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -97,6 +98,7 @@ export const App: React.FC = () => {
         <Route path="/catalogo-monitores" element={<Catalog />} />
         <Route path="/contacto" element={<Contacto />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/ficha-equipo/:activoId" element={<FichaEquipoQR />} />
 
         {/* Private Protected Routes with Granular RBAC */}
         <Route 
