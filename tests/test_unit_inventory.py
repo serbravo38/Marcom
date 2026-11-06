@@ -136,3 +136,66 @@ def test_ubicacion_actualizacion_tarifas_uf():
     assert upd.precio_instalacion_uf == 4.5
     assert upd.precio_transporte_uf == 2.25
     assert upd.cantidad_pantallas == 8
+
+def test_ficha_publica_qr_activo_respuesta_completa():
+    """Valida el esquema de la Ficha Pública QR (/activos/publico/{id}) con Modelo, SKU, Serie, Ubicación exacta y Responsable"""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    prod_id = uuid.uuid4()
+    ub_id = uuid.uuid4()
+    act_id = uuid.uuid4()
+
+    ficha_qr = schemas.ActivoRespuesta(
+        activo_id=act_id,
+        producto_id=prod_id,
+        numero_serie="SN-SAMS-QM55R-0091",
+        codigo_qr="QR-MC-QM55R-0091",
+        estado_actual=EstadoActivoEnum.NUEVO,
+        ubicacion_actual_id=ub_id,
+        creado_en=now,
+        actualizado_en=now,
+        producto=schemas.CatalogoProductosRespuesta(
+            producto_id=prod_id,
+            sku="SAM-QM55R",
+            nombre="Monitor Samsung 55\" 4K UHD Signage",
+            marca="Samsung",
+            categoria="Cartelería Digital",
+            pulgadas=55.0,
+            descripcion="Pantalla profesional 24/7",
+            creado_en=now
+        ),
+        ubicacion_actual=schemas.UbicacionRespuesta(
+            ubicacion_id=ub_id,
+            codigo_local="EDS-1025",
+            nombre="Pronto Copec Vitacura Piso 1 Sala Principal",
+            direccion="Av. Vitacura 4500",
+            zona="Zona Oriente",
+            region="Región Metropolitana",
+            provincia="Santiago",
+            comuna="Vitacura",
+            es_bodega=False,
+            nombre_encargado="Roberto Gómez (Jefe de Tienda)",
+            telefono_encargado="+56987654321",
+            correo_encargado="rgomez@local.cl",
+            activo=True,
+            creado_en=now
+        )
+    )
+    assert ficha_qr.codigo_qr == "QR-MC-QM55R-0091"
+    assert ficha_qr.producto.sku == "SAM-QM55R"
+    assert ficha_qr.numero_serie == "SN-SAMS-QM55R-0091"
+    assert ficha_qr.ubicacion_actual.codigo_local == "EDS-1025"
+    assert ficha_qr.ubicacion_actual.nombre_encargado == "Roberto Gómez (Jefe de Tienda)"
+    assert ficha_qr.ubicacion_actual.telefono_encargado == "+56987654321"
+
+def test_actualizacion_codigo_qr_etiqueta_activo():
+    """Valida la actualización de etiqueta QR imprimible y ubicación asignada de un televisor en terreno"""
+    nueva_ubicacion_id = uuid.uuid4()
+    upd_qr = schemas.ActivoActualizar(
+        codigo_qr="QR-MC-TV65-8841",
+        ubicacion_actual_id=nueva_ubicacion_id,
+        estado_actual=EstadoActivoEnum.USADO_BUEN_ESTADO
+    )
+    assert upd_qr.codigo_qr == "QR-MC-TV65-8841"
+    assert upd_qr.ubicacion_actual_id == nueva_ubicacion_id
+    assert upd_qr.estado_actual == EstadoActivoEnum.USADO_BUEN_ESTADO

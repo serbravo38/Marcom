@@ -94,3 +94,45 @@ def test_evidencia_ruta_local_permitida():
     )
     assert evidencia.url_imagen.startswith("/")
     assert evidencia.url_firma.startswith("/")
+
+def test_cierre_movil_evidencia_foto_y_firma_tactil_recepcion():
+    """Valida el cierre de orden desde el celular con foto de cámara, firma táctil en pantalla y acta de quién recepciona"""
+    foto_camara_movil = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/"
+    firma_tactil_pantalla = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    comentario_recepcion = "[Recepcionado por: Juan Pérez - Encargado Pronto Copec] Monitor Samsung 55 instalado y operativo en sala."
+
+    evidencia_movil = schemas.EvidenciaTerrenoCrear(
+        url_imagen=foto_camara_movil,
+        url_firma=firma_tactil_pantalla,
+        comentarios=comentario_recepcion
+    )
+    assert evidencia_movil.url_imagen.startswith("data:image/jpeg;base64,")
+    assert evidencia_movil.url_firma.startswith("data:image/png;base64,")
+    assert "[Recepcionado por: Juan Pérez" in evidencia_movil.comentarios
+
+    cierre_ot = schemas.OrdenTrabajoActualizar(
+        estado=EstadoOTEnum.COMPLETADA,
+        fecha_termino=datetime.now(timezone.utc)
+    )
+    assert cierre_ot.estado == EstadoOTEnum.COMPLETADA
+    assert cierre_ot.fecha_termino is not None
+
+def test_evidencia_respuesta_incluye_firma_y_timestamp():
+    """Valida el schema EvidenciaTerrenoRespuesta al consultar una OT cerrada con firma de recepción móvil"""
+    ev_id = uuid.uuid4()
+    ot_id = uuid.uuid4()
+    now = datetime.now(timezone.utc)
+    firma_png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+
+    respuesta = schemas.EvidenciaTerrenoRespuesta(
+        evidencia_id=ev_id,
+        orden_trabajo_id=ot_id,
+        url_imagen="data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+        url_firma=firma_png,
+        comentarios="[Recepcionado por: María Soto - Administradora] Trabajo recepcionado conforme en terreno",
+        fecha_captura=now
+    )
+    assert respuesta.evidencia_id == ev_id
+    assert respuesta.url_firma == firma_png
+    assert "Recepcionado por: María Soto" in respuesta.comentarios
+    assert respuesta.fecha_captura == now

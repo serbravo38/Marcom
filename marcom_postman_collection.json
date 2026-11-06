@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7c6d5e4f",
-    "name": "MARCOM - Suite Integral de Pruebas API, Microservicios & Seguridad (v2.0 - 48 Pruebas)",
-    "description": "Colección oficial de aseguramiento de calidad (QA) y Seguridad Defensiva (OWASP API Security) para la plataforma MARCOM.\n\nContiene **48 pruebas automatizadas** distribuidas en 6 módulos:\n- **00. Gateway & Infraestructura (6 pruebas)**: Health checks de API Gateway y los 4 microservicios + control de rutas inexistentes.\n- **01. Módulo Autenticación, Usuarios, Convenios & Portada (9 pruebas)**: Login JWT, RBAC, usuarios, convenios B2B y editor de trabajos realizados en portada.\n- **02. Módulo Inventario, Catálogo de Monitores & Sucursales (8 pruebas)**: Bodegas, locales, carga masiva, catálogo de monitores, edición de galería, activos QR y movimientos.\n- **03. Módulo Órdenes de Trabajo, Reapertura & Terreno (7 pruebas)**: Ciclo completo de OT, asignación de activos, evidencia fotográfica/firma digital y reapertura/edición de órdenes.\n- **04. Módulo Facturación, Cotizaciones, OC & DTE SII (6 pruebas)**: Cálculo automático UF/KM/IVA 19%, aprobación con OC, pedidos, pagos Webpay y emisión de Factura Electrónica DTE.\n- **05. Pruebas de Seguridad Defensiva, RBAC, JWT & Blindaje Perimetral (12 pruebas)**: Sin token (401), JWT adulterado (401), JWT expirado (401), bloqueo de escalación de privilegios RBAC (403) en Usuarios, Portada, Catálogo y DTE, políticas de robustez de contraseñas (422), validación anti-inyección en RUT (422), bloqueo Anti-XSS/SSRF en firmas y evidencias (422), protección de desafío 2FA/TOTP (401) y control de credenciales inválidas / fuerza bruta (401).",
+    "name": "MARCOM - Suite Integral de Pruebas API, Microservicios & Seguridad (v2.1 - 54 Pruebas)",
+    "description": "Colección oficial de aseguramiento de calidad (QA) y Seguridad Defensiva (OWASP API Security) para la plataforma MARCOM.\n\nContiene **54 pruebas automatizadas** distribuidas en 6 módulos:\n- **00. Gateway & Infraestructura (6 pruebas)**: Health checks de API Gateway y los 4 microservicios + control de rutas inexistentes.\n- **01. Módulo Autenticación, Usuarios, Convenios & Portada (9 pruebas)**: Login JWT, RBAC, usuarios, convenios B2B y editor de trabajos realizados en portada.\n- **02. Módulo Inventario, Catálogo, Sucursales & Códigos QR (10 pruebas)**: Bodegas, locales, carga masiva, catálogo de monitores, edición de galería, activos, actualización de etiquetas QR, movimientos y consulta de Ficha Pública QR sin token.\n- **03. Módulo Órdenes de Trabajo, Cierre Móvil con Cámara & Firma Táctil de Recepción (9 pruebas)**: Ciclo completo de OT, asignación de activos, evidencia fotográfica desde celular, recepción con firma digital táctil en teléfono, cierre y reapertura/edición de órdenes.\n- **04. Módulo Facturación, Cotizaciones, OC & DTE SII (6 pruebas)**: Cálculo automático UF/KM/IVA 19%, aprobación con OC, pedidos, pagos Webpay y emisión de Factura Electrónica DTE.\n- **05. Pruebas de Seguridad Defensiva, RBAC, JWT & Blindaje Perimetral (14 pruebas)**: Sin token (401), JWT adulterado (401), JWT expirado (401), bloqueo de escalación de privilegios RBAC (403) en Usuarios, Portada, Catálogo y DTE, políticas de robustez de contraseñas (422), validación anti-inyección en RUT (422), bloqueo Anti-XSS/SSRF en firmas y evidencias (422), protección de desafío 2FA/TOTP (401), control de fuerza bruta (401), blindaje contra SQLi/UUID malformado en Ficha QR Pública (422) y bloqueo de falsificación de firmas móviles (422).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -819,6 +819,77 @@
               }
             }
           ]
+        },
+        {
+          "name": "02.9 [QR Televisor] Actualizar Etiqueta QR Imprimible del Activo (PATCH /activos/{id})",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo_qr\": \"QR-MC-LG55-{{$timestamp}}\",\n  \"ubicacion_actual_id\": \"{{localId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/activos/{{activoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "activos", "{{activoId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Etiqueta QR del televisor actualizada correctamente (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.codigo_qr).to.include(\"QR-MC-\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.10 [QR Móvil] Consultar Ficha Pública de Televisor al Escanear QR (GET /activos/publico/{id})",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/activos/publico/{{activoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "activos", "publico", "{{activoId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Ficha Pública QR responde 200 OK sin requerir sesión y entrega Modelo, SKU, Serie, Ubicación y Responsable\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.numero_serie).to.be.a(\"string\");",
+                  "    pm.expect(jsonData.producto).to.be.an(\"object\");",
+                  "    pm.expect(jsonData.producto.sku).to.be.a(\"string\");",
+                  "    pm.expect(jsonData.ubicacion_actual).to.be.an(\"object\");",
+                  "    pm.expect(jsonData.ubicacion_actual.nombre_encargado).to.eql(\"Marcela Paz\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
@@ -1088,6 +1159,88 @@
                   "pm.test(\"Listado de órdenes de trabajo retorna 200 OK con array de OTs\", function () {",
                   "    pm.response.to.have.status(200);",
                   "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.8 [Cierre Móvil] Subir Foto de Cámara y Firma Táctil de Recepción desde el Teléfono",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tecnicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url_imagen\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/\",\n  \"url_firma\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\",\n  \"comentarios\": \"[Recepcionado por: Marcela Paz - Encargada Pronto Copec] Monitor LG 55 instalado y recepcionado con firma en teléfono.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}/evidencias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}", "evidencias"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Evidencia móvil con foto de cámara y firma táctil de recepción guardada (201 Created)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.url_firma).to.include(\"data:image/png;base64,\");",
+                  "    pm.expect(jsonData.comentarios).to.include(\"Recepcionado por: Marcela Paz\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.9 [Cierre Móvil] Recepcionar y Cerrar Orden de Trabajo desde Celular (COMPLETADA con Firma)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tecnicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"COMPLETADA\",\n  \"fecha_termino\": \"2026-04-15T18:10:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Orden de trabajo recepcionada con firma en teléfono y cerrada como COMPLETADA (200 OK)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.estado).to.eql(\"COMPLETADA\");",
+                  "    pm.expect(jsonData.evidencias).to.be.an(\"array\");",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1743,6 +1896,69 @@
                 "exec": [
                   "pm.test(\"Rechaza credenciales inválidas con 401 Unauthorized sin filtrar información sensible\", function () {",
                   "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.13 [Seguridad QR Público - OWASP API8] Bloqueo de Inyección SQL / UUID Malformado en Ficha QR (422)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/activos/publico/12345-OR-1=1-DROP-TABLE-activos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "activos", "publico", "12345-OR-1=1-DROP-TABLE-activos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Endpoint de Ficha Pública QR rechaza UUID malformado o intento de inyección SQL con HTTP 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.14 [Seguridad Firma Móvil - OWASP API8] Bloqueo de Ejecutable o SVG Malicioso en Firma de Recepción (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tecnicoToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url_imagen\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg==\",\n  \"url_firma\": \"data:application/x-msdownload;base64,TVqQAAMAAAAEAAAA\",\n  \"comentarios\": \"[Recepcionado por: Atacante] Intento de subir binario ejecutable en firma móvil\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ordenes-trabajo/{{ordenTrabajoId}}/evidencias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ordenes-trabajo", "{{ordenTrabajoId}}", "evidencias"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bloquea archivo ejecutable o MIME inválido en campo url_firma de recepción móvil (422)\", function () {",
+                  "    pm.response.to.have.status(422);",
                   "});"
                 ],
                 "type": "text/javascript"

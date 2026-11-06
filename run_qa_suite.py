@@ -247,7 +247,7 @@ def load_postman_stats():
 
 def main():
     print("=" * 88)
-    print("  INICIANDO SUITE INTEGRAL DE PRUEBAS QA & SEGURIDAD DEFENSIVA - MARCOM (48 PRUEBAS)")
+    print("  INICIANDO SUITE INTEGRAL DE PRUEBAS QA & SEGURIDAD DEFENSIVA - MARCOM (54 PRUEBAS)")
     print("=" * 88)
 
     test_cases = [
@@ -262,7 +262,7 @@ def main():
         {"file": "tests/test_unit_auth.py", "func": "test_convenio_corporativo_schema_validation", "service": "Auth Service (:8001)", "desc": "Validación de Convenio Corporativo B2B y normalización de RUT empresa"},
         {"file": "tests/test_unit_auth.py", "func": "test_trabajos_portada_carousel_schema_validation", "service": "Auth Service (:8001)", "desc": "Validación del esquema de proyectos en Editor de Trabajos Realizados (Portada)"},
 
-        # --- 02. Inventory Service (8 pruebas) ---
+        # --- 02. Inventory Service & Códigos QR (10 pruebas) ---
         {"file": "tests/test_unit_inventory.py", "func": "test_ubicacion_crear_bodega", "service": "Inventory Service (:8002)", "desc": "Creación y validación de ubicaciones logísticas tipo Bodega Central"},
         {"file": "tests/test_unit_inventory.py", "func": "test_ubicacion_crear_local_convenio", "service": "Inventory Service (:8002)", "desc": "Vinculación de sucursales/locales comerciales a convenios corporativos"},
         {"file": "tests/test_unit_inventory.py", "func": "test_carga_masiva_locales", "service": "Inventory Service (:8002)", "desc": "Procesamiento de esquema de importación masiva de estaciones de servicio"},
@@ -271,14 +271,18 @@ def main():
         {"file": "tests/test_unit_inventory.py", "func": "test_activo_fisico_estados", "service": "Inventory Service (:8002)", "desc": "Trazabilidad de activos por número de serie, QR y estado operativo"},
         {"file": "tests/test_unit_inventory.py", "func": "test_movimiento_stock", "service": "Inventory Service (:8002)", "desc": "Registro de movimientos de inventario entre bodega de origen y local destino"},
         {"file": "tests/test_unit_inventory.py", "func": "test_ubicacion_actualizacion_tarifas_uf", "service": "Inventory Service (:8002)", "desc": "Actualización de tarifas de instalación y transporte en UF por sucursal"},
+        {"file": "tests/test_unit_inventory.py", "func": "test_ficha_publica_qr_activo_respuesta_completa", "service": "Inventory Service (:8002)", "desc": "Ficha Pública QR (/activos/publico/{id}): Modelo, SKU, Serie, Ubicación exacta y Responsable"},
+        {"file": "tests/test_unit_inventory.py", "func": "test_actualizacion_codigo_qr_etiqueta_activo", "service": "Inventory Service (:8002)", "desc": "Generación y actualización de etiqueta QR imprimible (QR-MC-*) y ubicación de televisor"},
 
-        # --- 03. Work Order Service (6 pruebas) ---
+        # --- 03. Work Order Service, Cámara Móvil & Firma Táctil de Recepción (8 pruebas) ---
         {"file": "tests/test_unit_work_orders.py", "func": "test_orden_trabajo_crear_valida", "service": "Work Order Service (:8003)", "desc": "Creación de Orden de Trabajo con asignación de técnico y fecha programada"},
         {"file": "tests/test_unit_work_orders.py", "func": "test_orden_trabajo_estados_enum", "service": "Work Order Service (:8003)", "desc": "Máquina de estados de OT (PENDIENTE, ASIGNADA, EN_PROCESO, COMPLETADA, CANCELADA)"},
         {"file": "tests/test_unit_work_orders.py", "func": "test_orden_trabajo_reapertura_y_edicion", "service": "Work Order Service (:8003)", "desc": "Edición y reapertura de Órdenes de Trabajo cerradas hacia EN_PROCESO"},
         {"file": "tests/test_unit_work_orders.py", "func": "test_evidencia_firma_digital_validador_seguro", "service": "Work Order Service (:8003)", "desc": "Validación de firmas digitales Base64 y bloqueo de esquemas peligrosos"},
         {"file": "tests/test_unit_work_orders.py", "func": "test_activos_orden_trabajo", "service": "Work Order Service (:8003)", "desc": "Asociación de activos instalados/retirados en órdenes de terreno"},
         {"file": "tests/test_unit_work_orders.py", "func": "test_evidencia_ruta_local_permitida", "service": "Work Order Service (:8003)", "desc": "Aceptación de rutas locales seguras (/Monitores/...) y data URI en evidencias"},
+        {"file": "tests/test_unit_work_orders.py", "func": "test_cierre_movil_evidencia_foto_y_firma_tactil_recepcion", "service": "Work Order Service (:8003)", "desc": "Cierre móvil de OT con foto de cámara, firma táctil de recepción en teléfono y estado COMPLETADA"},
+        {"file": "tests/test_unit_work_orders.py", "func": "test_evidencia_respuesta_incluye_firma_y_timestamp", "service": "Work Order Service (:8003)", "desc": "Persistencia de firma de recepción móvil (url_firma), responsable y timestamp en EvidenciaTerreno"},
 
         # --- 04. Billing Service (6 pruebas) ---
         {"file": "tests/test_unit_billing.py", "func": "test_calculo_financiero_cotizacion", "service": "Billing Service (:8004)", "desc": "Cálculo financiero automático (Equipos + Soporte + Instalación + KM + IVA 19%)"},
@@ -295,7 +299,7 @@ def main():
         {"file": "tests/test_unit_gateway.py", "func": "test_gateway_rate_limiting_ip_isolation", "service": "API Gateway (:8000)", "desc": "Aislamiento por IP: el bloqueo de un atacante no afecta a usuarios legítimos"},
         {"file": "tests/test_unit_gateway.py", "func": "test_gateway_cors_origins_configured", "service": "API Gateway (:8000)", "desc": "Política estricta de orígenes permitidos CORS sin comodín abierto inseguro"},
 
-        # --- 06. Módulo de Seguridad Defensiva OWASP / RBAC / JWT / 2FA (14 pruebas) ---
+        # --- 06. Módulo de Seguridad Defensiva OWASP / RBAC / JWT / 2FA / QR & Firma Móvil (16 pruebas) ---
         {"file": "tests/test_unit_security.py", "func": "test_security_jwt_tampered_signature_rejected", "service": "Seguridad OWASP & RBAC", "desc": "[OWASP API2] Rechazo de token JWT con firma criptográfica adulterada (401)"},
         {"file": "tests/test_unit_security.py", "func": "test_security_jwt_expired_token_rejected", "service": "Seguridad OWASP & RBAC", "desc": "[OWASP API2] Rechazo inmediato de tokens JWT con tiempo de vida expirado (401)"},
         {"file": "tests/test_unit_security.py", "func": "test_security_jwt_missing_or_empty_token_rejected", "service": "Seguridad OWASP & RBAC", "desc": "[OWASP API2] Bloqueo de peticiones anónimas sin token Bearer (401 Unauthorized)"},
@@ -310,14 +314,18 @@ def main():
         {"file": "tests/test_unit_security.py", "func": "test_security_common_weak_passwords_dictionary_blocked", "service": "Seguridad OWASP & RBAC", "desc": "[OWASP ASVS] Bloqueo de contraseñas comunes de diccionario y claves vulnerables"},
         {"file": "tests/test_unit_security.py", "func": "test_security_evidencia_xss_and_ssrf_schemes_blocked", "service": "Seguridad OWASP & RBAC", "desc": "[Anti-XSS / SSRF] Bloqueo de payloads javascript:, data:text/html, file:// y ftp://"},
         {"file": "tests/test_unit_security.py", "func": "test_security_rut_sql_injection_and_malformed_blocked", "service": "Seguridad OWASP & RBAC", "desc": "[Anti-SQLi] Bloqueo de inyección SQL y caracteres maliciosos en validador de RUT"},
+        {"file": "tests/test_unit_security.py", "func": "test_security_qr_public_endpoint_read_only_and_malformed_uuid_blocked", "service": "Seguridad OWASP & RBAC", "desc": "[Seguridad QR Público] Validación estricta UUID anti-SQLi y protección RBAC en escritura de QR (403)"},
+        {"file": "tests/test_unit_security.py", "func": "test_security_firma_movil_tampered_uri_and_unauthorized_closure_blocked", "service": "Seguridad OWASP & RBAC", "desc": "[Seguridad Firma Móvil] Bloqueo de ejecutables/SVG malicioso en firma táctil y bloqueo de cierre por rol Cliente (403)"},
     ]
 
     results = []
     start_time = time.time()
 
-    # Ejecución unificada de alta velocidad de los 48 casos de prueba con pytest
+    # Ejecución unificada de alta velocidad de los 54 casos de prueba con pytest
+    venv_py = os.path.join(".venv", "Scripts", "python.exe")
+    py_exec = venv_py if os.path.exists(venv_py) else sys.executable
     all_nodes = [f"{tc['file']}::{tc['func']}" for tc in test_cases]
-    cmd = [sys.executable, "-m", "pytest"] + all_nodes + ["-v", "--tb=short"]
+    cmd = [py_exec, "-m", "pytest"] + all_nodes + ["-v", "--tb=short"]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     stdout_text = proc.stdout + "\n" + proc.stderr
 
