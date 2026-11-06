@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Plus, 
   X, 
@@ -13,7 +13,10 @@ import {
   FileText,
   ArrowLeft,
   Edit2,
-  RotateCcw
+  RotateCcw,
+  PenTool,
+  Eraser,
+  UserCheck
 } from "lucide-react";
 import { workOrdersService, type OrdenTrabajo, type EvidenciaTerreno } from "../services/workOrders";
 import { authService, type Usuario, type Convenio } from "../services/auth";
@@ -116,13 +119,151 @@ export const WorkOrders: React.FC = () => {
   const [linkRemovedId, setLinkRemovedId] = useState("");
   const [linkActionType, setLinkActionType] = useState("INSTALACION_NUEVA");
 
-  // Evidence Form Fields
+  // Evidence & Mobile Digital Signature Form Fields
   const [evImageUrl, setEvImageUrl] = useState("");
   const [evImageFileName, setEvImageFileName] = useState("");
   const [evImageFileSize, setEvImageFileSize] = useState("");
   const [evSigUrl, setEvSigUrl] = useState("");
   const [evSigFileName, setEvSigFileName] = useState("");
   const [evComments, setEvComments] = useState("");
+  const [evSigMode, setEvSigMode] = useState<"PANTALLA" | "ARCHIVO">("PANTALLA");
+  const [evReceiverName, setEvReceiverName] = useState("");
+  const [evReceiverRoleOrRut, setEvReceiverRoleOrRut] = useState("");
+  const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
+  const sigCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawingSigRef = useRef(false);
+
+  const initSignatureCanvas = () => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Línea guía de firma
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(24, canvas.height - 34);
+    ctx.lineTo(canvas.width - 24, canvas.height - 34);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "11px Inter, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("FIRME AQUÍ CON EL DEDO EN LA PANTALLA DEL CELULAR", canvas.width / 2, canvas.height - 14);
+  };
+
+  useEffect(() => {
+    if (modalView === "SUBIR_EVIDENCIA" && evSigMode === "PANTALLA" && !hasDrawnSignature) {
+      setTimeout(() => initSignatureCanvas(), 40);
+    }
+  }, [modalView, evSigMode, selectedWo]);
+
+  const getCanvasPoint = (
+    canvas: HTMLCanvasElement,
+    clientX: number,
+    clientY: number
+  ): { x: number; y: number } => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  const handleSigPointerStart = (clientX: number, clientY: number) => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const pt = getCanvasPoint(canvas, clientX, clientY);
+    isDrawingSigRef.current = true;
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(pt.x, pt.y);
+    // Dibujar un punto si es un toque corto
+    ctx.lineTo(pt.x + 0.2, pt.y + 0.2);
+    ctx.stroke();
+    setHasDrawnSignature(true);
+    setModalError(null);
+  };
+
+  const handleSigPointerMove = (clientX: number, clientY: number) => {
+    if (!isDrawingSigRef.current) return;
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const pt = getCanvasPoint(canvas, clientX, clientY);
+    ctx.lineTo(pt.x, pt.y);
+    ctx.stroke();
+  };
+
+  const handleSigPointerEnd = () => {
+    if (!isDrawingSigRef.current) return;
+    isDrawingSigRef.current = false;
+    const canvas = sigCanvasRef.current;
+    if (canvas) {
+      setEvSigUrl(canvas.toDataURL("image/png"));
+      setEvSigFileName("Firma_Recepcion_Movil.png");
+    }
+  };
+
+  const handleClearSignaturePad = () => {
+    setHasDrawnSignature(false);
+    setEvSigUrl("");
+    setEvSigFileName("");
+    initSignatureCanvas();
+  };
+
+  const buildFinalStampedSignatureUrl = (): string | null => {
+    if (evSigMode === "ARCHIVO") {
+      return evSigUrl || null;
+    }
+    if (!hasDrawnSignature || !sigCanvasRef.current) {
+      return evSigUrl || null;
+    }
+    const srcCanvas = sigCanvasRef.current;
+    const outCanvas = document.createElement("canvas");
+    outCanvas.width = srcCanvas.width;
+    outCanvas.height = srcCanvas.height + 42;
+    const ctx = outCanvas.getContext("2d");
+    if (!ctx) return srcCanvas.toDataURL("image/png");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+    ctx.drawImage(srcCanvas, 0, 0);
+
+    // Pie de firma auditable con datos de recepción y fecha/hora
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillRect(0, srcCanvas.height, outCanvas.width, 42);
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.beginPath();
+    ctx.moveTo(0, srcCanvas.height);
+    ctx.lineTo(outCanvas.width, srcCanvas.height);
+    ctx.stroke();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 11px Inter, Arial, sans-serif";
+    ctx.textAlign = "left";
+    const recName = evReceiverName.trim() || "Recepción Conforme en Terreno";
+    const recRole = evReceiverRoleOrRut.trim() ? ` (${evReceiverRoleOrRut.trim()})` : "";
+    ctx.fillText(`Recepcionado por: ${recName}${recRole}`, 12, srcCanvas.height + 16);
+
+    ctx.fillStyle = "#475569";
+    ctx.font = "10px Inter, Arial, sans-serif";
+    const stampDate = new Date().toLocaleString("es-CL");
+    ctx.fillText(`OT: ${selectedWo?.numero_orden || ""}  |  Fecha recepción: ${stampDate}`, 12, srcCanvas.height + 33);
+
+    return outCanvas.toDataURL("image/png");
+  };
 
   const fetchData = async (showLoading = true) => {
     try {
@@ -288,19 +429,52 @@ export const WorkOrders: React.FC = () => {
     }
   };
 
+  const openEvidenceAndClosureView = (wo: OrdenTrabajo) => {
+    setSelectedWo(wo);
+    const loc = locations.find(l => l.ubicacion_id === wo.ubicacion_id);
+    setEvReceiverName(loc?.nombre_encargado || "");
+    setEvReceiverRoleOrRut(loc ? `Encargado ${loc.nombre}` : "");
+    setHasDrawnSignature(false);
+    setEvSigUrl("");
+    setEvSigFileName("");
+    setEvSigMode("PANTALLA");
+    setModalView("SUBIR_EVIDENCIA");
+    setModalError(null);
+    setDetailSuccessMessage(null);
+  };
+
   const submitEvidenceAndOptionallyFinish = async (finalizeWorkOrder: boolean) => {
     if (!selectedWo) return;
     if (!evImageUrl) {
-      setModalError("Por favor toma una foto con la cámara o selecciona una imagen de la galería.");
+      setModalError("Por favor toma una foto del trabajo con la cámara o selecciona una imagen de la galería.");
       return;
     }
+
+    const finalSignatureUrl = buildFinalStampedSignatureUrl();
+
+    if (finalizeWorkOrder) {
+      if (!evReceiverName.trim()) {
+        setModalError("Para recepcionar y cerrar la orden, ingresa el nombre de la persona que recepciona el trabajo.");
+        return;
+      }
+      if (!finalSignatureUrl) {
+        setModalError("Para cerrar la orden, la persona que recepciona debe firmar con su dedo en la pantalla del teléfono (o adjuntar acta firmada).");
+        return;
+      }
+    }
+
+    const receiverHeader = evReceiverName.trim()
+      ? `[Recepcionado por: ${evReceiverName.trim()}${evReceiverRoleOrRut.trim() ? ` - ${evReceiverRoleOrRut.trim()}` : ""}] `
+      : "";
+    const combinedComments = `${receiverHeader}${evComments.trim() || "Trabajo recepcionado conforme en terreno"}`.trim();
+
     setModalLoading(true);
     setModalError(null);
     try {
       const createdEvidence = await workOrdersService.uploadEvidence(selectedWo.orden_trabajo_id, {
         url_imagen: evImageUrl,
-        url_firma: evSigUrl || null,
-        comentarios: evComments || null
+        url_firma: finalSignatureUrl || null,
+        comentarios: combinedComments || null
       });
 
       let updatedWoState: OrdenTrabajo | null = null;
@@ -345,12 +519,15 @@ export const WorkOrders: React.FC = () => {
       setEvSigUrl(""); 
       setEvSigFileName(""); 
       setEvComments(""); 
+      setEvReceiverName("");
+      setEvReceiverRoleOrRut("");
+      setHasDrawnSignature(false);
       setModalError(null);
 
       // Display feedback notifications
       const msg = finalizeWorkOrder
-        ? `Evidencia guardada y Orden ${selectedWo.numero_orden} marcada como FINALIZADA (COMPLETADA).`
-        : "Evidencia fotográfica actualizada con éxito.";
+        ? `Trabajo recepcionado con firma digital y Orden ${selectedWo.numero_orden} CERRADA (COMPLETADA).`
+        : "Evidencia fotográfica y firma guardadas con éxito.";
       setSuccessMessage(msg);
       setDetailSuccessMessage(msg);
       setTimeout(() => {
@@ -361,7 +538,7 @@ export const WorkOrders: React.FC = () => {
       // Refresh in background without full screen spinner
       await fetchData(false);
     } catch (err: any) {
-      setModalError(err?.message || "No se pudo registrar la evidencia.");
+      setModalError(err?.message || "No se pudo registrar la evidencia y firma.");
     } finally {
       setModalLoading(false);
     }
@@ -374,6 +551,14 @@ export const WorkOrders: React.FC = () => {
 
   const handleUpdateStatus = async (status: string) => {
     if (!selectedWo) return;
+    if (status === "COMPLETADA") {
+      const hasSignedReception = (selectedWo.evidencias || []).some(ev => Boolean(ev.url_firma));
+      if (!hasSignedReception) {
+        openEvidenceAndClosureView(selectedWo);
+        setModalError("Para cerrar la orden, captura la evidencia fotográfica y solicita la firma de recepción en la pantalla del teléfono.");
+        return;
+      }
+    }
     try {
       const updated = await workOrdersService.updateWorkOrder(selectedWo.orden_trabajo_id, {
         estado: status,
@@ -495,16 +680,11 @@ export const WorkOrders: React.FC = () => {
                                 color: "#ffffff",
                                 fontWeight: 700
                               }}
-                              title="Tomar foto desde el celular o galería y finalizar orden"
-                              onClick={() => {
-                                setSelectedWo(wo);
-                                setModalView("SUBIR_EVIDENCIA");
-                                setModalError(null);
-                                setDetailSuccessMessage(null);
-                              }}
+                              title="Tomar foto, capturar firma de recepción en el celular y cerrar orden"
+                              onClick={() => openEvidenceAndClosureView(wo)}
                             >
-                              <Camera size={14} />
-                              <span>Foto / Finalizar</span>
+                              <PenTool size={14} />
+                              <span>Foto / Firma Cierre</span>
                             </button>
                           )}
 
@@ -677,14 +857,14 @@ export const WorkOrders: React.FC = () => {
                 )}
                 <h3 style={{ margin: 0, fontWeight: 600 }} className="accent-text-gradient">
                   {modalView === "SUBIR_EVIDENCIA" 
-                    ? "Subir Evidencia Fotográfica" 
+                    ? "Recepción y Cierre de Trabajo (Foto + Firma Móvil)" 
                     : modalView === "VINCULAR_ACTIVO" 
                     ? "Vincular Activo a la OT" 
                     : `Detalle de la Orden: ${selectedWo.numero_orden}`}
                 </h3>
                 <p style={{ fontSize: "0.82rem", color: "hsl(var(--text-muted))", margin: "4px 0 0 0" }}>
                   {modalView === "SUBIR_EVIDENCIA" 
-                    ? `Orden ${selectedWo.numero_orden} - Carga fotografías del trabajo realizado en terreno` 
+                    ? `Orden ${selectedWo.numero_orden} - Fotografía del equipo instalado y firma de recepción en pantalla` 
                     : modalView === "VINCULAR_ACTIVO" 
                     ? `Orden ${selectedWo.numero_orden} - Asocia activos instalados o retirados` 
                     : `Programada para: ${new Date(selectedWo.fecha_programada).toLocaleString()}`}
@@ -761,7 +941,7 @@ export const WorkOrders: React.FC = () => {
                       )}
                       {selectedWo.estado !== "COMPLETADA" && (
                         <button className="btn-primary" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => handleUpdateStatus("COMPLETADA")}>
-                          {isTech ? "Finalizar y Completar" : "Completar"}
+                          {isTech ? "Recepcionar y Finalizar" : "Completar"}
                         </button>
                       )}
                       {isAdminOrJefe && selectedWo.estado !== "CANCELADA" && (
@@ -810,12 +990,12 @@ export const WorkOrders: React.FC = () => {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                     <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
                       <Camera size={16} style={{ color: "hsl(var(--accent-primary))" }} />
-                      <span>Evidencias y Firmas de Terreno</span>
+                      <span>Evidencias y Firmas de Recepción en Terreno</span>
                     </h4>
                     {!isClient && (
-                      <button className="btn-primary" style={{ padding: "5px 12px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => { setModalView("SUBIR_EVIDENCIA"); setModalError(null); }}>
-                        <Plus size={14} />
-                        <span>Subir Foto / Evidencia</span>
+                      <button className="btn-primary" style={{ padding: "5px 12px", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => openEvidenceAndClosureView(selectedWo)}>
+                        <PenTool size={14} />
+                        <span>Subir Foto / Firma Recepción</span>
                       </button>
                     )}
                   </div>
@@ -823,7 +1003,7 @@ export const WorkOrders: React.FC = () => {
                   {(!selectedWo.evidencias || selectedWo.evidencias.length === 0) ? (
                     <div style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "8px", padding: "24px", textAlign: "center" }}>
                       <p style={{ fontSize: "0.85rem", color: "hsl(var(--text-muted))", margin: 0 }}>
-                        No se han registrado evidencias fotográficas para este trabajo.
+                        No se han registrado evidencias fotográficas ni firmas de recepción para este trabajo.
                       </p>
                     </div>
                   ) : (
@@ -847,16 +1027,25 @@ export const WorkOrders: React.FC = () => {
                           </div>
 
                           <div style={{ marginTop: "8px" }}>
-                            <p style={{ fontSize: "0.82rem", fontWeight: 600, margin: "0 0 3px 0", color: "#fff" }}>
+                            <p style={{ fontSize: "0.8rem", fontWeight: 600, margin: "0 0 6px 0", color: "#fff", lineHeight: 1.3 }}>
                               {e.comentarios || "Fotografía de trabajo en terreno"}
                             </p>
+                            {e.url_firma && (
+                              <div style={{ background: "#ffffff", borderRadius: "6px", padding: "4px 6px", marginBottom: "6px", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <img
+                                  src={e.url_firma}
+                                  alt="Firma Recepción"
+                                  style={{ maxHeight: "42px", maxWidth: "100%", objectFit: "contain", display: "block" }}
+                                />
+                              </div>
+                            )}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <span style={{ fontSize: "0.74rem", color: "hsl(var(--text-muted))" }}>
                                 📅 {new Date(e.fecha_captura).toLocaleDateString()}
                               </span>
                               {e.url_firma && (
-                                <span className="badge success" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
-                                  Con firma
+                                <span className="badge success" style={{ fontSize: "0.68rem", padding: "2px 6px" }}>
+                                  ✍️ Recepcionado
                                 </span>
                               )}
                             </div>
@@ -869,14 +1058,14 @@ export const WorkOrders: React.FC = () => {
               </div>
             )}
 
-            {/* TAB 2: SUBIR EVIDENCIA */}
+            {/* TAB 2: SUBIR EVIDENCIA Y FIRMA DE RECEPCIÓN MÓVIL */}
             {modalView === "SUBIR_EVIDENCIA" && (
               <form onSubmit={handleUploadEvidence}>
-                {/* Main Evidence Photo Picker */}
-                <div className="form-group" style={{ marginBottom: "16px" }}>
+                {/* 1. Main Evidence Photo Picker */}
+                <div className="form-group" style={{ marginBottom: "14px" }}>
                   <label style={{ fontSize: "0.82rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
                     <Camera size={15} style={{ color: "hsl(var(--accent-primary))" }} />
-                    <span>Foto del Trabajo Realizado (.JPG / .PNG) *</span>
+                    <span>1. Foto del Trabajo Realizado (.JPG / .PNG) *</span>
                   </label>
 
                   {evImageUrl ? (
@@ -916,7 +1105,7 @@ export const WorkOrders: React.FC = () => {
                       style={{ 
                         border: "2px dashed rgba(56, 189, 248, 0.35)", 
                         borderRadius: "12px", 
-                        padding: "20px 16px", 
+                        padding: "16px 14px", 
                         textAlign: "center",
                         background: "rgba(15, 23, 42, 0.35)"
                       }}
@@ -939,12 +1128,12 @@ export const WorkOrders: React.FC = () => {
                         onChange={handleEvidenceImageFileChange}
                       />
 
-                      <Camera size={32} style={{ color: "hsl(var(--accent-primary))", margin: "0 auto 8px auto" }} />
-                      <h5 style={{ margin: "0 0 6px 0", fontSize: "0.95rem", fontWeight: 700 }}>
+                      <Camera size={28} style={{ color: "hsl(var(--accent-primary))", margin: "0 auto 6px auto" }} />
+                      <h5 style={{ margin: "0 0 4px 0", fontSize: "0.92rem", fontWeight: 700 }}>
                         Captura o sube la evidencia del monitor instalado
                       </h5>
-                      <p style={{ margin: "0 0 14px 0", fontSize: "0.78rem", color: "hsl(var(--text-muted))" }}>
-                        Puedes abrir directamente la cámara de tu celular o elegir una foto desde tu galería
+                      <p style={{ margin: "0 0 12px 0", fontSize: "0.76rem", color: "hsl(var(--text-muted))" }}>
+                        Abre directamente la cámara trasera del celular o elige una foto de la galería
                       </p>
 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -952,8 +1141,8 @@ export const WorkOrders: React.FC = () => {
                           type="button"
                           className="btn-primary"
                           style={{
-                            padding: "11px 14px",
-                            fontSize: "0.84rem",
+                            padding: "10px 12px",
+                            fontSize: "0.82rem",
                             fontWeight: 700,
                             display: "flex",
                             alignItems: "center",
@@ -972,8 +1161,8 @@ export const WorkOrders: React.FC = () => {
                           type="button"
                           className="btn-secondary"
                           style={{
-                            padding: "11px 14px",
-                            fontSize: "0.84rem",
+                            padding: "10px 12px",
+                            fontSize: "0.82rem",
                             fontWeight: 700,
                             display: "flex",
                             alignItems: "center",
@@ -990,59 +1179,180 @@ export const WorkOrders: React.FC = () => {
                   )}
                 </div>
 
-                {/* Optional Signature File Picker */}
-                <div className="form-group" style={{ marginBottom: "16px" }}>
-                  <label style={{ fontSize: "0.82rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-                    <FileText size={15} style={{ color: "hsl(var(--accent-primary))" }} />
-                    <span>Firma o Acta del Cliente (Opcional)</span>
-                  </label>
+                {/* 2. Recepción Conforme y Firma Digital desde el Teléfono */}
+                <div
+                  style={{
+                    background: "rgba(15, 23, 42, 0.55)",
+                    border: "1px solid rgba(56, 189, 248, 0.28)",
+                    borderRadius: "12px",
+                    padding: "14px",
+                    marginBottom: "14px"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                    <label style={{ fontSize: "0.84rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px", margin: 0, color: "#38bdf8" }}>
+                      <UserCheck size={16} />
+                      <span>2. Recepción del Trabajo y Firma en Teléfono *</span>
+                    </label>
+                    <div style={{ display: "inline-flex", gap: "6px" }}>
+                      <button
+                        type="button"
+                        className={evSigMode === "PANTALLA" ? "btn-primary" : "btn-secondary"}
+                        style={{ padding: "4px 10px", fontSize: "0.73rem" }}
+                        onClick={() => setEvSigMode("PANTALLA")}
+                      >
+                        ✍️ Firmar en Pantalla
+                      </button>
+                      <button
+                        type="button"
+                        className={evSigMode === "ARCHIVO" ? "btn-primary" : "btn-secondary"}
+                        style={{ padding: "4px 10px", fontSize: "0.73rem" }}
+                        onClick={() => setEvSigMode("ARCHIVO")}
+                      >
+                        📎 Subir Acta
+                      </button>
+                    </div>
+                  </div>
 
-                  {evSigUrl ? (
-                    <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)" }}>
-                      <span style={{ fontSize: "0.8rem", color: "#fff" }}>
-                        ✍️ {evSigFileName || "Firma adjuntada"}
-                      </span>
-                      <button 
-                        type="button" 
-                        className="btn-secondary" 
-                        style={{ padding: "2px 8px", fontSize: "0.75rem" }}
-                        onClick={() => {
-                          setEvSigUrl("");
-                          setEvSigFileName("");
+                  {/* Datos de quien recepciona el trabajo */}
+                  <div className="form-row" style={{ marginBottom: "10px", gap: "10px" }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: "0.76rem", marginBottom: "4px" }}>Nombre de quien recepciona *</label>
+                      <input
+                        type="text"
+                        className="glass-input"
+                        style={{ padding: "7px 10px", fontSize: "0.83rem" }}
+                        placeholder="Ej: Juan Pérez (Jefe de Local)"
+                        value={evReceiverName}
+                        onChange={e => setEvReceiverName(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: "0.76rem", marginBottom: "4px" }}>Cargo o RUT (Opcional)</label>
+                      <input
+                        type="text"
+                        className="glass-input"
+                        style={{ padding: "7px 10px", fontSize: "0.83rem" }}
+                        placeholder="Ej: 15.432.198-K / Encargado"
+                        value={evReceiverRoleOrRut}
+                        onChange={e => setEvReceiverRoleOrRut(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {evSigMode === "PANTALLA" ? (
+                    <div>
+                      <div
+                        style={{
+                          position: "relative",
+                          background: "#ffffff",
+                          borderRadius: "10px",
+                          border: hasDrawnSignature ? "2px solid #10b981" : "2px solid #94a3b8",
+                          overflow: "hidden",
+                          touchAction: "none",
+                          userSelect: "none"
                         }}
                       >
-                        Quitar
-                      </button>
+                        <canvas
+                          ref={sigCanvasRef}
+                          width={480}
+                          height={155}
+                          style={{
+                            width: "100%",
+                            height: "145px",
+                            display: "block",
+                            cursor: "crosshair",
+                            touchAction: "none"
+                          }}
+                          onMouseDown={e => handleSigPointerStart(e.clientX, e.clientY)}
+                          onMouseMove={e => handleSigPointerMove(e.clientX, e.clientY)}
+                          onMouseUp={handleSigPointerEnd}
+                          onMouseLeave={handleSigPointerEnd}
+                          onTouchStart={e => {
+                            e.preventDefault();
+                            const t = e.touches[0];
+                            if (t) handleSigPointerStart(t.clientX, t.clientY);
+                          }}
+                          onTouchMove={e => {
+                            e.preventDefault();
+                            const t = e.touches[0];
+                            if (t) handleSigPointerMove(t.clientX, t.clientY);
+                          }}
+                          onTouchEnd={e => {
+                            e.preventDefault();
+                            handleSigPointerEnd();
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                        <span style={{ fontSize: "0.75rem", color: hasDrawnSignature ? "#34d399" : "hsl(var(--text-muted))", fontWeight: hasDrawnSignature ? 600 : 400 }}>
+                          {hasDrawnSignature
+                            ? "✅ Firma de recepción capturada en pantalla"
+                            : "👆 Pídele al encargado que firme con su dedo en el recuadro blanco"}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: "4px 10px", fontSize: "0.74rem", display: "inline-flex", alignItems: "center", gap: "5px" }}
+                          onClick={handleClearSignaturePad}
+                        >
+                          <Eraser size={13} />
+                          <span>Borrar Firma</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div>
-                      <input 
-                        type="file" 
-                        id="sig-file-input"
-                        accept="image/png, image/jpeg, image/jpg" 
-                        style={{ display: "none" }}
-                        onChange={handleEvidenceSigFileChange}
-                      />
-                      <button 
-                        type="button" 
-                        className="btn-secondary"
-                        style={{ width: "100%", padding: "8px", fontSize: "0.8rem", borderStyle: "dashed" }}
-                        onClick={() => document.getElementById("sig-file-input")?.click()}
-                      >
-                        + Adjuntar imagen de firma o acta escaneada
-                      </button>
+                      {evSigUrl ? (
+                        <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)" }}>
+                          <span style={{ fontSize: "0.8rem", color: "#fff" }}>
+                            ✍️ {evSigFileName || "Acta firmada adjuntada"}
+                          </span>
+                          <button 
+                            type="button" 
+                            className="btn-secondary" 
+                            style={{ padding: "2px 8px", fontSize: "0.75rem" }}
+                            onClick={() => {
+                              setEvSigUrl("");
+                              setEvSigFileName("");
+                            }}
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <input 
+                            type="file" 
+                            id="sig-file-input"
+                            accept="image/png, image/jpeg, image/jpg" 
+                            style={{ display: "none" }}
+                            onChange={handleEvidenceSigFileChange}
+                          />
+                          <button 
+                            type="button" 
+                            className="btn-secondary"
+                            style={{ width: "100%", padding: "10px", fontSize: "0.8rem", borderStyle: "dashed" }}
+                            onClick={() => document.getElementById("sig-file-input")?.click()}
+                          >
+                            <FileText size={14} style={{ marginRight: "6px" }} />
+                            <span>+ Adjuntar foto de acta o firma en papel</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Comments */}
-                <div className="form-group" style={{ marginBottom: "22px" }}>
-                  <label style={{ fontSize: "0.82rem", fontWeight: 600 }}>Comentarios u Observaciones del Trabajo</label>
+                {/* 3. Comments */}
+                <div className="form-group" style={{ marginBottom: "18px" }}>
+                  <label style={{ fontSize: "0.82rem", fontWeight: 600 }}>3. Observaciones de Cierre / Recepción</label>
                   <textarea 
                     className="glass-input" 
                     rows={2}
-                    style={{ resize: "vertical", fontSize: "0.85rem", padding: "8px 12px" }}
-                    placeholder="ej: Pantalla Samsung 65 instalada en tótem principal y probada con éxito..." 
+                    style={{ resize: "vertical", fontSize: "0.84rem", padding: "8px 12px" }}
+                    placeholder="ej: Monitor instalado y operativo en sala principal. Se entrega conforme..." 
                     value={evComments} 
                     onChange={e=>setEvComments(e.target.value)} 
                   />
@@ -1061,7 +1371,7 @@ export const WorkOrders: React.FC = () => {
                     ) : (
                       <>
                         <Camera size={15} />
-                        <span>Guardar Solo Foto</span>
+                        <span>Guardar Avance</span>
                       </>
                     )}
                   </button>
@@ -1082,7 +1392,7 @@ export const WorkOrders: React.FC = () => {
                       onClick={() => submitEvidenceAndOptionallyFinish(true)}
                     >
                       <CheckCircle2 size={16} />
-                      <span>Subir Foto y Finalizar Trabajo</span>
+                      <span>Recepcionar con Firma y Cerrar Orden</span>
                     </button>
                   )}
                 </div>
@@ -1213,14 +1523,14 @@ export const WorkOrders: React.FC = () => {
 
               {previewEvidence.url_firma && (
                 <div style={{ textAlign: "center", borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: "18px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "hsl(var(--text-muted))", display: "block", marginBottom: "6px", fontWeight: 500 }}>
-                    ✍️ Firma del Cliente
+                  <span style={{ fontSize: "0.75rem", color: "#34d399", display: "block", marginBottom: "6px", fontWeight: 700 }}>
+                    ✍️ Firma de Recepción Conforme
                   </span>
-                  <div style={{ background: "#ffffff", borderRadius: "6px", padding: "4px 8px", display: "inline-block" }}>
+                  <div style={{ background: "#ffffff", borderRadius: "8px", padding: "6px 10px", display: "inline-block", border: "1px solid #cbd5e1" }}>
                     <img 
                       src={previewEvidence.url_firma} 
-                      alt="Firma del Cliente" 
-                      style={{ height: "45px", maxWidth: "150px", objectFit: "contain", display: "block" }} 
+                      alt="Firma de Recepción" 
+                      style={{ height: "75px", maxWidth: "260px", objectFit: "contain", display: "block" }} 
                     />
                   </div>
                 </div>
