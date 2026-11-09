@@ -62,6 +62,24 @@ export interface RespuestaActivarMFA {
   codigos_respaldo: string[];
 }
 
+export interface AuditoriaEvento {
+  auditoria_id: string;
+  usuario_id?: string | null;
+  correo_usuario?: string | null;
+  nombre_usuario?: string | null;
+  rol_usuario?: string | null;
+  modulo: string;
+  accion: string;
+  descripcion: string;
+  metodo_http?: string | null;
+  ruta_endpoint?: string | null;
+  codigo_respuesta?: number | null;
+  direccion_ip?: string | null;
+  dispositivo_user_agent?: string | null;
+  detalle_json?: string | null;
+  fecha_evento: string;
+}
+
 export const authService = {
   login: async (credenciales: any): Promise<RespuestaIniciarSesion> => {
     return api.post<RespuestaIniciarSesion>("/auth/iniciar-sesion", credenciales);
@@ -149,5 +167,27 @@ export const authService = {
 
   getAgreements: async (): Promise<Convenio[]> => {
     return api.get<Convenio[]>("/convenios");
+  },
+
+  // Auditoría y Bitácora de Usuarios
+  getAuditLogs: async (params?: {
+    modulo?: string;
+    accion?: string;
+    rol_usuario?: string;
+    busqueda?: string;
+    limit?: number;
+  }): Promise<AuditoriaEvento[]> => {
+    const query = new URLSearchParams();
+    if (params?.modulo && params.modulo !== "TODOS") query.set("modulo", params.modulo);
+    if (params?.accion && params.accion !== "TODAS") query.set("accion", params.accion);
+    if (params?.rol_usuario && params.rol_usuario !== "TODOS") query.set("rol_usuario", params.rol_usuario);
+    if (params?.busqueda && params.busqueda.trim()) query.set("busqueda", params.busqueda.trim());
+    if (params?.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    return api.get<AuditoriaEvento[]>(`/auditoria${qs ? `?${qs}` : ""}`);
+  },
+
+  registerAuditEvent: async (evento: Partial<AuditoriaEvento>): Promise<AuditoriaEvento> => {
+    return api.post<AuditoriaEvento>("/auditoria/registrar-evento", evento);
   }
 };

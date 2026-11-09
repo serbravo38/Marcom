@@ -79,3 +79,28 @@ class PerfilCliente(Base):
     # Relaciones
     usuario = relationship("Usuario", back_populates="perfil")
     convenio = relationship("Convenio", back_populates="perfiles")
+
+
+class AuditoriaUsuario(Base):
+    __tablename__ = "auditoria_usuarios"
+    __table_args__ = {"schema": "esquema_auth_clientes"}
+
+    auditoria_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    usuario_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("esquema_auth_clientes.usuarios.usuario_id", ondelete="SET NULL"),
+        nullable=True
+    )
+    correo_usuario = Column(String(150), nullable=True)
+    nombre_usuario = Column(String(150), nullable=True)
+    rol_usuario = Column(String(50), nullable=True)
+    modulo = Column(String(60), nullable=False)
+    accion = Column(String(60), nullable=False)
+    descripcion = Column(String(500), nullable=False)
+    metodo_http = Column(String(15), nullable=True)
+    ruta_endpoint = Column(String(255), nullable=True)
+    codigo_respuesta = Column(Integer, nullable=True)
+    direccion_ip = Column(String(60), nullable=True)
+    dispositivo_user_agent = Column(String(300), nullable=True)
+    detalle_json = Column(Text, nullable=True)
+    fecha_evento = Column(DateTime(timezone=True), server_default=func.now())

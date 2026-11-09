@@ -265,5 +265,32 @@ class ActualizarTrabajosPortada(BaseModel):
     items: List[TrabajoPortadaItem]
 
 
+# --- AUDITORÍA Y BITÁCORA DE USUARIOS ---
+class AuditoriaUsuarioBase(BaseModel):
+    usuario_id: Optional[UUID] = None
+    correo_usuario: Optional[str] = None
+    nombre_usuario: Optional[str] = None
+    rol_usuario: Optional[str] = None
+    modulo: str = Field(..., max_length=60)
+    accion: str = Field(..., max_length=60)
+    descripcion: str = Field(..., max_length=500)
+    metodo_http: Optional[str] = Field(None, max_length=15)
+    ruta_endpoint: Optional[str] = Field(None, max_length=255)
+    codigo_respuesta: Optional[int] = None
+    direccion_ip: Optional[str] = Field(None, max_length=60)
+    dispositivo_user_agent: Optional[str] = Field(None, max_length=300)
+    detalle_json: Optional[str] = None
+
+class AuditoriaUsuarioCrear(AuditoriaUsuarioBase):
+    pass
+
+class AuditoriaUsuarioRespuesta(AuditoriaUsuarioBase):
+    auditoria_id: UUID
+    fecha_evento: datetime
+
+    class Config:
+        from_attributes = True
+
+
 
 

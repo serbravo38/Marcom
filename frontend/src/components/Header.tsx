@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { Search, Bell, ChevronDown, Building2, LogOut, Menu } from "lucide-react";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import ThemeToggle from "./ThemeToggle";
+import { authService } from "../services/auth";
 
 interface HeaderProps {
   /** Título principal de la sección activa (ej. 'Panel Principal', 'Gestión de Inventario') */
@@ -42,7 +43,25 @@ export const Header: React.FC<HeaderProps> = ({ title, onToggleMobileSidebar }) 
     }
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (currentUser) {
+        await authService.registerAuditEvent({
+          usuario_id: currentUser.id,
+          nombre_usuario: `${currentUser.nombre} ${currentUser.apellido}`.trim(),
+          correo_usuario: currentUser.correo_electronico,
+          rol_usuario: currentUser.rol,
+          modulo: "SESION_AUTH",
+          accion: "CIERRE_SESION",
+          descripcion: "Cierre de sesión voluntario desde el encabezado de la plataforma",
+          ruta_endpoint: "/logout",
+          metodo_http: "POST",
+          codigo_respuesta: 200,
+        });
+      }
+    } catch {
+      // No bloquear cierre de sesión si falla registro de auditoría
+    }
     localStorage.removeItem("marcom_token");
     localStorage.removeItem("marcom_user");
     navigate("/login");

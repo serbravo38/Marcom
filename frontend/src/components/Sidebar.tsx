@@ -31,6 +31,7 @@ import {
   TrendingUp,
   Tv,
   FileSpreadsheet,
+  ShieldCheck,
   X
 } from "lucide-react";
 import { ProfileModal } from "./ProfileModal";
@@ -160,6 +161,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           >
             <User size={20} />
             <span>Usuarios y Roles</span>
+          </NavLink>
+        )}
+
+        {/* Auditoría y Bitácora de Usuarios - Exclusivo Administradores */}
+        {currentUser && currentUser.rol === "ADMIN" && (
+          <NavLink 
+            to="/auditoria" 
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+            title="Bitácora de inicios de sesión y movimientos de usuarios"
+          >
+            <ShieldCheck size={20} />
+            <span>Auditoría Usuarios</span>
           </NavLink>
         )}
 

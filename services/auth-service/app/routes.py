@@ -1,15 +1,103 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Response, BackgroundTasks, Request
 from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy import text as sql_text
+from typing import List, Optional
 from uuid import UUID
 import random
 import logging
+import json
 from app.db import get_db
 from app.config import settings
 from app import crud, schemas, auth, models, email_service
 
 logger = logging.getLogger("auth_audit")
 router = APIRouter()
+
+def _ensure_auditoria_table(db: Session):
+    try:
+        db.execute(sql_text("""
+            CREATE TABLE IF NOT EXISTS esquema_auth_clientes.auditoria_usuarios (
+                auditoria_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                usuario_id UUID REFERENCES esquema_auth_clientes.usuarios(usuario_id) ON DELETE SET NULL,
+                correo_usuario VARCHAR(150),
+                nombre_usuario VARCHAR(150),
+                rol_usuario VARCHAR(50),
+                modulo VARCHAR(60) NOT NULL,
+                accion VARCHAR(60) NOT NULL,
+                descripcion VARCHAR(500) NOT NULL,
+                metodo_http VARCHAR(15),
+                ruta_endpoint VARCHAR(255),
+                codigo_respuesta INTEGER,
+                direccion_ip VARCHAR(60),
+                dispositivo_user_agent VARCHAR(300),
+                detalle_json TEXT,
+                fecha_evento TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning(f"No se pudo verificar tabla auditoria_usuarios: {exc}")
+
+def _extract_request_meta(request: Optional[Request]) -> tuple[str, str]:
+    if not request:
+        return "127.0.0.1", "Desconocido"
+    forwarded_for = request.headers.get("x-forwarded-for")
+    real_ip = request.headers.get("x-real-ip")
+    if forwarded_for:
+        ip = forwarded_for.split(",")[0].strip()
+    elif real_ip:
+        ip = real_ip.strip()
+    else:
+        ip = request.client.host if request.client else "127.0.0.1"
+    ua = (request.headers.get("user-agent") or "Navegador / Cliente API")[:300]
+    return ip[:60], ua
+
+def _registrar_evento_auditoria(
+    db: Session,
+    modulo: str,
+    accion: str,
+    descripcion: str,
+    usuario: Optional[models.Usuario] = None,
+    usuario_id: Optional[UUID] = None,
+    correo_usuario: Optional[str] = None,
+    nombre_usuario: Optional[str] = None,
+    rol_usuario: Optional[str] = None,
+    metodo_http: str = "POST",
+    ruta_endpoint: str = "/api/v1/auth/iniciar-sesion",
+    codigo_respuesta: int = 200,
+    direccion_ip: str = "127.0.0.1",
+    dispositivo_user_agent: str = "Navegador",
+    detalle_dict: Optional[dict] = None
+):
+    try:
+        _ensure_auditoria_table(db)
+        uid = usuario.usuario_id if usuario else usuario_id
+        correo = usuario.correo if usuario else correo_usuario
+        nombre = f"{usuario.nombre} {usuario.apellido}".strip() if usuario else nombre_usuario
+        rol = (usuario.rol.value if hasattr(usuario.rol, "value") else str(usuario.rol)) if usuario else rol_usuario
+        detalle_str = json.dumps(detalle_dict, ensure_ascii=False) if detalle_dict else None
+
+        nuevo_evento = models.AuditoriaUsuario(
+            usuario_id=uid,
+            correo_usuario=correo,
+            nombre_usuario=nombre,
+            rol_usuario=rol,
+            modulo=modulo[:60],
+            accion=accion[:60],
+            descripcion=descripcion[:500],
+            metodo_http=(metodo_http or "POST")[:15],
+            ruta_endpoint=(ruta_endpoint or "")[:255],
+            codigo_respuesta=codigo_respuesta,
+            direccion_ip=(direccion_ip or "127.0.0.1")[:60],
+            dispositivo_user_agent=(dispositivo_user_agent or "Navegador")[:300],
+            detalle_json=detalle_str
+        )
+        db.add(nuevo_evento)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning(f"Error al guardar evento en auditoria_usuarios: {exc}")
 
 # --- AUTH ENDPOINTS ---
 
@@ -36,11 +124,27 @@ def register_user(
     return crud.crear_usuario(db=db, usuario_in=user_in)
 
 @router.post("/auth/iniciar-sesion", response_model=schemas.Token)
-def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(get_db)):
+def login_user(user_login: schemas.IniciarSesionUsuario, request: Request, db: Session = Depends(get_db)):
+    ip_addr, user_agent = _extract_request_meta(request)
     user = crud.obtener_usuario_por_correo(db, correo=user_login.correo)
     if not user:
         # Prevenir enumeración y ataques de tiempo (timing attack mitigation)
         crud.verificar_clave_dummy(user_login.clave)
+        _registrar_evento_auditoria(
+            db,
+            modulo="SESION_AUTH",
+            accion="LOGIN_FALLIDO",
+            descripcion=f"Intento de inicio de sesión con correo no registrado ({user_login.correo})",
+            correo_usuario=user_login.correo,
+            nombre_usuario="Usuario Desconocido",
+            rol_usuario="NO_AUTENTICADO",
+            metodo_http="POST",
+            ruta_endpoint="/api/v1/auth/iniciar-sesion",
+            codigo_respuesta=401,
+            direccion_ip=ip_addr,
+            dispositivo_user_agent=user_agent,
+            detalle_dict={"motivo": "Correo no existe", "correo_intentado": user_login.correo}
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas.",
@@ -56,6 +160,18 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
             )
         crud.resetear_intentos_fallidos(db, user)
         logger.info(f"[AUDIT_SEGURIDAD] Ingreso con contraseña temporal válido para: {user.correo}. Requiere definir nueva clave.")
+        _registrar_evento_auditoria(
+            db,
+            modulo="SESION_AUTH",
+            accion="LOGIN_CLAVE_TEMPORAL",
+            descripcion=f"Ingreso con contraseña temporal de recuperación ({user.correo}). Se solicitó cambio de clave.",
+            usuario=user,
+            metodo_http="POST",
+            ruta_endpoint="/api/v1/auth/iniciar-sesion",
+            codigo_respuesta=200,
+            direccion_ip=ip_addr,
+            dispositivo_user_agent=user_agent
+        )
         return {
             "access_token": None,
             "token_type": "bearer",
@@ -68,6 +184,19 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     esta_bloqueado, segundos_restantes = crud.esta_cuenta_bloqueada(user)
     if esta_bloqueado:
         minutos_restantes = max(1, (segundos_restantes + 59) // 60)
+        _registrar_evento_auditoria(
+            db,
+            modulo="SESION_AUTH",
+            accion="CUENTA_BLOQUEADA",
+            descripcion=f"Intento de acceso rechazado: cuenta {user.correo} se encuentra bloqueada temporalmente",
+            usuario=user,
+            metodo_http="POST",
+            ruta_endpoint="/api/v1/auth/iniciar-sesion",
+            codigo_respuesta=429,
+            direccion_ip=ip_addr,
+            dispositivo_user_agent=user_agent,
+            detalle_dict={"segundos_restantes": segundos_restantes}
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Cuenta bloqueada temporalmente por múltiples intentos fallidos. Inténtalo nuevamente en {minutos_restantes} minuto(s) o solicita una contraseña temporal de recuperación.",
@@ -80,6 +209,19 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
         if bloqueado_ahora:
             logger.warning(f"[AUDIT_SEGURIDAD] Cuenta bloqueada por exceso de intentos fallidos: {user.correo}")
             minutos = max(1, (segs + 59) // 60)
+            _registrar_evento_auditoria(
+                db,
+                modulo="SESION_AUTH",
+                accion="CUENTA_BLOQUEADA",
+                descripcion=f"Cuenta {user.correo} bloqueada por alcanzar {intentos} intentos fallidos de contraseña",
+                usuario=user,
+                metodo_http="POST",
+                ruta_endpoint="/api/v1/auth/iniciar-sesion",
+                codigo_respuesta=429,
+                direccion_ip=ip_addr,
+                dispositivo_user_agent=user_agent,
+                detalle_dict={"intentos_fallidos": intentos, "bloqueo_minutos": minutos}
+            )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Demasiados intentos fallidos. Por motivos de seguridad, tu cuenta ha sido bloqueada temporalmente por {minutos} minutos. Puedes esperar o solicitar una contraseña temporal por correo para desbloquearla.",
@@ -88,6 +230,19 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
         else:
             logger.warning(f"[AUDIT_SEGURIDAD] Contraseña incorrecta para cuenta: {user.correo} (intentos: {intentos})")
             intentos_restantes = max(0, settings.MAX_FAILED_LOGIN_ATTEMPTS - intentos)
+            _registrar_evento_auditoria(
+                db,
+                modulo="SESION_AUTH",
+                accion="LOGIN_FALLIDO",
+                descripcion=f"Contraseña incorrecta para {user.correo} (intento {intentos}/{settings.MAX_FAILED_LOGIN_ATTEMPTS})",
+                usuario=user,
+                metodo_http="POST",
+                ruta_endpoint="/api/v1/auth/iniciar-sesion",
+                codigo_respuesta=401,
+                direccion_ip=ip_addr,
+                dispositivo_user_agent=user_agent,
+                detalle_dict={"intentos_acumulados": intentos, "intentos_restantes": intentos_restantes}
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Credenciales incorrectas. Te quedan {intentos_restantes} intento(s) antes del bloqueo temporal de 5 minutos.",
@@ -97,6 +252,18 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     # 3. Comprobar si el usuario está activo
     if not user.activo:
         logger.warning(f"[AUDIT_SEGURIDAD] Intento de acceso a cuenta inactiva: {user.correo}")
+        _registrar_evento_auditoria(
+            db,
+            modulo="SESION_AUTH",
+            accion="LOGIN_FALLIDO",
+            descripcion=f"Intento de inicio de sesión en cuenta inactiva ({user.correo})",
+            usuario=user,
+            metodo_http="POST",
+            ruta_endpoint="/api/v1/auth/iniciar-sesion",
+            codigo_respuesta=400,
+            direccion_ip=ip_addr,
+            dispositivo_user_agent=user_agent
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Usuario inactivo. Contacta al administrador."
@@ -115,6 +282,18 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
     # 5. Comprobar si el usuario tiene autenticación de dos factores (2FA / MFA) habilitada
     if user.mfa_habilitado and user.mfa_secreto:
         challenge_token = auth.create_mfa_challenge_token(str(user.usuario_id), user.correo)
+        _registrar_evento_auditoria(
+            db,
+            modulo="SESION_AUTH",
+            accion="DESAFIO_MFA",
+            descripcion=f"Credenciales válidas para {user.correo}; se solicitó código de segundo factor 2FA/TOTP",
+            usuario=user,
+            metodo_http="POST",
+            ruta_endpoint="/api/v1/auth/iniciar-sesion",
+            codigo_respuesta=200,
+            direccion_ip=ip_addr,
+            dispositivo_user_agent=user_agent
+        )
         return {
             "access_token": None,
             "token_type": "bearer",
@@ -130,6 +309,19 @@ def login_user(user_login: schemas.IniciarSesionUsuario, db: Session = Depends(g
         "convenio_id": convenio_id_val
     }
     access_token = auth.create_access_token(data=token_data)
+    _registrar_evento_auditoria(
+        db,
+        modulo="SESION_AUTH",
+        accion="LOGIN_EXITOSO",
+        descripcion=f"Inicio de sesión exitoso de {user.nombre} {user.apellido} ({user.correo}) con rol {user.rol.value}",
+        usuario=user,
+        metodo_http="POST",
+        ruta_endpoint="/api/v1/auth/iniciar-sesion",
+        codigo_respuesta=200,
+        direccion_ip=ip_addr,
+        dispositivo_user_agent=user_agent,
+        detalle_dict={"autenticacion": "JWT Estándar", "rol": user.rol.value}
+    )
     return {"access_token": access_token, "token_type": "bearer", "requiere_mfa": False}
 
 @router.post("/auth/solicitar-recuperacion", response_model=schemas.RespuestaRecuperacion)
@@ -715,6 +907,101 @@ def update_trabajos_portada(
     )
     db.commit()
     return {"status": "ok", "items": payload.items}
+
+
+# --- AUDITORÍA Y BITÁCORA DE MOVIMIENTOS DE USUARIOS ---
+
+@router.get("/auditoria", response_model=List[schemas.AuditoriaUsuarioRespuesta])
+def get_audit_logs(
+    modulo: Optional[str] = None,
+    accion: Optional[str] = None,
+    rol_usuario: Optional[str] = None,
+    busqueda: Optional[str] = None,
+    limit: int = 300,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(auth.require_role([models.RolUsuario.ADMIN]))
+):
+    """
+    Lista la bitácora completa de inicios de sesión y movimientos de usuarios logueados.
+    Exclusivo para el rol ADMIN.
+    """
+    _ensure_auditoria_table(db)
+    query = db.query(models.AuditoriaUsuario)
+
+    if modulo and modulo.strip() and modulo != "TODOS":
+        query = query.filter(models.AuditoriaUsuario.modulo == modulo.strip())
+    if accion and accion.strip() and accion != "TODAS":
+        query = query.filter(models.AuditoriaUsuario.accion == accion.strip())
+    if rol_usuario and rol_usuario.strip() and rol_usuario != "TODOS":
+        query = query.filter(models.AuditoriaUsuario.rol_usuario == rol_usuario.strip())
+    if busqueda and busqueda.strip():
+        term = f"%{busqueda.strip()}%"
+        from sqlalchemy import or_
+        query = query.filter(
+            or_(
+                models.AuditoriaUsuario.correo_usuario.ilike(term),
+                models.AuditoriaUsuario.nombre_usuario.ilike(term),
+                models.AuditoriaUsuario.descripcion.ilike(term),
+                models.AuditoriaUsuario.ruta_endpoint.ilike(term),
+                models.AuditoriaUsuario.direccion_ip.ilike(term)
+            )
+        )
+
+    safe_limit = min(max(1, limit), 1000)
+    return query.order_by(models.AuditoriaUsuario.fecha_evento.desc()).limit(safe_limit).all()
+
+
+@router.post("/auditoria/registrar-evento", response_model=schemas.AuditoriaUsuarioRespuesta, status_code=status.HTTP_201_CREATED)
+def register_audit_event(
+    evento_in: schemas.AuditoriaUsuarioCrear,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Registra un movimiento operativo de un usuario autenticado (invocado por el Interceptor del API Gateway
+    o por acciones del cliente como cierre de sesión).
+    """
+    _ensure_auditoria_table(db)
+    ip_addr, user_agent = _extract_request_meta(request)
+
+    nombre_final = evento_in.nombre_usuario
+    correo_final = evento_in.correo_usuario
+    rol_final = evento_in.rol_usuario
+
+    # Enriquecer con los datos reales del usuario en DB si solo viene usuario_id o correo
+    db_user = None
+    if evento_in.usuario_id:
+        db_user = crud.obtener_usuario_por_id(db, evento_in.usuario_id)
+    elif correo_final:
+        db_user = crud.obtener_usuario_por_correo(db, correo_final)
+
+    if db_user:
+        if not nombre_final:
+            nombre_final = f"{db_user.nombre} {db_user.apellido}".strip()
+        if not correo_final:
+            correo_final = db_user.correo
+        if not rol_final:
+            rol_final = db_user.rol.value if hasattr(db_user.rol, "value") else str(db_user.rol)
+
+    nuevo_registro = models.AuditoriaUsuario(
+        usuario_id=db_user.usuario_id if db_user else evento_in.usuario_id,
+        correo_usuario=correo_final,
+        nombre_usuario=nombre_final or "Usuario Autenticado",
+        rol_usuario=rol_final or "AUTENTICADO",
+        modulo=evento_in.modulo[:60],
+        accion=evento_in.accion[:60],
+        descripcion=evento_in.descripcion[:500],
+        metodo_http=(evento_in.metodo_http or "POST")[:15],
+        ruta_endpoint=(evento_in.ruta_endpoint or "")[:255],
+        codigo_respuesta=evento_in.codigo_respuesta or 200,
+        direccion_ip=(evento_in.direccion_ip or ip_addr)[:60],
+        dispositivo_user_agent=(evento_in.dispositivo_user_agent or user_agent)[:300],
+        detalle_json=evento_in.detalle_json
+    )
+    db.add(nuevo_registro)
+    db.commit()
+    db.refresh(nuevo_registro)
+    return nuevo_registro
 
 
 

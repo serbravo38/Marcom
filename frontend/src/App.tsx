@@ -19,6 +19,7 @@ import AdminMonitores from "./pages/AdminMonitores";
 import SalesControl from "./pages/SalesControl";
 import Facturacion from "./pages/Facturacion";
 import FichaEquipoQR from "./pages/FichaEquipoQR";
+import Auditoria from "./pages/Auditoria";
 
 // Main Layout Wrapper for authenticated sections
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -52,6 +53,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         return "Control de Ventas";
       case "/facturacion":
         return "Control de Facturación";
+      case "/auditoria":
+        return "Auditoría y Bitácora de Usuarios";
       default:
         return "MARCOM";
     }
@@ -190,6 +193,17 @@ export const App: React.FC = () => {
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <Layout>
                 <Facturacion />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        {/* Auditoría y Bitácora Forense de Usuarios - Exclusivo ADMIN */}
+        <Route 
+          path="/auditoria" 
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Layout>
+                <Auditoria />
               </Layout>
             </ProtectedRoute>
           } 

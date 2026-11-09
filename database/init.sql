@@ -292,3 +292,28 @@ VALUES (
 )
 ON CONFLICT (correo) DO NOTHING;
 
+
+-- =============================================================================
+-- TABLA DE AUDITORÍA Y BITÁCORA DE MOVIMIENTOS DE USUARIOS
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS esquema_auth_clientes.auditoria_usuarios (
+    auditoria_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID REFERENCES esquema_auth_clientes.usuarios(usuario_id) ON DELETE SET NULL,
+    correo_usuario VARCHAR(150),
+    nombre_usuario VARCHAR(150),
+    rol_usuario VARCHAR(50),
+    modulo VARCHAR(60) NOT NULL,
+    accion VARCHAR(60) NOT NULL,
+    descripcion VARCHAR(500) NOT NULL,
+    metodo_http VARCHAR(15),
+    ruta_endpoint VARCHAR(255),
+    codigo_respuesta INTEGER,
+    direccion_ip VARCHAR(60),
+    dispositivo_user_agent VARCHAR(300),
+    detalle_json TEXT,
+    fecha_evento TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON esquema_auth_clientes.auditoria_usuarios(fecha_evento DESC);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON esquema_auth_clientes.auditoria_usuarios(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_modulo ON esquema_auth_clientes.auditoria_usuarios(modulo);
